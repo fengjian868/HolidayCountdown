@@ -1,0 +1,10 @@
+id: com.example.holidaycountdown
+name: 节假日倒计时
+apiVersion: 2.0.0.0
+description: 显示距离最近节假日的倒计时，支持网络同步中国法定节假日数据
+entranceAssembly: HolidayCountdown.dll
+url: https://github.com/example/holidaycountdown
+author: Developer
+version: 1.1.0.0
+icon: icon.png
+readme: README.md
