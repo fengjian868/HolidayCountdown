@@ -42,9 +42,15 @@ public class GreetingSettingsPage : SettingsPageBase
         schoolPanel.Children.Add(SettingsUI.SettingItem("放学时间", "时:分",
             new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, HorizontalAlignment = HorizontalAlignment.Right }.Also(h =>
             {
-                h.Children.Add(SettingsUI.Text(_svc.Settings.SchoolEndHour.ToString("D2"), 40, v => _svc.Settings.SchoolEndHour = Math.Max(0, Math.Min(23, int.Parse(v)))));
+                h.Children.Add(SettingsUI.Text(_svc.Settings.SchoolEndHour.ToString("D2"), 40, v =>
+                {
+                    if (int.TryParse(v, out var hval)) _svc.Settings.SchoolEndHour = Math.Max(0, Math.Min(23, hval));
+                }));
                 h.Children.Add(new TextBlock { Text = ":", VerticalAlignment = VerticalAlignment.Center });
-                h.Children.Add(SettingsUI.Text(_svc.Settings.SchoolEndMinute.ToString("D2"), 40, v => _svc.Settings.SchoolEndMinute = Math.Max(0, Math.Min(59, int.Parse(v)))));
+                h.Children.Add(SettingsUI.Text(_svc.Settings.SchoolEndMinute.ToString("D2"), 40, v =>
+                {
+                    if (int.TryParse(v, out var mval)) _svc.Settings.SchoolEndMinute = Math.Max(0, Math.Min(59, mval));
+                }));
             })));
         schoolPanel.Children.Add(SettingsUI.Separator());
         schoolPanel.Children.Add(SettingsUI.SettingItem("提前提醒分钟", "放学前多少分钟切换提醒",
