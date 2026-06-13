@@ -21,13 +21,6 @@ public class Plugin : PluginBase
         services.AddComponent<Views.Components.ClassScheduleComponent>();
         services.AddComponent<Views.Components.StudyTimeComponent>();
 
-        services.AddSettingsPage<Views.SettingsPages.HolidaySettingsPage>();
-        services.AddSettingsPage<Views.SettingsPages.GreetingSettingsPage>();
-        services.AddSettingsPage<Views.SettingsPages.SolarTermSettingsPage>();
-        services.AddSettingsPage<Views.SettingsPages.LunarSettingsPage>();
-        services.AddSettingsPage<Views.SettingsPages.CustomHolidaySettingsPage>();
-        services.AddSettingsPage<Views.SettingsPages.VacationSettingsPage>();
-        services.AddSettingsPage<Views.SettingsPages.WeatherSettingsPage>();
-        services.AddSettingsPage<Views.SettingsPages.AboutSettingsPage>();
+        services.AddSettingsPage<Views.SettingsPages.UnifiedSettingsPage>();
     }
 }
