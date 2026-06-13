@@ -30,11 +30,24 @@ jobs:
       - name: Publish
         run: dotnet publish --no-build --configuration Release --output ./publish
 
+      - name: Clean up runtime files
+        run: |
+          Remove-Item -Recurse -Force ./publish/runtimes/linux-* -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/runtimes/osx-* -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/runtimes/freebsd-* -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/runtimes/android-* -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/runtimes/ios-* -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/runtimes/unix-* -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/runtimes/browser-* -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/runtimes/maccatalyst-* -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/runtimes/tvos-* -ErrorAction SilentlyContinue
+          Remove-Item -Recurse -Force ./publish/runtimes/watchos-* -ErrorAction SilentlyContinue
+
       - name: Zip Artifact
         run: Compress-Archive -Path ./publish/* -DestinationPath ./HolidayCountdown.zip
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HolidayCountdown-${{ github.sha }}
+          name: HolidayCountdown
           path: ./HolidayCountdown.zip
