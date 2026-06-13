@@ -63,7 +63,7 @@ public class HolidaySettingsPage : SettingsPageBase
         {
             var key = kv.Key;
             colorPanel.Children.Add(SettingsUI.SettingItem(key, null,
-                SettingsUI.Color(kv.Value, c => _svc.Settings.HolidayColors[key] = c)));
+                SettingsUI.ColorPicker(kv.Value, c => _svc.Settings.HolidayColors[key] = c)));
             if (key != _svc.Settings.HolidayColors.Keys.Last())
                 colorPanel.Children.Add(SettingsUI.Separator());
         }

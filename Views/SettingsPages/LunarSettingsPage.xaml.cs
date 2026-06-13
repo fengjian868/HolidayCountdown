@@ -57,7 +57,7 @@ public class LunarSettingsPage : SettingsPageBase
         formatPanel.Children.Add(SettingsUI.SettingItem("选择格式", "快速选择预设模板", presetCombo));
         formatPanel.Children.Add(SettingsUI.Separator());
 
-        var templateBox = SettingsUI.Text(_svc.Settings.LunarDateTemplate, 280, v => _svc.Settings.LunarDateTemplate = v);
+        var templateBox = SettingsUI.Text(_svc.Settings.LunarDateTemplate ?? "", 280, v => _svc.Settings.LunarDateTemplate = v);
         formatPanel.Children.Add(SettingsUI.SettingItem("自定义模板", null, templateBox));
         formatPanel.Children.Add(SettingsUI.Separator());
         formatPanel.Children.Add(SettingsUI.Info("可用变量: {gzYear} 干支年 | {IMonthCn} 农历月 | {IDayCn} 农历日 | {Animal} 生肖 | {Term} 节气"));

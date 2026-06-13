@@ -13,12 +13,12 @@ namespace HolidayCountdown.Views.SettingsPages;
 public static class SettingsUI
 {
     // 颜色常量
-    public static readonly Color CardBg = Color.Parse("#0DFFFFFF");
-    public static readonly Color CardBorder = Color.Parse("#1AFFFFFF");
-    public static readonly Color HeaderText = Color.Parse("#FFFFFF");
-    public static readonly Color DescText = Color.Parse("#A0A0A0");
-    public static readonly Color AccentColor = Color.Parse("#2196F3");
-    public static readonly Color SeparatorColor = Color.Parse("#15FFFFFF");
+    public static readonly Avalonia.Media.Color CardBg = Avalonia.Media.Color.Parse("#0DFFFFFF");
+    public static readonly Avalonia.Media.Color CardBorder = Avalonia.Media.Color.Parse("#1AFFFFFF");
+    public static readonly Avalonia.Media.Color HeaderText = Avalonia.Media.Color.Parse("#FFFFFF");
+    public static readonly Avalonia.Media.Color DescText = Avalonia.Media.Color.Parse("#A0A0A0");
+    public static readonly Avalonia.Media.Color AccentColor = Avalonia.Media.Color.Parse("#2196F3");
+    public static readonly Avalonia.Media.Color SeparatorColor = Avalonia.Media.Color.Parse("#15FFFFFF");
 
     /// <summary>
     /// 页面标题
@@ -339,7 +339,7 @@ public static class SettingsUI
     /// <summary>
     /// 颜色选择器
     /// </summary>
-    public static ColorPicker Color(string hex, Action<string> onChanged)
+    public static ColorPicker ColorPicker(string hex, Action<string> onChanged)
     {
         var picker = new ColorPicker
         {

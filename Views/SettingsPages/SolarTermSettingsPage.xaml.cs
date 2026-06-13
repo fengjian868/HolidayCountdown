@@ -28,7 +28,7 @@ public class SolarTermSettingsPage : SettingsPageBase
             var kv = colors[i];
             var key = kv.Key;
             colorPanel.Children.Add(SettingsUI.SettingItem(key, null,
-                SettingsUI.Color(kv.Value, c => _svc.Settings.TermColors[key] = c)));
+                SettingsUI.ColorPicker(kv.Value, c => _svc.Settings.TermColors[key] = c)));
             if (i < colors.Count - 1)
                 colorPanel.Children.Add(SettingsUI.Separator());
         }
