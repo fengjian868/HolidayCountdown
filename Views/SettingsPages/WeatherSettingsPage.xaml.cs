@@ -27,6 +27,49 @@ public class WeatherSettingsPage : SettingsPageBase
             SettingsUI.Toggle(_svc.Settings.WeatherGreetingEnabled, v => _svc.Settings.WeatherGreetingEnabled = v)));
         s.Children.Add(SettingsUI.Expander("开关", "天气问候组件总开关", togglePanel));
 
+        // 排版设置
+        var layoutPanel = new StackPanel { Spacing = 0 };
+
+        // 预设模板
+        var presets = new[] { "仅问候", "图标+问候", "温度+问候", "完整信息" };
+        var presetCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
+        foreach (var p in presets) presetCombo.Items.Add(p);
+
+        var currentTemplate = _svc.Settings.WeatherTemplate ?? "{greeting}";
+        presetCombo.SelectedIndex = currentTemplate switch
+        {
+            "{greeting}" => 0,
+            "{icon} {greeting}" => 1,
+            "{temp} {greeting}" => 2,
+            "{icon} {temp} {greeting} {warning}" => 3,
+            _ => -1
+        };
+        presetCombo.SelectionChanged += (a, b) =>
+        {
+            _svc.Settings.WeatherTemplate = presetCombo.SelectedIndex switch
+            {
+                0 => "{greeting}",
+                1 => "{icon} {greeting}",
+                2 => "{temp} {greeting}",
+                3 => "{icon} {temp} {greeting} {warning}",
+                _ => _svc.Settings.WeatherTemplate
+            };
+        };
+
+        layoutPanel.Children.Add(SettingsUI.SettingItem("预设模板", "快速选择排版样式", presetCombo));
+        layoutPanel.Children.Add(SettingsUI.Separator());
+        layoutPanel.Children.Add(SettingsUI.SettingItem("自定义模板", null,
+            SettingsUI.Text(_svc.Settings.WeatherTemplate ?? "{greeting}", 280, v => _svc.Settings.WeatherTemplate = v)));
+        layoutPanel.Children.Add(SettingsUI.Separator());
+        layoutPanel.Children.Add(SettingsUI.SettingItem("显示天气图标", "在模板中使用 {icon}",
+            SettingsUI.Toggle(_svc.Settings.WeatherShowIcon, v => _svc.Settings.WeatherShowIcon = v)));
+        layoutPanel.Children.Add(SettingsUI.Separator());
+        layoutPanel.Children.Add(SettingsUI.SettingItem("显示温度", "在模板中使用 {temp}",
+            SettingsUI.Toggle(_svc.Settings.WeatherShowTemp, v => _svc.Settings.WeatherShowTemp = v)));
+        layoutPanel.Children.Add(SettingsUI.Separator());
+        layoutPanel.Children.Add(SettingsUI.Info("可用变量: {greeting} 问候语 | {temp} 温度 | {weather} 天气 | {warning} 预警 | {icon} 天气图标"));
+        s.Children.Add(SettingsUI.Expander("排版", "自定义天气问候的显示格式", layoutPanel));
+
         // 问候语文案
         s.Children.Add(SettingsUI.Expander("问候语文案", "根据天气关键词匹配显示文案", BuildGreetingPanel()));
 

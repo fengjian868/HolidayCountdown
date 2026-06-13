@@ -60,6 +60,9 @@ public class PluginSettings
 
     // 天气问候
     public bool WeatherGreetingEnabled { get; set; } = true;
+    public string WeatherTemplate { get; set; } = "{greeting}";
+    public bool WeatherShowIcon { get; set; } = true;
+    public bool WeatherShowTemp { get; set; } = true;
     public Dictionary<string, string> WeatherGreetings { get; set; } = new()
     {
         ["雨"] = "记得带伞 ☔",

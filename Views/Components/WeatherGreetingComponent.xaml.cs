@@ -16,7 +16,7 @@ namespace HolidayCountdown.Views.Components;
     "A7B8C9D0-E1F2-3456-0123-123456789016",
     "天气问候",
     "\uE753",
-    "根据ClassIsland天气温度显示穿衣提醒"
+    "根据ClassIsland天气温度显示穿衣提醒，支持自定义排版模板"
 )]
 public class WeatherGreetingComponent : ComponentBase
 {
@@ -26,9 +26,10 @@ public class WeatherGreetingComponent : ComponentBase
 
     public WeatherGreetingComponent()
     {
-        var panel = new Grid { ColumnDefinitions = new ColumnDefinitions("*"), VerticalAlignment = VerticalAlignment.Center };
+        var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
-        Grid.SetColumn(_txt, 0); panel.Children.Add(_txt); Content = panel;
+        panel.Children.Add(_txt);
+        Content = panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) }; _timer.Tick += (s, e) => Update(); _timer.Start();
         Dispatcher.UIThread.Post(() => { _svc = new HolidayService(); HolidayService.SettingsChanged += OnSettingsChanged; Update(); });
     }
@@ -44,22 +45,44 @@ public class WeatherGreetingComponent : ComponentBase
         if (_svc == null || !_svc.Settings.WeatherGreetingEnabled) { _txt.Text = ""; return; }
 
         var (temp, weatherCode, warning) = GetWeatherData();
+        var weatherText = !string.IsNullOrEmpty(weatherCode) ? GetWeatherTextByCode(weatherCode) : "";
 
-        // 优先根据温度给出穿衣提醒
+        // 获取问候语
         var greet = GetTempGreeting(temp);
-
-        // 如果温度获取失败，回退到天气关键词匹配
-        if (string.IsNullOrEmpty(greet) && !string.IsNullOrEmpty(weatherCode))
-        {
-            var weatherText = GetWeatherTextByCode(weatherCode);
+        if (string.IsNullOrEmpty(greet) && !string.IsNullOrEmpty(weatherText))
             greet = GetWeatherGreeting(weatherText);
-        }
 
-        // 预警简短显示
-        if (!string.IsNullOrEmpty(warning))
-            greet = $"⚠️{warning} " + greet;
+        // 使用模板排版
+        var template = _svc.Settings.WeatherTemplate ?? "{greeting}";
+        var result = template
+            .Replace("{greeting}", greet ?? "")
+            .Replace("{temp}", temp.HasValue ? $"{temp.Value:0}°C" : "")
+            .Replace("{weather}", weatherText ?? "")
+            .Replace("{warning}", warning ?? "")
+            .Replace("{icon}", GetWeatherIcon(weatherText));
 
-        _txt.Text = greet;
+        // 清理空括号和多余空格
+        while (result.Contains("  ")) result = result.Replace("  ", " ");
+        result = result.Trim();
+
+        _txt.Text = result;
+    }
+
+    /// <summary>
+    /// 根据天气文本返回对应图标
+    /// </summary>
+    string GetWeatherIcon(string? weatherText)
+    {
+        if (!_svc!.Settings.WeatherShowIcon || string.IsNullOrEmpty(weatherText)) return "";
+        if (weatherText.Contains("雨")) return "🌧️";
+        if (weatherText.Contains("雪")) return "❄️";
+        if (weatherText.Contains("晴")) return "☀️";
+        if (weatherText.Contains("云") || weatherText.Contains("阴")) return "⛅";
+        if (weatherText.Contains("雾") || weatherText.Contains("霾")) return "🌫️";
+        if (weatherText.Contains("风")) return "🍃";
+        if (weatherText.Contains("雷")) return "⚡";
+        if (weatherText.Contains("沙")) return "😷";
+        return "🌤️";
     }
 
     /// <summary>
@@ -112,7 +135,6 @@ public class WeatherGreetingComponent : ComponentBase
             var lastWeatherInfo = GetPropertyValue(settings, "LastWeatherInfo");
             if (lastWeatherInfo == null) return (null, null, null);
 
-            // 获取 Current 中的温度
             var current = GetPropertyValue(lastWeatherInfo, "Current");
             double? temp = null;
             string? weatherCode = null;
@@ -127,9 +149,7 @@ public class WeatherGreetingComponent : ComponentBase
                 weatherCode = GetPropertyValue(current, "Weather")?.ToString();
             }
 
-            // 获取预警
             var warning = GetFirstAlertTitle(lastWeatherInfo);
-
             return (temp, weatherCode, warning);
         }
         catch { return (null, null, null); }
