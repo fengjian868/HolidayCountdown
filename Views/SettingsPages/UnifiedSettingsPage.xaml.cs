@@ -795,7 +795,4 @@ public class UnifiedSettingsPage : SettingsPageBase
     }
 }
 
-public static class PanelExt
-{
-    public static T Also<T>(this T t, Action<T> a) { a(t); return t; }
-}
+
