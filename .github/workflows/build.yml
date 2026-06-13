@@ -51,3 +51,27 @@ jobs:
         with:
           name: HolidayCountdown
           path: ./HolidayCountdown.zip
+
+      - name: Generate Build Summary
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          $sha = "${{ github.sha }}".Substring(0, 7)
+          $runId = "${{ github.run_id }}"
+          $repo = "${{ github.repository }}"
+          $artifactName = "HolidayCountdown"
+          $nightlyLink = "https://nightly.link/$repo/actions/runs/$runId/$artifactName.zip"
+          $ghproxyLink = "https://ghproxy.com/$nightlyLink"
+          $mirrorLink = "https://mirror.ghproxy.com/$nightlyLink"
+          
+          echo "## Build Summary" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **Run:** #${{ github.run_number }}" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **Version:** debug-$sha-${{ github.run_number }}" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "### Download" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "- [Download Artifact](https://github.com/$repo/actions/runs/$runId)" >> $env:GITHUB_STEP_SUMMARY
+          echo "- [Nightly.link Download]($nightlyLink) (GhProxy Fastly Mirror / GhProxy Mirror)" >> $env:GITHUB_STEP_SUMMARY
+          echo "" >> $env:GITHUB_STEP_SUMMARY
+          echo "_Job summary generated at run-time_" >> $env:GITHUB_STEP_SUMMARY
