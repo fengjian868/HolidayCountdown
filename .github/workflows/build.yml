@@ -38,6 +38,7 @@ jobs:
           Copy-Item -Path ./manifest.yml -Destination ./publish/ -ErrorAction SilentlyContinue
           Copy-Item -Path ./Plugin.cs -Destination ./publish/ -ErrorAction SilentlyContinue
           Copy-Item -Path ./README.md -Destination ./publish/ -ErrorAction SilentlyContinue
+          Copy-Item -Path ./.gitignore -Destination ./publish/ -ErrorAction SilentlyContinue
           # 清理不需要的运行时文件
           Remove-Item -Recurse -Force ./publish/runtimes/linux-* -ErrorAction SilentlyContinue
           Remove-Item -Recurse -Force ./publish/runtimes/osx-* -ErrorAction SilentlyContinue
