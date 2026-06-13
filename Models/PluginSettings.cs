@@ -25,7 +25,6 @@ public class PluginSettings
 
     // 问候语
     public bool ShowGreeting { get; set; } = true;
-    public bool GreetingOnline { get; set; } = true;
     public List<TimeSlotGreeting> TimeSlotGreetings { get; set; } = new();
     public List<SpecialDateGreeting> SpecialDateGreetings { get; set; } = new();
     public Dictionary<string, string> SpecialGreetings { get; set; } = new();
@@ -36,6 +35,11 @@ public class PluginSettings
     public string AfterSchoolEndText { get; set; } = "run！";
     public bool ShowSundayEveningStudy { get; set; } = true;
     public string SundayEveningStudyText { get; set; } = "今晚有晚修，记得按时到教室！";
+    // 每周提醒：自定义日期（1=周一, 7=周日）
+    public int WeeklyReminderDay { get; set; } = 7;
+    public int WeeklyReminderStartHour { get; set; } = 17;
+    public int WeeklyReminderEndHour { get; set; } = 21;
+    public bool WeeklyReminderEnabled { get; set; } = true;
 
     // 农历
     public bool ShowLunarDate { get; set; } = true;
@@ -63,6 +67,7 @@ public class PluginSettings
     public string WeatherTemplate { get; set; } = "{greeting}";
     public bool WeatherShowIcon { get; set; } = true;
     public bool WeatherShowTemp { get; set; } = true;
+    public List<TempGreeting> TempGreetings { get; set; } = new();
     public Dictionary<string, string> WeatherGreetings { get; set; } = new()
     {
         ["雨"] = "记得带伞 ☔",
@@ -117,4 +122,11 @@ public class SpecialDateGreeting
     public int EndMinute { get; set; } = 59;
     public string Text { get; set; } = "";
     public bool Enabled { get; set; } = true;
+}
+
+public class TempGreeting
+{
+    public int MinTemp { get; set; }
+    public int MaxTemp { get; set; }
+    public string Text { get; set; } = "";
 }

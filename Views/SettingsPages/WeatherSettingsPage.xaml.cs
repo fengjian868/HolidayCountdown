@@ -6,6 +6,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using ClassIsland.Core.Attributes;
 using ClassIsland.Core.Abstractions.Controls;
+using HolidayCountdown.Models;
 using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.SettingsPages;
@@ -29,8 +30,6 @@ public class WeatherSettingsPage : SettingsPageBase
 
         // 排版设置
         var layoutPanel = new StackPanel { Spacing = 0 };
-
-        // 预设模板
         var presets = new[] { "仅问候", "图标+问候", "温度+问候", "完整信息" };
         var presetCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
         foreach (var p in presets) presetCombo.Items.Add(p);
@@ -70,12 +69,86 @@ public class WeatherSettingsPage : SettingsPageBase
         layoutPanel.Children.Add(SettingsUI.Info("可用变量: {greeting} 问候语 | {temp} 温度 | {weather} 天气 | {warning} 预警 | {icon} 天气图标"));
         s.Children.Add(SettingsUI.Expander("排版", "自定义天气问候的显示格式", layoutPanel));
 
-        // 问候语文案
-        s.Children.Add(SettingsUI.Expander("问候语文案", "根据天气关键词匹配显示文案", BuildGreetingPanel()));
+        // 温度提醒
+        s.Children.Add(SettingsUI.Expander("温度提醒", "自定义各温度区间的穿衣提醒文案", BuildTempPanel()));
+
+        // 天气关键词问候
+        s.Children.Add(SettingsUI.Expander("天气关键词", "根据天气关键词匹配显示文案", BuildGreetingPanel()));
 
         s.Children.Add(SettingsUI.Info("天气数据来自ClassIsland内置天气服务，插件会自动读取当前天气并匹配对应的问候语。"));
         s.Children.Add(SettingsUI.SaveButton(() => _svc.SaveSettings()));
         return new ScrollViewer { Content = s };
+    }
+
+    StackPanel BuildTempPanel()
+    {
+        var panel = new StackPanel { Spacing = 8 };
+        var listPanel = new StackPanel { Spacing = 0 };
+
+        void RefreshList()
+        {
+            listPanel.Children.Clear();
+            var items = _svc.Settings.TempGreetings.OrderBy(g => g.MinTemp).ToList();
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(16, 8, 16, 8) };
+
+                var minBox = new TextBox { Text = item.MinTemp.ToString(), Width = 45 };
+                minBox.LostFocus += (a, b) =>
+                {
+                    if (int.TryParse(minBox.Text, out var v)) item.MinTemp = v;
+                    else minBox.Text = item.MinTemp.ToString();
+                };
+
+                var maxBox = new TextBox { Text = item.MaxTemp == 999 ? "" : item.MaxTemp.ToString(), Width = 45, Watermark = "∞" };
+                maxBox.LostFocus += (a, b) =>
+                {
+                    if (string.IsNullOrEmpty(maxBox.Text)) item.MaxTemp = 999;
+                    else if (int.TryParse(maxBox.Text, out var v)) item.MaxTemp = v;
+                    else maxBox.Text = item.MaxTemp == 999 ? "" : item.MaxTemp.ToString();
+                };
+
+                var textBox = SettingsUI.Text(item.Text, 200, v => item.Text = v);
+                var delBtn = new Button { Content = "🗑️", Padding = new Thickness(4, 2) };
+                delBtn.Click += (a, e) => { _svc.Settings.TempGreetings.Remove(item); RefreshList(); };
+
+                row.Children.Add(new TextBlock { Text = "≥", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(minBox);
+                row.Children.Add(new TextBlock { Text = "°C", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(new TextBlock { Text = "~", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(maxBox);
+                row.Children.Add(new TextBlock { Text = "°C", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(textBox);
+                row.Children.Add(delBtn);
+                listPanel.Children.Add(row);
+                if (i < items.Count - 1)
+                    listPanel.Children.Add(SettingsUI.Separator());
+            }
+        }
+
+        RefreshList();
+        panel.Children.Add(listPanel);
+
+        var addBtn = new Button { Content = "+ 添加温度区间", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 4, 16, 8) };
+        addBtn.Click += (a, e) =>
+        {
+            _svc.Settings.TempGreetings.Add(new TempGreeting { MinTemp = 0, MaxTemp = 999, Text = "" });
+            RefreshList();
+        };
+        panel.Children.Add(addBtn);
+
+        var resetBtn = new Button { Content = "恢复默认", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 0, 16, 8) };
+        resetBtn.Click += (a, e) =>
+        {
+            _svc.Settings.TempGreetings.Clear();
+            foreach (var g in LocalGreetingDB.DefaultTempGreetings)
+                _svc.Settings.TempGreetings.Add(new TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text });
+            RefreshList();
+        };
+        panel.Children.Add(resetBtn);
+
+        return panel;
     }
 
     StackPanel BuildGreetingPanel()

@@ -105,6 +105,11 @@ public class HolidayService
             Settings.TermColors["立冬"] = "#607D8B"; Settings.TermColors["小雪"] = "#607D8B"; Settings.TermColors["大雪"] = "#607D8B";
             Settings.TermColors["冬至"] = "#2196F3"; Settings.TermColors["小寒"] = "#2196F3"; Settings.TermColors["大寒"] = "#2196F3";
         }
+        if (Settings.TempGreetings.Count == 0)
+        {
+            foreach (var g in LocalGreetingDB.DefaultTempGreetings)
+                Settings.TempGreetings.Add(new TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text });
+        }
     }
 
     public void SaveSettings()
@@ -408,52 +413,6 @@ public class HolidayService
     }
 
     string GetStr(JsonElement e, string p) => e.TryGetProperty(p, out var v) ? (v.GetString() ?? "") : "";
-
-    public async Task RefreshGreetingsAsync()
-    {
-        if (!Settings.GreetingOnline) return;
-        try
-        {
-            using var c = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            var r = await c.GetStringAsync("https://v1.hitokoto.cn/?c=k&encode=json");
-            using var doc = JsonDocument.Parse(r);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("hitokoto", out var hp))
-            {
-                var text = hp.GetString() ?? "";
-                if (!string.IsNullOrEmpty(text))
-                {
-                    var now = DateTime.Now;
-                    var ct = now.TimeOfDay;
-
-                    // 如果当前处于特殊日期时段内，不刷新（特殊日期优先且固定）
-                    var inSpecial = Settings.SpecialDateGreetings.Any(sg =>
-                    {
-                        if (!sg.Enabled) return false;
-                        if ((int)now.DayOfWeek == 0 ? sg.DayOfWeek != 7 : (int)now.DayOfWeek != sg.DayOfWeek) return false;
-                        var start = new TimeSpan(sg.StartHour, sg.StartMinute, 0);
-                        var end = new TimeSpan(sg.EndHour, sg.EndMinute, 0);
-                        return ct >= start && ct < end;
-                    });
-                    if (inSpecial) return;
-
-                    // 只刷新当前所处的时间段问候语，且保存到设置
-                    var slot = Settings.TimeSlotGreetings.FirstOrDefault(s =>
-                    {
-                        var start = new TimeSpan(s.StartHour, s.StartMinute, 0);
-                        var end = new TimeSpan(s.EndHour, s.EndMinute, 0);
-                        return ct >= start && ct < end;
-                    });
-                    if (slot != null)
-                    {
-                        slot.Text = text;
-                        SaveSettings();
-                    }
-                }
-            }
-        }
-        catch { }
-    }
 
     public Color ParseColor(string hex)
     {

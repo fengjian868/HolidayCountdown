@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
 using ClassIsland.Core.Attributes;
+using HolidayCountdown.Models;
 using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.Components;
@@ -16,7 +17,7 @@ namespace HolidayCountdown.Views.Components;
     "A7B8C9D0-E1F2-3456-0123-123456789016",
     "天气问候",
     "\uE753",
-    "根据ClassIsland天气温度显示穿衣提醒，支持自定义排版模板"
+    "根据ClassIsland天气温度显示穿衣提醒，支持自定义排版模板和温度区间"
 )]
 public class WeatherGreetingComponent : ComponentBase
 {
@@ -47,7 +48,7 @@ public class WeatherGreetingComponent : ComponentBase
         var (temp, weatherCode, warning) = GetWeatherData();
         var weatherText = !string.IsNullOrEmpty(weatherCode) ? GetWeatherTextByCode(weatherCode) : "";
 
-        // 获取问候语
+        // 获取问候语：优先温度区间，其次天气关键词
         var greet = GetTempGreeting(temp);
         if (string.IsNullOrEmpty(greet) && !string.IsNullOrEmpty(weatherText))
             greet = GetWeatherGreeting(weatherText);
@@ -61,7 +62,6 @@ public class WeatherGreetingComponent : ComponentBase
             .Replace("{warning}", warning ?? "")
             .Replace("{icon}", GetWeatherIcon(weatherText));
 
-        // 清理空括号和多余空格
         while (result.Contains("  ")) result = result.Replace("  ", " ");
         result = result.Trim();
 
@@ -69,8 +69,22 @@ public class WeatherGreetingComponent : ComponentBase
     }
 
     /// <summary>
-    /// 根据天气文本返回对应图标
+    /// 根据温度区间获取问候语（从设置中读取，支持自定义）
     /// </summary>
+    string GetTempGreeting(double? temp)
+    {
+        if (temp == null) return "";
+        var t = temp.Value;
+
+        // 从用户自定义的温度区间中查找
+        var greetings = _svc!.Settings.TempGreetings;
+        if (greetings == null || greetings.Count == 0)
+            greetings = LocalGreetingDB.DefaultTempGreetings;
+
+        var match = greetings.FirstOrDefault(g => t >= g.MinTemp && t < g.MaxTemp);
+        return match?.Text ?? "";
+    }
+
     string GetWeatherIcon(string? weatherText)
     {
         if (!_svc!.Settings.WeatherShowIcon || string.IsNullOrEmpty(weatherText)) return "";
@@ -85,30 +99,6 @@ public class WeatherGreetingComponent : ComponentBase
         return "🌤️";
     }
 
-    /// <summary>
-    /// 根据温度给出穿衣提醒
-    /// </summary>
-    string GetTempGreeting(double? temp)
-    {
-        if (temp == null) return "";
-        var t = temp.Value;
-        return t switch
-        {
-            >= 35 => "高温预警，注意防暑 🌡️",
-            >= 30 => "很热，穿短袖注意防晒 ☀️",
-            >= 25 => "较热，短袖即可 👕",
-            >= 20 => "舒适，薄长袖或短袖 🍃",
-            >= 15 => "微凉，建议穿外套 🧥",
-            >= 10 => "较冷，穿厚外套 🧣",
-            >= 5 => "冷，穿羽绒服或棉衣 ❄️",
-            >= 0 => "很冷，注意保暖 🥶",
-            _ => "严寒，多穿点别冻着 🧊"
-        };
-    }
-
-    /// <summary>
-    /// 根据天气文本匹配问候语（备用）
-    /// </summary>
     string GetWeatherGreeting(string weatherText)
     {
         if (string.IsNullOrEmpty(weatherText)) return "";
@@ -122,9 +112,6 @@ public class WeatherGreetingComponent : ComponentBase
         return greet;
     }
 
-    /// <summary>
-    /// 获取天气数据：温度、天气代码、预警
-    /// </summary>
     (double? temp, string? weatherCode, string? warning) GetWeatherData()
     {
         try
