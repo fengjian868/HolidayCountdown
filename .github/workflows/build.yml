@@ -33,7 +33,6 @@ jobs:
       - name: Copy plugin files to publish
         run: |
           # 复制项目源代码文件到 publish 目录
-          Copy-Item -Path ./.gitignore -Destination ./publish/ -ErrorAction SilentlyContinue
           Copy-Item -Path ./HolidayCountdown.csproj -Destination ./publish/ -ErrorAction SilentlyContinue
           Copy-Item -Path ./icon.png -Destination ./publish/ -ErrorAction SilentlyContinue
           Copy-Item -Path ./manifest.yml -Destination ./publish/ -ErrorAction SilentlyContinue
