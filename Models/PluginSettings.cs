@@ -63,6 +63,14 @@ public class PluginSettings
     public bool SolarTermShowProgressRing { get; set; } = true;
     public Dictionary<string, string> TermColors { get; set; } = new();
 
+    // 课程表联动
+    public bool ClassScheduleEnabled { get; set; } = true;
+    public bool ClassScheduleShowIcon { get; set; } = true;
+
+    // 学习时长统计
+    public bool StudyTimeEnabled { get; set; } = true;
+    public bool StudyTimeShowIcon { get; set; } = true;
+
     // 天气问候
     public bool WeatherGreetingEnabled { get; set; } = true;
     public string WeatherTemplate { get; set; } = "{greeting}";
