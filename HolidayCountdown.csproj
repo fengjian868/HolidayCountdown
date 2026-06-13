@@ -10,7 +10,7 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="ClassIsland.PluginSdk" Version="2.0.3.2">
+    <PackageReference Include="ClassIsland.PluginSdk" Version="2.0.0.2">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
   </ItemGroup>
