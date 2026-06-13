@@ -20,6 +20,12 @@ public class SolarTermSettingsPage : SettingsPageBase
         var s = new StackPanel { Spacing = 0, Margin = new Thickness(20, 16) };
         s.Children.Add(SettingsUI.PageHeader("🌿 24节气设置"));
 
+        // 显示设置
+        var displayPanel = new StackPanel { Spacing = 0 };
+        displayPanel.Children.Add(SettingsUI.SettingItem("显示进度环", "弧形进度环显示节气进度",
+            SettingsUI.Toggle(_svc.Settings.SolarTermShowProgressRing, v => _svc.Settings.SolarTermShowProgressRing = v)));
+        s.Children.Add(SettingsUI.Expander("显示", "节气组件显示选项", displayPanel));
+
         // 颜色
         var colorPanel = new StackPanel { Spacing = 0 };
         var colors = _svc.Settings.TermColors.OrderBy(x => x.Key).ToList();

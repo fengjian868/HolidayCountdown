@@ -59,7 +59,8 @@ public class PluginSettings
     public DateTime WinterEnd { get; set; } = new DateTime(2026, 2, 13);
     public bool ShowVacationCountdown { get; set; } = true;
 
-    // 节气颜色
+    // 节气
+    public bool SolarTermShowProgressRing { get; set; } = true;
     public Dictionary<string, string> TermColors { get; set; } = new();
 
     // 天气问候
