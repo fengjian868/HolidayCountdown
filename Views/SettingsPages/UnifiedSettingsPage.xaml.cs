@@ -608,7 +608,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 1 => "{icon} {greeting}",
                 2 => "{temp} {greeting}",
                 3 => "{icon} {temp} {greeting} {warning}",
-                _ => _svc.Settings.WeatherTemplate
+                _ => _svc.Settings.WeatherTemplate ?? "{greeting}"
             };
         };
 
