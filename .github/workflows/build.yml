@@ -52,7 +52,9 @@ jobs:
           Remove-Item -Recurse -Force ./publish/runtimes/watchos-* -ErrorAction SilentlyContinue
 
       - name: Zip Artifact
-        run: Compress-Archive -Path ./publish/* -DestinationPath ./HolidayCountdown.zip
+        run: |
+          if (Test-Path ./HolidayCountdown.zip) { Remove-Item -Force ./HolidayCountdown.zip }
+          Compress-Archive -Path ./publish/* -DestinationPath ./HolidayCountdown.zip
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
