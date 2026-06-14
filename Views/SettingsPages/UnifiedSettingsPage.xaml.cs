@@ -26,6 +26,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         _tabs = new (string, string, Func<Control>)[]
         {
             ("\uE8F5", "节假日", BuildHolidayPanel),
+            ("\uE713", "设置", BuildGeneralPanel),
             ("\uE9D2", "问候语", BuildGreetingPanel),
             ("\uE9CA", "24节气", BuildSolarTermPanel),
             ("\uE787", "农历", BuildLunarPanel),
@@ -125,6 +126,31 @@ public class UnifiedSettingsPage : SettingsPageBase
     }
 
     // ===== Tab Builders =====
+
+    Control BuildGeneralPanel()
+    {
+        var s = new StackPanel { Spacing = 0 };
+        s.Children.Add(PageHeader("⚙️ 设置"));
+
+        var schedulePanel = new StackPanel { Spacing = 0 };
+        schedulePanel.Children.Add(SettingItem("启用课程表联动", "读取ClassIsland课程表，显示当前课程/课间倒计时",
+            Toggle(_svc.Settings.ClassScheduleEnabled, v => _svc.Settings.ClassScheduleEnabled = v)));
+        schedulePanel.Children.Add(Separator());
+        schedulePanel.Children.Add(SettingItem("显示图标", "在课程表信息前显示图标",
+            Toggle(_svc.Settings.ClassScheduleShowIcon, v => _svc.Settings.ClassScheduleShowIcon = v)));
+        s.Children.Add(Expander("课程表联动", "课程表联动组件设置", schedulePanel));
+
+        var studyPanel = new StackPanel { Spacing = 0 };
+        studyPanel.Children.Add(SettingItem("启用学习时长统计", "记录ClassIsland运行时长，显示今日学习时长",
+            Toggle(_svc.Settings.StudyTimeEnabled, v => _svc.Settings.StudyTimeEnabled = v)));
+        studyPanel.Children.Add(Separator());
+        studyPanel.Children.Add(SettingItem("显示图标", "在学习时长前显示图标",
+            Toggle(_svc.Settings.StudyTimeShowIcon, v => _svc.Settings.StudyTimeShowIcon = v)));
+        s.Children.Add(Expander("学习时长统计", "学习时长统计组件设置", studyPanel));
+
+        s.Children.Add(SaveButton(() => _svc.SaveSettings()));
+        return s;
+    }
 
     Control BuildHolidayPanel()
     {
