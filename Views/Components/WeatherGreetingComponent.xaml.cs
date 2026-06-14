@@ -76,12 +76,22 @@ public class WeatherGreetingComponent : ComponentBase
     }
 
     /// <summary>
-    /// 根据温度给出穿衣提醒
+    /// 根据温度给出穿衣提醒（读取用户设置中的温度区间文案）
     /// </summary>
     string GetTempGreeting(double? temp)
     {
         if (temp == null) return "";
         var t = temp.Value;
+
+        // 优先使用用户设置中的温度区间文案
+        var items = _svc?.Settings.TempGreetings;
+        if (items != null && items.Count > 0)
+        {
+            var match = items.FirstOrDefault(x => t >= x.MinTemp && t < x.MaxTemp);
+            if (match != null) return match.Text;
+        }
+
+        // 回退到默认硬编码
         return t switch
         {
             >= 35 => "高温预警，注意防暑 \uD83C\uDF21️",
