@@ -897,9 +897,9 @@ public class UnifiedSettingsPage : SettingsPageBase
         return d;
     }
 
-    static ColorPickerButton ColorPicker(string color, Action<string> onChanged)
+    static ColorPicker ColorPicker(string color, Action<string> onChanged)
     {
-        var c = new ColorPickerButton { Color = Color.Parse(color), Width = 40, Height = 24 };
+        var c = new ColorPicker { Color = Color.Parse(color), Width = 40, Height = 24 };
         c.ColorChanged += (s, e) => onChanged(c.Color.ToString());
         return c;
     }
