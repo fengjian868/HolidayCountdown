@@ -263,10 +263,11 @@ public class WeatherGreetingComponent : ComponentBase
                 ?? GetPropertyValue(settings, "City")?.ToString()
                 ?? "";
 
-            // 尝试多种可能的天气属性名
+            // 尝试多种可能的天气属性名（ClassIsland 不同版本使用的属性名不同）
             var weatherObj = GetPropertyValue(settings, "Weather")
                 ?? GetPropertyValue(settings, "CurrentWeather")
-                ?? GetPropertyValue(settings, "WeatherInfo");
+                ?? GetPropertyValue(settings, "WeatherInfo")
+                ?? GetPropertyValue(settings, "LastWeatherInfo");
             if (weatherObj == null)
             {
                 // 列出Settings所有属性名用于诊断
