@@ -15,7 +15,7 @@ using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.SettingsPages;
 
-[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE787", "\uE787")]
+[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE8F5", "\uE8F5")]
 public class UnifiedSettingsPage : SettingsPageBase
 {
     private readonly HolidayService _svc;
