@@ -105,7 +105,7 @@ public class HolidayService
         if (Settings.TempGreetings.Count == 0)
         {
             foreach (var g in LocalGreetingDB.DefaultTempGreetings)
-                Settings.TempGreetings.Add(new TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text });
+                Settings.TempGreetings.Add(new TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text, Tag = g.Tag });
         }
     }
 
