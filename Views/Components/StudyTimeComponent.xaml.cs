@@ -27,6 +27,7 @@ public class StudyTimeComponent : ComponentBase
     private TextBlock _txt = null!;
     private HolidayService? _svc;
     private DateTime _sessionStart;
+    private DateTime _lastUpdate;
     private static readonly string DataDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "ClassIsland", "Plugins", "HolidayCountdown");
@@ -35,6 +36,7 @@ public class StudyTimeComponent : ComponentBase
     public StudyTimeComponent()
     {
         _sessionStart = DateTime.Now;
+        _lastUpdate = DateTime.Now;
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
         panel.Children.Add(_txt);
@@ -61,10 +63,13 @@ public class StudyTimeComponent : ComponentBase
             var data = LoadStudyData();
             var key = today.ToString("yyyy-MM-dd");
 
-            // Add current session time
-            var sessionMinutes = (DateTime.Now - _sessionStart).TotalMinutes;
+            // Only add elapsed time since last update
+            var now = DateTime.Now;
+            var elapsedMinutes = (now - _lastUpdate).TotalMinutes;
+            _lastUpdate = now;
+
             if (!data.ContainsKey(key)) data[key] = 0;
-            data[key] = data[key] + sessionMinutes;
+            data[key] = data[key] + elapsedMinutes;
 
             // Save updated data
             SaveStudyData(data);
