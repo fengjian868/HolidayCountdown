@@ -25,8 +25,6 @@
 - **新增：温度区间提醒自定义** - 可自定义各温度区间的穿衣提醒文案，支持恢复默认
 - **新增：24节气进度环开关** - 设置中可选择是否显示节气进度环
 - **修复：PluginSdk 降级到 2.0.0.2** - 兼容 ClassIsland 稳定版，解决 FileNotFoundException
-- **优化：CI 打包体积** - 删除非 Windows 运行时文件，减小 zip 体积
-- **优化：Build Summary** - GitHub Actions 构建完成后显示下载链接
 
 ### v1.2.0.2
 
