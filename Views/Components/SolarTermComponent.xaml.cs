@@ -202,12 +202,16 @@ public class SolarTermComponent : ComponentBase
 
     void Update()
     {
-        if (_svc == null || _currentTerm == null) { _panel.Children.Clear(); return; }
+        if (_svc == null) { _panel.Children.Clear(); return; }
         try
         {
             var now = DateTime.Now;
-            var days = (_currentTerm.NextDate.Date - now.Date).Days;
-            var color = _svc.GetTermColor(_currentTerm.Name);
+            // 每次更新都用真实日期表重新计算当前节气，避免缓存过期
+            var term = CalculateLocalTerm(now);
+            if (term == null) { _panel.Children.Clear(); return; }
+
+            var days = (term.NextDate.Date - now.Date).Days;
+            var color = _svc.GetTermColor(term.Name);
 
             _panel.Children.Clear();
 
@@ -215,13 +219,14 @@ public class SolarTermComponent : ComponentBase
 
             if (showProgress && days <= 15 && days >= 0)
             {
-                var progress = 1.0 - (double)days / 15.0;
+                var totalDays = Math.Max(1, (term.NextDate.Date - term.Date.Date).Days);
+                var progress = 1.0 - (double)days / totalDays;
                 _panel.Children.Add(CreateArcRing(days, progress, color));
             }
 
             var nameBlock = new TextBlock
             {
-                Text = _currentTerm.Name,
+                Text = term.Name,
                 Foreground = new SolidColorBrush(color),
                 FontWeight = FontWeight.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
