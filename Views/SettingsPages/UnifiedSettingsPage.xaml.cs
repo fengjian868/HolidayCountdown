@@ -40,7 +40,10 @@ public class UnifiedSettingsPage : SettingsPageBase
 
     Control Build()
     {
-        var root = new StackPanel { Spacing = 0 };
+        var root = new Grid
+        {
+            RowDefinitions = new RowDefinitions("Auto Auto *")
+        };
 
         var tabBar = new StackPanel
         {
@@ -75,6 +78,8 @@ public class UnifiedSettingsPage : SettingsPageBase
             btn.Click += (s, e) => SwitchTab(idx);
             tabBar.Children.Add(btn);
         }
+        Grid.SetRow(tabBar, 0);
+        root.Children.Add(tabBar);
 
         var sep = new Border
         {
@@ -82,6 +87,8 @@ public class UnifiedSettingsPage : SettingsPageBase
             Background = new SolidColorBrush(Color.Parse("#20FFFFFF")),
             Margin = new Thickness(16, 0, 16, 8)
         };
+        Grid.SetRow(sep, 1);
+        root.Children.Add(sep);
 
         _contentPanel = new StackPanel { Spacing = 0, Margin = new Thickness(20, 8, 20, 16) };
         _scrollViewer = new ScrollViewer
@@ -90,9 +97,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
         };
-
-        root.Children.Add(tabBar);
-        root.Children.Add(sep);
+        Grid.SetRow(_scrollViewer, 2);
         root.Children.Add(_scrollViewer);
 
         SwitchTab(0);
@@ -101,7 +106,7 @@ public class UnifiedSettingsPage : SettingsPageBase
 
     void SwitchTab(int index)
     {
-        var tabBar = (Content as StackPanel)?.Children[0] as StackPanel;
+        var tabBar = (Content as Grid)?.Children[0] as StackPanel;
         if (tabBar != null)
         {
             foreach (var child in tabBar.Children)
