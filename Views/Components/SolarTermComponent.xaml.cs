@@ -152,12 +152,12 @@ public class SolarTermComponent : ComponentBase
             {
                 var progress = 1.0 - (double)days / 15.0;
                 var arc = GetArcText(progress);
-                _txt.Text = $"🌿 {_currentTerm.Name} {arc} 距{_currentTerm.NextName}还有{days}天";
+                _txt.Text = $"🌿 {_currentTerm.Name} {arc}";
                 _txt.Foreground = new SolidColorBrush(color);
             }
             else
             {
-                _txt.Text = $"🌿 {_currentTerm.Name} 距{_currentTerm.NextName}还有{days}天";
+                _txt.Text = $"🌿 {_currentTerm.Name}";
                 _txt.Foreground = new SolidColorBrush(color);
             }
         }
