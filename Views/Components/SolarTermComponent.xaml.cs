@@ -86,13 +86,13 @@ public class SolarTermComponent : ComponentBase
                 var term = GetStr(dp, "Term");
                 if (!string.IsNullOrEmpty(term))
                 {
-                    var localTerm = CalculateLocalTerm(now);
+                    var nextTerm = CalculateNextTerm(now);
                     _currentTerm = new SolarTermInfo
                     {
                         Name = term,
-                        Date = localTerm?.Date ?? now,
-                        NextDate = localTerm?.NextDate ?? now.AddDays(15),
-                        NextName = localTerm?.NextName ?? GetNextTermName(term)
+                        Date = nextTerm?.Date ?? now,
+                        NextDate = nextTerm?.Date ?? now.AddDays(15),
+                        NextName = nextTerm?.Name ?? GetNextTermName(term)
                     };
                     try { File.WriteAllText(cachePath, JsonSerializer.Serialize(_currentTerm)); }
                     catch { }
@@ -102,8 +102,18 @@ public class SolarTermComponent : ComponentBase
         }
         catch { }
 
-        // 网络失败时使用本地计算
-        _currentTerm = CalculateLocalTerm(now);
+        // 网络失败时使用本地计算下一个节气
+        var localNext = CalculateNextTerm(now);
+        if (localNext.HasValue)
+        {
+            _currentTerm = new SolarTermInfo
+            {
+                Name = localNext.Value.Name,
+                Date = localNext.Value.Date,
+                NextDate = localNext.Value.Date,
+                NextName = localNext.Value.Name
+            };
+        }
     }
 
     // 2024-2026年24节气真实日期表（CET+8）
@@ -200,18 +210,42 @@ public class SolarTermComponent : ComponentBase
         return null;
     }
 
+    // 计算下一个即将到来的节气
+    (string Name, DateTime Date, DateTime PrevDate)? CalculateNextTerm(DateTime date)
+    {
+        var year = date.Year;
+        if (!TermDates.TryGetValue(year, out var terms))
+        {
+            terms = TermDates[2026];
+        }
+
+        for (int i = 0; i < terms.Length; i++)
+        {
+            var (name, termDate) = terms[i];
+            if (date.Date < termDate.Date)
+            {
+                var prevDate = i > 0 ? terms[i - 1].date : (TermDates.TryGetValue(year - 1, out var pt) ? pt[^1].date : new DateTime(year, 1, 1));
+                return (name, termDate, prevDate);
+            }
+        }
+
+        // 如果今年所有节气都过了，返回明年第一个节气
+        var nextYearFirst = TermDates.TryGetValue(year + 1, out var nt) ? nt[0] : (TermDates.TryGetValue(year, out var ct) ? ct[0] : terms[0]);
+        return (nextYearFirst.name, nextYearFirst.date, terms[^1].date);
+    }
+
     void Update()
     {
         if (_svc == null) { _panel.Children.Clear(); return; }
         try
         {
             var now = DateTime.Now;
-            // 每次更新都用真实日期表重新计算当前节气，避免缓存过期
-            var term = CalculateLocalTerm(now);
-            if (term == null) { _panel.Children.Clear(); return; }
+            // 每次更新都用真实日期表重新计算，显示下一个节气还有几天
+            var nextTerm = CalculateNextTerm(now);
+            if (nextTerm == null) { _panel.Children.Clear(); return; }
 
-            var days = (term.NextDate.Date - now.Date).Days;
-            var color = _svc.GetTermColor(term.Name);
+            var days = (nextTerm.Date.Date - now.Date).Days;
+            var color = _svc.GetTermColor(nextTerm.Name);
 
             _panel.Children.Clear();
 
@@ -219,14 +253,14 @@ public class SolarTermComponent : ComponentBase
 
             if (showProgress && days <= 15 && days >= 0)
             {
-                var totalDays = Math.Max(1, (term.NextDate.Date - term.Date.Date).Days);
+                var totalDays = Math.Max(1, (nextTerm.Date.Date - nextTerm.PrevDate.Date).Days);
                 var progress = 1.0 - (double)days / totalDays;
                 _panel.Children.Add(CreateArcRing(days, progress, color));
             }
 
             var nameBlock = new TextBlock
             {
-                Text = term.Name,
+                Text = nextTerm.Name,
                 Foreground = new SolidColorBrush(color),
                 FontWeight = FontWeight.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
