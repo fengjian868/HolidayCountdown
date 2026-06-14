@@ -76,7 +76,7 @@ public class StudyTimeComponent : ComponentBase
 
             var totalMinutes = data[key];
             var icon = _svc.Settings.StudyTimeShowIcon ? "📚 " : "";
-            _txt.Text = $"{icon}今日学习 {FormatDuration(totalMinutes)}";
+            _txt.Text = $"{icon}今日已学习 {FormatDuration(totalMinutes)}";
         }
         catch { _txt.Text = ""; }
     }
