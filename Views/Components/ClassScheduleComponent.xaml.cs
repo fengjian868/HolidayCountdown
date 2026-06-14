@@ -85,7 +85,8 @@ public class ClassScheduleComponent : ComponentBase
                 case 3: // Breaking
                     {
                         var nextName = GetSubjectName(nextSubject);
-                        var leftTime = onBreakingTimeLeftTime as TimeSpan? ?? TimeSpan.Zero;
+                        // 课间状态时，ClassIsland 的 OnClassLeftTime 表示距离下节课开始的剩余时间
+                        var leftTime = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
                         var icon = _svc.Settings.ClassScheduleShowIcon ? "☕ " : "";
                         if (!string.IsNullOrEmpty(nextName) && nextName != "未安排")
                             result = $"{icon}课间 还有{FormatTime(leftTime)} → {nextName}";
