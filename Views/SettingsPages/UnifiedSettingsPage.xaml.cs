@@ -82,7 +82,12 @@ public class UnifiedSettingsPage : SettingsPageBase
         };
 
         _contentPanel = new StackPanel { Spacing = 0, Margin = new Thickness(20, 8, 20, 16) };
-        _scrollViewer = new ScrollViewer { Content = _contentPanel };
+        _scrollViewer = new ScrollViewer
+        {
+            Content = _contentPanel,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+        };
 
         root.Children.Add(tabBar);
         root.Children.Add(sep);
