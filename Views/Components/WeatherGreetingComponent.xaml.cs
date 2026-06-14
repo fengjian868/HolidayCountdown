@@ -277,18 +277,40 @@ public class WeatherGreetingComponent : ComponentBase
                 return ("", null, null, null, city, $"无Weather属性。相关属性: {string.Join(", ", props)}");
             }
 
+            // 列出 WeatherInfo 对象的所有属性名和值，用于诊断和自动匹配
+            var weatherProps = weatherObj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            var propDict = weatherProps.ToDictionary(p => p.Name, p => p.GetValue(weatherObj)?.ToString() ?? "null");
+
+            // 尝试多种可能的属性名读取天气文本
             var weatherText = GetPropertyValue(weatherObj, "WeatherText")?.ToString()
                 ?? GetPropertyValue(weatherObj, "Text")?.ToString()
+                ?? GetPropertyValue(weatherObj, "Weather")?.ToString()
+                ?? GetPropertyValue(weatherObj, "Description")?.ToString()
                 ?? "";
+
+            // 尝试多种可能的属性名读取温度
             var temp = GetPropertyValue(weatherObj, "Temperature") as double?
-                ?? (GetPropertyValue(weatherObj, "Temp") as double?);
+                ?? (GetPropertyValue(weatherObj, "Temp") as double?)
+                ?? (GetPropertyValue(weatherObj, "CurrentTemperature") as double?)
+                ?? (GetPropertyValue(weatherObj, "Temperature2m") as double?);
+
+            // 尝试多种可能的属性名读取预警
             var warning = GetPropertyValue(weatherObj, "WeatherWarning")?.ToString()
-                ?? GetPropertyValue(weatherObj, "Warning")?.ToString();
+                ?? GetPropertyValue(weatherObj, "Warning")?.ToString()
+                ?? GetPropertyValue(weatherObj, "WeatherWarnings")?.ToString()
+                ?? "";
+
+            // 尝试多种可能的属性名读取图标
             var icon = GetPropertyValue(weatherObj, "WeatherIcon")?.ToString()
-                ?? GetPropertyValue(weatherObj, "Icon")?.ToString();
+                ?? GetPropertyValue(weatherObj, "Icon")?.ToString()
+                ?? GetPropertyValue(weatherObj, "IconSource")?.ToString()
+                ?? "";
 
             if (string.IsNullOrEmpty(weatherText) && !temp.HasValue)
-                return ("", null, null, null, city, $"Weather对象存在但无数据。类型: {weatherObj.GetType().Name}");
+            {
+                var propsInfo = string.Join(", ", propDict.Select(kv => $"{kv.Key}={kv.Value}"));
+                return ("", null, null, null, city, $"Weather对象存在但无数据。类型: {weatherObj.GetType().Name}, 属性: {propsInfo}");
+            }
 
             return (weatherText, temp, warning, icon, city, null);
         }
