@@ -60,7 +60,7 @@ public class WeatherGreetingComponent : ComponentBase
 
         try
         {
-            var (weatherText, temp, warning, icon, city) = GetWeatherInfo();
+            var (weatherText, temp, warning, icon, city, diag) = GetWeatherInfo();
 
             // 如果ClassIsland没有天气数据，尝试调用网络API（传入ClassIsland设置的城市）
             if (string.IsNullOrEmpty(weatherText) || !temp.HasValue)
@@ -76,7 +76,7 @@ public class WeatherGreetingComponent : ComponentBase
             // 如果仍然没有天气数据，显示诊断信息
             if (string.IsNullOrEmpty(weatherText) && !temp.HasValue)
             {
-                _txt.Text = "🌤️ 天气加载中...";
+                _txt.Text = $"🌤️ {diag ?? "天气加载中..."}";
                 return;
             }
 
@@ -248,32 +248,50 @@ public class WeatherGreetingComponent : ComponentBase
         return item?.Text;
     }
 
-    (string weather, double? temp, string? warning, string? icon, string? city) GetWeatherInfo()
+    (string weather, double? temp, string? warning, string? icon, string? city, string? diag) GetWeatherInfo()
     {
         try
         {
             var settingsService = GetSettingsService();
-            if (settingsService == null) return ("", null, null, null, null);
+            if (settingsService == null) return ("", null, null, null, null, "无SettingsService");
 
             var settings = GetPropertyValue(settingsService, "Settings");
-            if (settings == null) return ("", null, null, null, null);
+            if (settings == null) return ("", null, null, null, null, "无Settings");
 
             // 尝试读取 ClassIsland 设置中的城市名
             var city = GetPropertyValue(settings, "WeatherCity")?.ToString()
                 ?? GetPropertyValue(settings, "City")?.ToString()
                 ?? "";
 
-            var weatherObj = GetPropertyValue(settings, "Weather");
-            if (weatherObj == null) return ("", null, null, null, city);
+            // 尝试多种可能的天气属性名
+            var weatherObj = GetPropertyValue(settings, "Weather")
+                ?? GetPropertyValue(settings, "CurrentWeather")
+                ?? GetPropertyValue(settings, "WeatherInfo");
+            if (weatherObj == null)
+            {
+                // 列出Settings所有属性名用于诊断
+                var props = settings.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Select(p => p.Name)
+                    .Where(n => n.Contains("Weather", StringComparison.OrdinalIgnoreCase) || n.Contains("City", StringComparison.OrdinalIgnoreCase));
+                return ("", null, null, null, city, $"无Weather属性。相关属性: {string.Join(", ", props)}");
+            }
 
-            var weatherText = GetPropertyValue(weatherObj, "WeatherText")?.ToString() ?? "";
-            var temp = GetPropertyValue(weatherObj, "Temperature") as double?;
-            var warning = GetPropertyValue(weatherObj, "WeatherWarning")?.ToString();
-            var icon = GetPropertyValue(weatherObj, "WeatherIcon")?.ToString();
+            var weatherText = GetPropertyValue(weatherObj, "WeatherText")?.ToString()
+                ?? GetPropertyValue(weatherObj, "Text")?.ToString()
+                ?? "";
+            var temp = GetPropertyValue(weatherObj, "Temperature") as double?
+                ?? (GetPropertyValue(weatherObj, "Temp") as double?);
+            var warning = GetPropertyValue(weatherObj, "WeatherWarning")?.ToString()
+                ?? GetPropertyValue(weatherObj, "Warning")?.ToString();
+            var icon = GetPropertyValue(weatherObj, "WeatherIcon")?.ToString()
+                ?? GetPropertyValue(weatherObj, "Icon")?.ToString();
 
-            return (weatherText, temp, warning, icon, city);
+            if (string.IsNullOrEmpty(weatherText) && !temp.HasValue)
+                return ("", null, null, null, city, $"Weather对象存在但无数据。类型: {weatherObj.GetType().Name}");
+
+            return (weatherText, temp, warning, icon, city, null);
         }
-        catch { return ("", null, null, null, null); }
+        catch (Exception ex) { return ("", null, null, null, null, $"异常: {ex.Message}"); }
     }
 
     object? GetSettingsService()
