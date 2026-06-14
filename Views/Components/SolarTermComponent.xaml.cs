@@ -10,6 +10,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
+using Path = System.IO.Path;
 using ClassIsland.Core.Attributes;
 using HolidayCountdown.Models;
 using HolidayCountdown.Services;
