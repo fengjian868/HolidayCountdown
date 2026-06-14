@@ -53,12 +53,12 @@ public class WeatherGreetingComponent : ComponentBase
 
         try
         {
-            var (weatherText, temp, warning, icon) = GetWeatherInfo();
+            var (weatherText, temp, warning, icon, city) = GetWeatherInfo();
 
-            // 如果ClassIsland没有天气数据，尝试调用网络API
+            // 如果ClassIsland没有天气数据，尝试调用网络API（传入ClassIsland设置的城市）
             if (string.IsNullOrEmpty(weatherText) || !temp.HasValue)
             {
-                var apiWeather = await GetWeatherFromApiAsync();
+                var apiWeather = await GetWeatherFromApiAsync(city);
                 if (!string.IsNullOrEmpty(apiWeather.weather))
                 {
                     weatherText = apiWeather.weather;
@@ -110,61 +110,100 @@ public class WeatherGreetingComponent : ComponentBase
         catch { _txt.Text = ""; }
     }
 
-    async Task<(string weather, double? temp)> GetWeatherFromApiAsync()
+    async Task<(string weather, double? temp)> GetWeatherFromApiAsync(string? cityName)
     {
         try
         {
-            // 使用 IP 定位获取城市，然后查询天气
             using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            double lat, lon;
+            string city;
 
-            // 1. 通过 IP 获取大致位置
+            // 如果 ClassIsland 有设置城市，使用城市名查询经纬度
+            if (!string.IsNullOrEmpty(cityName))
+            {
+                city = cityName;
+                // 使用 Open-Meteo Geocoding API 查询城市经纬度
+                var geoUrl = $"https://geocoding-api.open-meteo.com/v1/search?name={Uri.EscapeDataString(city)}&count=1&language=zh&format=json";
+                var geoJson = await client.GetStringAsync(geoUrl);
+                using var geoDoc = JsonDocument.Parse(geoJson);
+                if (geoDoc.RootElement.TryGetProperty("results", out var results) && results.GetArrayLength() > 0)
+                {
+                    var first = results[0];
+                    lat = first.GetProperty("latitude").GetDouble();
+                    lon = first.GetProperty("longitude").GetDouble();
+                }
+                else
+                {
+                    // 城市查询失败，回退到 IP 定位
+                    return await GetWeatherFromIpAsync();
+                }
+            }
+            else
+            {
+                // 没有城市设置，使用 IP 定位
+                return await GetWeatherFromIpAsync();
+            }
+
+            // 使用 Open-Meteo 获取天气
+            return await QueryOpenMeteoAsync(client, lat, lon, city);
+        }
+        catch { return ("", null); }
+    }
+
+    async Task<(string weather, double? temp)> GetWeatherFromIpAsync()
+    {
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
             var ipInfo = await client.GetStringAsync("https://ipapi.co/json/");
             using var ipDoc = JsonDocument.Parse(ipInfo);
             var lat = ipDoc.RootElement.GetProperty("latitude").GetDouble();
             var lon = ipDoc.RootElement.GetProperty("longitude").GetDouble();
             var city = ipDoc.RootElement.TryGetProperty("city", out var c) ? c.GetString() : "";
-
-            // 2. 使用 Open-Meteo 获取天气（免费，无需 API Key）
-            var weatherUrl = $"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code&timezone=auto";
-            var weatherJson = await client.GetStringAsync(weatherUrl);
-            using var wDoc = JsonDocument.Parse(weatherJson);
-            var current = wDoc.RootElement.GetProperty("current");
-            var temperature = current.GetProperty("temperature_2m").GetDouble();
-            var weatherCode = current.GetProperty("weather_code").GetInt32();
-
-            // WMO Weather interpretation codes
-            var weatherText = weatherCode switch
-            {
-                0 => "晴",
-                1 or 2 or 3 => "多云",
-                45 or 48 => "雾",
-                51 or 53 or 55 => "小雨",
-                56 or 57 => "冻雨",
-                61 or 63 or 65 => "雨",
-                66 or 67 => "雨夹雪",
-                71 or 73 or 75 => "雪",
-                77 => "小雪",
-                80 or 81 or 82 => "阵雨",
-                85 or 86 => "阵雪",
-                95 => "雷雨",
-                96 or 99 => "雷暴",
-                _ => "多云"
-            };
-
-            // 缓存位置信息
-            try
-            {
-                var cachePath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "ClassIsland", "Plugins", "HolidayCountdown", "weather_location.json");
-                var cache = new { Lat = lat, Lon = lon, City = city, Date = DateTime.Now.Date };
-                File.WriteAllText(cachePath, JsonSerializer.Serialize(cache));
-            }
-            catch { }
-
-            return (weatherText, temperature);
+            return await QueryOpenMeteoAsync(client, lat, lon, city);
         }
         catch { return ("", null); }
+    }
+
+    async Task<(string weather, double? temp)> QueryOpenMeteoAsync(HttpClient client, double lat, double lon, string city)
+    {
+        var weatherUrl = $"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code&timezone=auto";
+        var weatherJson = await client.GetStringAsync(weatherUrl);
+        using var wDoc = JsonDocument.Parse(weatherJson);
+        var current = wDoc.RootElement.GetProperty("current");
+        var temperature = current.GetProperty("temperature_2m").GetDouble();
+        var weatherCode = current.GetProperty("weather_code").GetInt32();
+
+        var weatherText = weatherCode switch
+        {
+            0 => "晴",
+            1 or 2 or 3 => "多云",
+            45 or 48 => "雾",
+            51 or 53 or 55 => "小雨",
+            56 or 57 => "冻雨",
+            61 or 63 or 65 => "雨",
+            66 or 67 => "雨夹雪",
+            71 or 73 or 75 => "雪",
+            77 => "小雪",
+            80 or 81 or 82 => "阵雨",
+            85 or 86 => "阵雪",
+            95 => "雷雨",
+            96 or 99 => "雷暴",
+            _ => "多云"
+        };
+
+        // 缓存位置信息
+        try
+        {
+            var cachePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ClassIsland", "Plugins", "HolidayCountdown", "weather_location.json");
+            var cache = new { Lat = lat, Lon = lon, City = city, Date = DateTime.Now.Date };
+            File.WriteAllText(cachePath, JsonSerializer.Serialize(cache));
+        }
+        catch { }
+
+        return (weatherText, temperature);
     }
 
     string GetWeatherGreeting(string weatherText)
@@ -202,27 +241,32 @@ public class WeatherGreetingComponent : ComponentBase
         return item?.Text;
     }
 
-    (string weather, double? temp, string? warning, string? icon) GetWeatherInfo()
+    (string weather, double? temp, string? warning, string? icon, string? city) GetWeatherInfo()
     {
         try
         {
             var settingsService = GetSettingsService();
-            if (settingsService == null) return ("", null, null, null);
+            if (settingsService == null) return ("", null, null, null, null);
 
             var settings = GetPropertyValue(settingsService, "Settings");
-            if (settings == null) return ("", null, null, null);
+            if (settings == null) return ("", null, null, null, null);
+
+            // 尝试读取 ClassIsland 设置中的城市名
+            var city = GetPropertyValue(settings, "WeatherCity")?.ToString()
+                ?? GetPropertyValue(settings, "City")?.ToString()
+                ?? "";
 
             var weatherObj = GetPropertyValue(settings, "Weather");
-            if (weatherObj == null) return ("", null, null, null);
+            if (weatherObj == null) return ("", null, null, null, city);
 
             var weatherText = GetPropertyValue(weatherObj, "WeatherText")?.ToString() ?? "";
             var temp = GetPropertyValue(weatherObj, "Temperature") as double?;
             var warning = GetPropertyValue(weatherObj, "WeatherWarning")?.ToString();
             var icon = GetPropertyValue(weatherObj, "WeatherIcon")?.ToString();
 
-            return (weatherText, temp, warning, icon);
+            return (weatherText, temp, warning, icon, city);
         }
-        catch { return ("", null, null, null); }
+        catch { return ("", null, null, null, null); }
     }
 
     object? GetSettingsService()
