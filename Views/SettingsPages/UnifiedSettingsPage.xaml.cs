@@ -1009,7 +1009,16 @@ public class UnifiedSettingsPage : SettingsPageBase
 
     static NumericUpDown Number(int value, int min, int max, Action<int> onChanged)
     {
-        var n = new NumericUpDown { Minimum = min, Maximum = max, Value = value, Width = 80 };
+        var n = new NumericUpDown
+        {
+            Minimum = min,
+            Maximum = max,
+            Value = value,
+            Width = 80,
+            FormatString = "0",
+            Increment = 1,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
+        };
         n.ValueChanged += (s, e) => onChanged((int)(n.Value ?? 0));
         return n;
     }
