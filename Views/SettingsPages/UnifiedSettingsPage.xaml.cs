@@ -721,7 +721,11 @@ public class UnifiedSettingsPage : SettingsPageBase
                     else maxBox.Text = item.MaxTemp == 999 ? "" : item.MaxTemp.ToString();
                 };
 
-                var tagBox = Text(item.Tag, 60, v => item.Tag = v);
+                var tags = new[] { "极寒", "寒冷", "偏冷", "凉", "微凉", "舒适", "偏热", "炎热", "极热" };
+                var tagCombo = new ComboBox { Width = 70 };
+                foreach (var t in tags) tagCombo.Items.Add(t);
+                tagCombo.SelectedItem = tags.Contains(item.Tag) ? item.Tag : "舒适";
+                tagCombo.SelectionChanged += (a, b) => item.Tag = tagCombo.SelectedItem?.ToString() ?? "舒适";
                 var textBox = Text(item.Text, 160, v => item.Text = v);
                 var refreshBtn = new Button { Content = "刷新", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FF2196F3")) };
                 refreshBtn.Click += (a, e) =>
@@ -739,7 +743,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 row.Children.Add(new TextBlock { Text = "~", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 row.Children.Add(maxBox);
                 row.Children.Add(new TextBlock { Text = "°C", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
-                row.Children.Add(tagBox);
+                row.Children.Add(tagCombo);
                 row.Children.Add(textBox);
                 row.Children.Add(refreshBtn);
                 row.Children.Add(delBtn);
@@ -798,7 +802,12 @@ public class UnifiedSettingsPage : SettingsPageBase
                         kv.Keyword = newKey;
                     }
                 };
-                var textBox = Text(kv.Text, 220, v => kv.Text = v);
+                var weatherTags = new[] { "雨天", "寒冷", "高温", "舒适", "恶劣天气", "大风", "雷电", "默认" };
+                var tagCombo = new ComboBox { Width = 70 };
+                foreach (var t in weatherTags) tagCombo.Items.Add(t);
+                tagCombo.SelectedItem = weatherTags.Contains(kv.Tag) ? kv.Tag : "默认";
+                tagCombo.SelectionChanged += (a, b) => kv.Tag = tagCombo.SelectedItem?.ToString() ?? "默认";
+                var textBox = Text(kv.Text, 160, v => kv.Text = v);
                 var refreshBtn = new Button { Content = "刷新", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FF2196F3")) };
                 refreshBtn.Click += (a, e) =>
                 {
@@ -811,6 +820,8 @@ public class UnifiedSettingsPage : SettingsPageBase
 
                 row.Children.Add(new TextBlock { Text = "关键词", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 row.Children.Add(keyBox);
+                row.Children.Add(new TextBlock { Text = "标签", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(tagCombo);
                 row.Children.Add(new TextBlock { Text = "文案", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 row.Children.Add(textBox);
                 row.Children.Add(refreshBtn);
