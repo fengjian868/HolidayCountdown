@@ -313,8 +313,15 @@ public class UnifiedSettingsPage : SettingsPageBase
                 {
                     if (TimeSpan.TryParse(v, out var ts)) { slot.EndHour = ts.Hours; slot.EndMinute = ts.Minutes; }
                 });
-                var textBox = Text(slot.Text, 180, v => slot.Text = v);
-                var delBtn = new Button { Content = "🗑️", Padding = new Thickness(4, 2) };
+                var textBox = Text(slot.Text, 160, v => slot.Text = v);
+                var refreshBtn = new Button { Content = "刷新", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FF2196F3")) };
+                refreshBtn.Click += (a, e) =>
+                {
+                    var tag = GetTimeSlotTag(slot.StartHour);
+                    slot.Text = LocalGreetingDB.GetDaily(tag, LocalGreetingDB.TimeSlotGreetings);
+                    RefreshList();
+                };
+                var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
                 delBtn.Click += (a, e) => { _svc.Settings.TimeSlotGreetings.Remove(slot); RefreshList(); };
 
                 row.Children.Add(new TextBlock { Text = "从", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
@@ -322,6 +329,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 row.Children.Add(new TextBlock { Text = "到", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 row.Children.Add(endBox);
                 row.Children.Add(textBox);
+                row.Children.Add(refreshBtn);
                 row.Children.Add(delBtn);
                 listPanel.Children.Add(row);
                 if (i < slots.Count - 1)
@@ -343,6 +351,19 @@ public class UnifiedSettingsPage : SettingsPageBase
         panel.Children.Add(Info("留空的时段会自动使用本地数据库按标签（早晨/上午/中午/下午/傍晚/晚上）每天刷新一条问候语"));
 
         return panel;
+    }
+
+    static string GetTimeSlotTag(int hour)
+    {
+        return hour switch
+        {
+            >= 5 and < 8 => "早晨",
+            >= 8 and < 12 => "上午",
+            >= 12 and < 14 => "中午",
+            >= 14 and < 17 => "下午",
+            >= 17 and < 19 => "傍晚",
+            _ => "晚上"
+        };
     }
 
     StackPanel BuildSpecialDatePanel()
@@ -368,12 +389,20 @@ public class UnifiedSettingsPage : SettingsPageBase
                 dayCombo.SelectionChanged += (a, b) => item.DayOfWeek = dayCombo.SelectedIndex + 1;
                 var enabledChk = new CheckBox { Content = "启用", IsChecked = item.Enabled };
                 enabledChk.IsCheckedChanged += (a, b) => item.Enabled = enabledChk.IsChecked == true;
-                var delBtn = new Button { Content = "🗑️", Padding = new Thickness(4, 2) };
+                var refreshBtn = new Button { Content = "刷新", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FF2196F3")) };
+                refreshBtn.Click += (a, e) =>
+                {
+                    var tag = item.DayOfWeek == 6 || item.DayOfWeek == 7 ? "周末" : $"周{new[] { "一", "二", "三", "四", "五", "六", "日" }[item.DayOfWeek - 1]}";
+                    item.Text = LocalGreetingDB.GetDaily(tag, LocalGreetingDB.WeeklyReminders);
+                    RefreshList();
+                };
+                var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
                 delBtn.Click += (a, e) => { _svc.Settings.SpecialDateGreetings.Remove(item); RefreshList(); };
 
                 headerRow.Children.Add(nameBox);
                 headerRow.Children.Add(dayCombo);
                 headerRow.Children.Add(enabledChk);
+                headerRow.Children.Add(refreshBtn);
                 headerRow.Children.Add(delBtn);
                 row.Children.Add(headerRow);
 
@@ -692,7 +721,14 @@ public class UnifiedSettingsPage : SettingsPageBase
 
                 var tagBox = Text(item.Tag, 60, v => item.Tag = v);
                 var textBox = Text(item.Text, 160, v => item.Text = v);
-                var delBtn = new Button { Content = "🗑️", Padding = new Thickness(4, 2) };
+                var refreshBtn = new Button { Content = "刷新", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FF2196F3")) };
+                refreshBtn.Click += (a, e) =>
+                {
+                    var tag = string.IsNullOrEmpty(item.Tag) ? "舒适" : item.Tag;
+                    item.Text = LocalGreetingDB.GetDaily(tag, new Dictionary<string, List<string>> { [tag] = new() { item.Text } });
+                    RefreshList();
+                };
+                var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
                 delBtn.Click += (a, e) => { _svc.Settings.TempGreetings.Remove(item); RefreshList(); };
 
                 row.Children.Add(new TextBlock { Text = "≥", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
@@ -703,6 +739,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 row.Children.Add(new TextBlock { Text = "°C", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 row.Children.Add(tagBox);
                 row.Children.Add(textBox);
+                row.Children.Add(refreshBtn);
                 row.Children.Add(delBtn);
                 listPanel.Children.Add(row);
                 if (i < items.Count - 1)
@@ -760,13 +797,21 @@ public class UnifiedSettingsPage : SettingsPageBase
                     }
                 };
                 var textBox = Text(kv.Text, 220, v => kv.Text = v);
-                var delBtn = new Button { Content = "🗑️", Padding = new Thickness(4, 2), IsVisible = kv.Keyword != "默认" };
+                var refreshBtn = new Button { Content = "刷新", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FF2196F3")) };
+                refreshBtn.Click += (a, e) =>
+                {
+                    var tag = string.IsNullOrEmpty(kv.Tag) ? "默认" : kv.Tag;
+                    kv.Text = LocalGreetingDB.GetDaily(tag, new Dictionary<string, List<string>> { [tag] = new() { kv.Text } });
+                    RefreshList();
+                };
+                var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")), IsVisible = kv.Keyword != "默认" };
                 delBtn.Click += (a, e) => { _svc.Settings.WeatherGreetingItems.Remove(kv); RefreshList(); };
 
                 row.Children.Add(new TextBlock { Text = "关键词", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 row.Children.Add(keyBox);
                 row.Children.Add(new TextBlock { Text = "文案", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 row.Children.Add(textBox);
+                row.Children.Add(refreshBtn);
                 row.Children.Add(delBtn);
                 listPanel.Children.Add(row);
                 if (i < items.Count - 1)
