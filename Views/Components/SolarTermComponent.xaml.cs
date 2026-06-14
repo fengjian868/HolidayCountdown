@@ -17,7 +17,7 @@ namespace HolidayCountdown.Views.Components;
     "C3D4E5F6-A7B8-9012-CDEF-123456789012",
     "24节气倒计时",
     "\uE9CA",
-    "显示距离下一个24节气的剩余天数，可选弧形进度环，有网络时自动刷新"
+    "显示距离下一个24节气的剩余天数，带弧形进度环，有网络时自动刷新"
 )]
 public class SolarTermComponent : ComponentBase
 {
@@ -47,19 +47,16 @@ public class SolarTermComponent : ComponentBase
         var days = (int)(next.Date - DateTime.Now.Date).TotalDays;
         var color = _svc?.GetTermColor(next.Name) ?? Color.Parse("#2196F3");
 
-        // 弧形进度环（可开关）
-        if (_svc?.Settings.SolarTermShowProgressRing != false)
-        {
-            var size = 32.0;
-            var grid = new Grid { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
-            grid.Children.Add(new Arc { Width = size, Height = size, StartAngle = -90, SweepAngle = 360, Stroke = new SolidColorBrush(Color.Parse("#20FFFFFF")), StrokeThickness = 2.5, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center });
-            double p = 0;
-            if (prev != null) { var t = (next.Date - prev.Date).TotalDays; var pass = (DateTime.Now - prev.Date).TotalDays; p = Math.Max(0, Math.Min(1, pass / t)); }
-            else p = Math.Max(0, Math.Min(1, 1 - days / 15.0));
-            grid.Children.Add(new Arc { Width = size, Height = size, StartAngle = -90, SweepAngle = p * 360, Stroke = new SolidColorBrush(color), StrokeThickness = 2.5, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center });
-            grid.Children.Add(new TextBlock { Text = next.Date.Day.ToString(), FontSize = 9, FontWeight = FontWeight.Bold, Foreground = new SolidColorBrush(color), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center });
-            _main.Children.Add(grid);
-        }
+        // 弧形进度
+        var size = 32.0;
+        var grid = new Grid { Width = size, Height = size, VerticalAlignment = VerticalAlignment.Center };
+        grid.Children.Add(new Arc { Width = size, Height = size, StartAngle = -90, SweepAngle = 360, Stroke = new SolidColorBrush(Color.Parse("#20FFFFFF")), StrokeThickness = 2.5, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center });
+        double p = 0;
+        if (prev != null) { var t = (next.Date - prev.Date).TotalDays; var pass = (DateTime.Now - prev.Date).TotalDays; p = Math.Max(0, Math.Min(1, pass / t)); }
+        else p = Math.Max(0, Math.Min(1, 1 - days / 15.0));
+        grid.Children.Add(new Arc { Width = size, Height = size, StartAngle = -90, SweepAngle = p * 360, Stroke = new SolidColorBrush(color), StrokeThickness = 2.5, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center });
+        grid.Children.Add(new TextBlock { Text = next.Date.Day.ToString(), FontSize = 9, FontWeight = FontWeight.Bold, Foreground = new SolidColorBrush(color), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center });
+        _main.Children.Add(grid);
 
         _main.Children.Add(new TextBlock { Text = "🌿", FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
         _main.Children.Add(new TextBlock { Text = next.Name, FontWeight = FontWeight.SemiBold, Foreground = new SolidColorBrush(color), VerticalAlignment = VerticalAlignment.Center });
