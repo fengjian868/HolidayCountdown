@@ -201,9 +201,6 @@ public class UnifiedSettingsPage : SettingsPageBase
         var togglePanel = new StackPanel { Spacing = 0 };
         togglePanel.Children.Add(SettingItem("启用问候语", null,
             Toggle(_svc.Settings.ShowGreeting, v => _svc.Settings.ShowGreeting = v)));
-        togglePanel.Children.Add(Separator());
-        togglePanel.Children.Add(SettingItem("合并到节假日组件", "问候语显示在节假日下方",
-            Toggle(_svc.Settings.MergeGreeting, v => _svc.Settings.MergeGreeting = v)));
         s.Children.Add(Expander("开关", "问候语基础设置", togglePanel));
 
         var weeklyPanel = new StackPanel { Spacing = 0 };
