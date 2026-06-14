@@ -85,12 +85,13 @@ public class SolarTermComponent : ComponentBase
                 var term = GetStr(dp, "Term");
                 if (!string.IsNullOrEmpty(term))
                 {
+                    var localTerm = CalculateLocalTerm(now);
                     _currentTerm = new SolarTermInfo
                     {
                         Name = term,
-                        Date = now,
-                        NextDate = now.AddDays(15),
-                        NextName = GetNextTermName(term)
+                        Date = localTerm?.Date ?? now,
+                        NextDate = localTerm?.NextDate ?? now.AddDays(15),
+                        NextName = localTerm?.NextName ?? GetNextTermName(term)
                     };
                     try { File.WriteAllText(cachePath, JsonSerializer.Serialize(_currentTerm)); }
                     catch { }
@@ -104,37 +105,98 @@ public class SolarTermComponent : ComponentBase
         _currentTerm = CalculateLocalTerm(now);
     }
 
+    // 2024-2026年24节气真实日期表（CET+8）
+    static readonly Dictionary<int, (string name, DateTime date)[]> TermDates = new()
+    {
+        [2024] = new[]
+        {
+            ("小寒", new DateTime(2024, 1, 6)), ("大寒", new DateTime(2024, 1, 20)),
+            ("立春", new DateTime(2024, 2, 4)), ("雨水", new DateTime(2024, 2, 19)),
+            ("惊蛰", new DateTime(2024, 3, 5)), ("春分", new DateTime(2024, 3, 20)),
+            ("清明", new DateTime(2024, 4, 4)), ("谷雨", new DateTime(2024, 4, 19)),
+            ("立夏", new DateTime(2024, 5, 5)), ("小满", new DateTime(2024, 5, 20)),
+            ("芒种", new DateTime(2024, 6, 5)), ("夏至", new DateTime(2024, 6, 21)),
+            ("小暑", new DateTime(2024, 7, 6)), ("大暑", new DateTime(2024, 7, 22)),
+            ("立秋", new DateTime(2024, 8, 7)), ("处暑", new DateTime(2024, 8, 22)),
+            ("白露", new DateTime(2024, 9, 7)), ("秋分", new DateTime(2024, 9, 22)),
+            ("寒露", new DateTime(2024, 10, 8)), ("霜降", new DateTime(2024, 10, 23)),
+            ("立冬", new DateTime(2024, 11, 7)), ("小雪", new DateTime(2024, 11, 22)),
+            ("大雪", new DateTime(2024, 12, 6)), ("冬至", new DateTime(2024, 12, 21))
+        },
+        [2025] = new[]
+        {
+            ("小寒", new DateTime(2025, 1, 5)), ("大寒", new DateTime(2025, 1, 20)),
+            ("立春", new DateTime(2025, 2, 3)), ("雨水", new DateTime(2025, 2, 18)),
+            ("惊蛰", new DateTime(2025, 3, 5)), ("春分", new DateTime(2025, 3, 20)),
+            ("清明", new DateTime(2025, 4, 4)), ("谷雨", new DateTime(2025, 4, 20)),
+            ("立夏", new DateTime(2025, 5, 5)), ("小满", new DateTime(2025, 5, 21)),
+            ("芒种", new DateTime(2025, 6, 5)), ("夏至", new DateTime(2025, 6, 21)),
+            ("小暑", new DateTime(2025, 7, 7)), ("大暑", new DateTime(2025, 7, 22)),
+            ("立秋", new DateTime(2025, 8, 7)), ("处暑", new DateTime(2025, 8, 23)),
+            ("白露", new DateTime(2025, 9, 7)), ("秋分", new DateTime(2025, 9, 23)),
+            ("寒露", new DateTime(2025, 10, 8)), ("霜降", new DateTime(2025, 10, 23)),
+            ("立冬", new DateTime(2025, 11, 7)), ("小雪", new DateTime(2025, 11, 22)),
+            ("大雪", new DateTime(2025, 12, 7)), ("冬至", new DateTime(2025, 12, 21))
+        },
+        [2026] = new[]
+        {
+            ("小寒", new DateTime(2026, 1, 5)), ("大寒", new DateTime(2026, 1, 20)),
+            ("立春", new DateTime(2026, 2, 4)), ("雨水", new DateTime(2026, 2, 18)),
+            ("惊蛰", new DateTime(2026, 3, 5)), ("春分", new DateTime(2026, 3, 20)),
+            ("清明", new DateTime(2026, 4, 5)), ("谷雨", new DateTime(2026, 4, 20)),
+            ("立夏", new DateTime(2026, 5, 5)), ("小满", new DateTime(2026, 5, 21)),
+            ("芒种", new DateTime(2026, 6, 5)), ("夏至", new DateTime(2026, 6, 21)),
+            ("小暑", new DateTime(2026, 7, 7)), ("大暑", new DateTime(2026, 7, 23)),
+            ("立秋", new DateTime(2026, 8, 7)), ("处暑", new DateTime(2026, 8, 23)),
+            ("白露", new DateTime(2026, 9, 7)), ("秋分", new DateTime(2026, 9, 23)),
+            ("寒露", new DateTime(2026, 10, 8)), ("霜降", new DateTime(2026, 10, 23)),
+            ("立冬", new DateTime(2026, 11, 7)), ("小雪", new DateTime(2026, 11, 22)),
+            ("大雪", new DateTime(2026, 12, 7)), ("冬至", new DateTime(2026, 12, 22))
+        }
+    };
+
     SolarTermInfo? CalculateLocalTerm(DateTime date)
     {
-        var terms = new[] { "小寒", "大寒", "立春", "雨水", "惊蛰", "春分", "清明", "谷雨", "立夏", "小满", "芒种", "夏至", "小暑", "大暑", "立秋", "处暑", "白露", "秋分", "寒露", "霜降", "立冬", "小雪", "大雪", "冬至" };
         var year = date.Year;
-        var baseDate = new DateTime(year, 1, 6); // 小寒约1月6日
-        var dayOfYear = (date - new DateTime(year, 1, 1)).TotalDays;
+        if (!TermDates.TryGetValue(year, out var terms))
+        {
+            // 如果年份不在表中，使用2026年的数据推算（节气日期每年变化很小）
+            terms = TermDates[2026];
+        }
 
         for (int i = 0; i < terms.Length; i++)
         {
-            var termDate = baseDate.AddDays(i * 15.2);
-            var nextTermDate = baseDate.AddDays((i + 1) * 15.2);
-            if (dayOfYear >= (termDate - new DateTime(year, 1, 1)).TotalDays && dayOfYear < (nextTermDate - new DateTime(year, 1, 1)).TotalDays)
+            var (name, termDate) = terms[i];
+            var nextTerm = terms[(i + 1) % terms.Length];
+            var nextDate = i < terms.Length - 1 ? nextTerm.date : new DateTime(year + 1, 1, 5);
+
+            if (date.Date >= termDate.Date && date.Date < nextDate.Date)
             {
                 return new SolarTermInfo
                 {
-                    Name = terms[i],
+                    Name = name,
                     Date = termDate,
-                    NextDate = nextTermDate,
-                    NextName = terms[(i + 1) % terms.Length]
+                    NextDate = nextDate,
+                    NextName = nextTerm.name
                 };
             }
         }
 
-        // 如果在一年的末尾，返回冬至
-        return new SolarTermInfo
+        // 如果在年初小寒之前
+        if (date.Date < terms[0].date.Date)
         {
-            Name = "冬至",
-            Date = baseDate.AddDays(23 * 15.2),
-            NextDate = new DateTime(year + 1, 1, 6),
-            NextName = "小寒"
-        };
+            var prevYearTerms = TermDates.TryGetValue(year - 1, out var pt) ? pt : TermDates[2026];
+            var lastTerm = prevYearTerms[^1];
+            return new SolarTermInfo
+            {
+                Name = lastTerm.name,
+                Date = lastTerm.date,
+                NextDate = terms[0].date,
+                NextName = terms[0].name
+            };
+        }
+
+        return null;
     }
 
     void Update()
