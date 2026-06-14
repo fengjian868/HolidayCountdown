@@ -17,9 +17,9 @@ namespace HolidayCountdown.Views.Components;
 
 [ComponentInfo(
     "E5F6A7B8-C9D0-1234-EF01-234567890ABC",
-    "学习时长统计",
+    "学习时长统计 [测试版]",
     "\uE917",
-    "记录ClassIsland运行时长，显示今日学习时长"
+    "记录ClassIsland运行时长，显示今日学习时长（测试版，不稳定）"
 )]
 public class StudyTimeComponent : ComponentBase
 {

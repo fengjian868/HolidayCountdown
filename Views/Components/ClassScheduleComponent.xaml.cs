@@ -15,9 +15,9 @@ namespace HolidayCountdown.Views.Components;
 
 [ComponentInfo(
     "D4E5F6A7-B8C9-0123-DEF0-1234567890AB",
-    "课程表联动",
+    "课程表联动 [测试版]",
     "\uE8F1",
-    "读取ClassIsland课程表，显示当前课程/下节课信息或课间倒计时"
+    "读取ClassIsland课程表，显示当前课程/下节课信息或课间倒计时（测试版，不稳定）"
 )]
 public class ClassScheduleComponent : ComponentBase
 {
