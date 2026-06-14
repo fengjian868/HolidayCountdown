@@ -690,7 +690,8 @@ public class UnifiedSettingsPage : SettingsPageBase
                     else maxBox.Text = item.MaxTemp == 999 ? "" : item.MaxTemp.ToString();
                 };
 
-                var textBox = Text(item.Text, 200, v => item.Text = v);
+                var tagBox = Text(item.Tag, 60, v => item.Tag = v);
+                var textBox = Text(item.Text, 160, v => item.Text = v);
                 var delBtn = new Button { Content = "🗑️", Padding = new Thickness(4, 2) };
                 delBtn.Click += (a, e) => { _svc.Settings.TempGreetings.Remove(item); RefreshList(); };
 
@@ -700,6 +701,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 row.Children.Add(new TextBlock { Text = "~", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 row.Children.Add(maxBox);
                 row.Children.Add(new TextBlock { Text = "°C", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(tagBox);
                 row.Children.Add(textBox);
                 row.Children.Add(delBtn);
                 listPanel.Children.Add(row);
@@ -711,23 +713,25 @@ public class UnifiedSettingsPage : SettingsPageBase
         RefreshList();
         panel.Children.Add(listPanel);
 
-        var addBtn = new Button { Content = "+ 添加温度区间", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 4, 16, 8) };
+        var btnRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(16, 4, 16, 8) };
+        var addBtn = new Button { Content = "+ 添加温度区间", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
         addBtn.Click += (a, e) =>
         {
-            _svc.Settings.TempGreetings.Add(new Models.TempGreeting { MinTemp = 0, MaxTemp = 999, Text = "" });
+            _svc.Settings.TempGreetings.Add(new Models.TempGreeting { MinTemp = 0, MaxTemp = 999, Text = "", Tag = "" });
             RefreshList();
         };
-        panel.Children.Add(addBtn);
+        btnRow.Children.Add(addBtn);
 
-        var resetBtn = new Button { Content = "恢复默认", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 0, 16, 8) };
+        var resetBtn = new Button { Content = "🔄 恢复默认", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
         resetBtn.Click += (a, e) =>
         {
             _svc.Settings.TempGreetings.Clear();
             foreach (var g in Models.LocalGreetingDB.DefaultTempGreetings)
-                _svc.Settings.TempGreetings.Add(new Models.TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text });
+                _svc.Settings.TempGreetings.Add(new Models.TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text, Tag = g.Tag });
             RefreshList();
         };
-        panel.Children.Add(resetBtn);
+        btnRow.Children.Add(resetBtn);
+        panel.Children.Add(btnRow);
 
         return panel;
     }

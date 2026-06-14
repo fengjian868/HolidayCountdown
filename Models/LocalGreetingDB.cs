@@ -537,15 +537,15 @@ public static class LocalGreetingDB
     /// </summary>
     public static readonly List<TempGreeting> DefaultTempGreetings = new()
     {
-        new TempGreeting { MinTemp = -999, MaxTemp = 0, Text = "严寒，多穿点别冻着 🧊" },
-        new TempGreeting { MinTemp = 0, MaxTemp = 5, Text = "很冷，注意保暖 🥶" },
-        new TempGreeting { MinTemp = 5, MaxTemp = 10, Text = "冷，穿羽绒服或棉衣 ❄️" },
-        new TempGreeting { MinTemp = 10, MaxTemp = 15, Text = "较冷，穿厚外套 🧥" },
-        new TempGreeting { MinTemp = 15, MaxTemp = 20, Text = "微凉，建议穿外套 🧣" },
-        new TempGreeting { MinTemp = 20, MaxTemp = 25, Text = "舒适，薄长袖或短袖 🌿" },
-        new TempGreeting { MinTemp = 25, MaxTemp = 30, Text = "较热，短袖即可 👕" },
-        new TempGreeting { MinTemp = 30, MaxTemp = 35, Text = "很热，穿短袖注意防晒 ☀️" },
-        new TempGreeting { MinTemp = 35, MaxTemp = 999, Text = "高温预警，注意防暑 🌡️" }
+        new TempGreeting { MinTemp = -999, MaxTemp = 0, Text = "严寒，多穿点别冻着 🧊", Tag = "极寒" },
+        new TempGreeting { MinTemp = 0, MaxTemp = 5, Text = "很冷，注意保暖 🥶", Tag = "寒冷" },
+        new TempGreeting { MinTemp = 5, MaxTemp = 10, Text = "冷，穿羽绒服或棉衣 ❄️", Tag = "偏冷" },
+        new TempGreeting { MinTemp = 10, MaxTemp = 15, Text = "较冷，穿厚外套 🧥", Tag = "凉" },
+        new TempGreeting { MinTemp = 15, MaxTemp = 20, Text = "微凉，建议穿外套 🧣", Tag = "微凉" },
+        new TempGreeting { MinTemp = 20, MaxTemp = 25, Text = "舒适，薄长袖或短袖 🌿", Tag = "舒适" },
+        new TempGreeting { MinTemp = 25, MaxTemp = 30, Text = "较热，短袖即可 👕", Tag = "偏热" },
+        new TempGreeting { MinTemp = 30, MaxTemp = 35, Text = "很热，穿短袖注意防晒 ☀️", Tag = "炎热" },
+        new TempGreeting { MinTemp = 35, MaxTemp = 999, Text = "高温预警，注意防暑 🌡️", Tag = "极热" }
     };
 }
 
@@ -554,4 +554,5 @@ public class TempGreeting
     public int MinTemp { get; set; }
     public int MaxTemp { get; set; }
     public string Text { get; set; } = "";
+    public string Tag { get; set; } = "";
 }
