@@ -47,9 +47,16 @@ public class WeatherGreetingComponent : ComponentBase
         Dispatcher.UIThread.Post(Update);
     }
 
-    async void Update()
+    void Update()
     {
         if (_svc == null || !_svc.Settings.WeatherGreetingEnabled) { _txt.Text = ""; return; }
+
+        _ = UpdateAsync();
+    }
+
+    async Task UpdateAsync()
+    {
+        if (_svc == null) return;
 
         try
         {
@@ -66,10 +73,10 @@ public class WeatherGreetingComponent : ComponentBase
                 }
             }
 
-            // 如果仍然没有天气数据，显示温度提醒或默认提示
+            // 如果仍然没有天气数据，显示诊断信息
             if (string.IsNullOrEmpty(weatherText) && !temp.HasValue)
             {
-                _txt.Text = "";
+                _txt.Text = "🌤️ 天气加载中...";
                 return;
             }
 
