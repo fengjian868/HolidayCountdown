@@ -6,7 +6,7 @@ namespace HolidayCountdown.Models;
 public class PluginSettings
 {
     // 全局
-    public int Version { get; set; } = 122;
+    public int Version { get; set; } = 123;
 
     // 节假日组件
     public int DisplayCount { get; set; } = 3;
@@ -25,7 +25,6 @@ public class PluginSettings
 
     // 问候语
     public bool ShowGreeting { get; set; } = true;
-    public bool GreetingOnline { get; set; } = true;
     public DateTime? LastGreetingRefreshDate { get; set; }
     public List<TimeSlotGreeting> TimeSlotGreetings { get; set; } = new();
     public List<SpecialDateGreeting> SpecialDateGreetings { get; set; } = new();
@@ -37,6 +36,12 @@ public class PluginSettings
     public string AfterSchoolEndText { get; set; } = "run！";
     public bool ShowSundayEveningStudy { get; set; } = true;
     public string SundayEveningStudyText { get; set; } = "今晚有晚修，记得按时到教室！";
+
+    // 每周提醒
+    public bool WeeklyReminderEnabled { get; set; } = true;
+    public int WeeklyReminderDay { get; set; } = 1; // 1=周一, 7=周日
+    public int WeeklyReminderStartHour { get; set; } = 0;
+    public int WeeklyReminderEndHour { get; set; } = 23;
 
     // 农历
     public bool ShowLunarDate { get; set; } = true;
@@ -59,9 +64,16 @@ public class PluginSettings
     // 节气颜色
     public Dictionary<string, string> TermColors { get; set; } = new();
 
+    // 24节气
+    public bool SolarTermShowProgressRing { get; set; } = true;
+
     // 天气问候
     public bool WeatherGreetingEnabled { get; set; } = true;
     public bool WeatherWarningOverride { get; set; } = true;
+    public string? WeatherTemplate { get; set; } = "{greeting}";
+    public bool WeatherShowIcon { get; set; } = true;
+    public bool WeatherShowTemp { get; set; } = true;
+    public List<TempGreeting> TempGreetings { get; set; } = new();
     public List<WeatherGreetingItem> WeatherGreetingItems { get; set; } = new()
     {
         new WeatherGreetingItem { Keyword = "雨", Text = "记得带伞 ☔", Tag = "雨天" },
@@ -88,6 +100,14 @@ public class PluginSettings
         new WeatherGreetingItem { Keyword = "沙尘", Text = "沙尘天气，关好窗户 😷", Tag = "恶劣天气" },
         new WeatherGreetingItem { Keyword = "默认", Text = "{weather}", Tag = "默认" }
     };
+
+    // 课程表联动
+    public bool ClassScheduleEnabled { get; set; } = true;
+    public bool ClassScheduleShowIcon { get; set; } = true;
+
+    // 学习时长统计
+    public bool StudyTimeEnabled { get; set; } = true;
+    public bool StudyTimeShowIcon { get; set; } = true;
 }
 
 public class CustomHoliday
@@ -104,25 +124,25 @@ public class TimeSlotGreeting
     public int EndHour { get; set; }
     public int EndMinute { get; set; }
     public string Text { get; set; } = "";
-    public string Tag { get; set; } = ""; // 标签：早晨/上午/中午/下午/傍晚/晚上/深夜
+    public string Tag { get; set; } = "";
 }
 
 public class SpecialDateGreeting
 {
     public string Name { get; set; } = "";
-    public int DayOfWeek { get; set; } = 1; // 1=周一, 7=周日
+    public int DayOfWeek { get; set; } = 1;
     public int StartHour { get; set; } = 0;
     public int StartMinute { get; set; } = 0;
     public int EndHour { get; set; } = 23;
     public int EndMinute { get; set; } = 59;
     public string Text { get; set; } = "";
     public bool Enabled { get; set; } = true;
-    public string Tag { get; set; } = ""; // 标签：周一/周二/周三/周四/周五/周六/周日
+    public string Tag { get; set; } = "";
 }
 
 public class WeatherGreetingItem
 {
     public string Keyword { get; set; } = "";
     public string Text { get; set; } = "";
-    public string Tag { get; set; } = ""; // 标签：雨天/寒冷/高温/舒适/恶劣天气/大风/雷电/默认
+    public string Tag { get; set; } = "";
 }

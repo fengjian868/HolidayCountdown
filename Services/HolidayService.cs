@@ -14,7 +14,7 @@ public class HolidayService
 {
     private readonly List<Holiday> _builtIn;
     private List<Holiday> _holidays = new();
-    private readonly string _cachePath, _settingsPath, _lunarCachePath, _greetingCachePath;
+    private readonly string _cachePath, _settingsPath, _lunarCachePath, _lunarYearCachePath;
     private static bool _netTried;
     private static readonly object _netLock = new();
     private static bool _netLoaded;
@@ -35,7 +35,7 @@ public class HolidayService
         _cachePath = Path.Combine(dir, "holiday_cache.json");
         _settingsPath = Path.Combine(dir, "settings.json");
         _lunarCachePath = Path.Combine(dir, "lunar_cache.json");
-        _greetingCachePath = Path.Combine(dir, "greeting_cache.json");
+        _lunarYearCachePath = Path.Combine(dir, "lunar_year_cache.json");
         LoadSettings();
         if (CacheValid()) { var c = LoadCache(); if (c.Count > 0) _holidays = c; }
         if (!_netTried)
@@ -66,20 +66,20 @@ public class HolidayService
     {
         if (Settings.TimeSlotGreetings.Count == 0)
         {
-            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 5, StartMinute = 0, EndHour = 8, EndMinute = 0, Text = "早啊，今天也要加油 💪" });
-            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 8, StartMinute = 0, EndHour = 12, EndMinute = 0, Text = "上午好，距离午休还有几节课" });
-            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 12, StartMinute = 0, EndHour = 14, EndMinute = 0, Text = "吃饭时间到！🍚" });
-            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 14, StartMinute = 0, EndHour = 17, EndMinute = 0, Text = "下午容易犯困，坚持住 😪" });
-            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 17, StartMinute = 0, EndHour = 19, EndMinute = 0, Text = "再坚持一下就能run了！" });
-            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 19, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "夜猫子模式启动 🦉" });
+            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 5, StartMinute = 0, EndHour = 8, EndMinute = 0, Text = "", Tag = "早晨" });
+            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 8, StartMinute = 0, EndHour = 12, EndMinute = 0, Text = "", Tag = "上午" });
+            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 12, StartMinute = 0, EndHour = 14, EndMinute = 0, Text = "", Tag = "中午" });
+            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 14, StartMinute = 0, EndHour = 17, EndMinute = 0, Text = "", Tag = "下午" });
+            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 17, StartMinute = 0, EndHour = 19, EndMinute = 0, Text = "", Tag = "傍晚" });
+            Settings.TimeSlotGreetings.Add(new TimeSlotGreeting { StartHour = 19, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "", Tag = "晚上" });
         }
         if (Settings.SpecialDateGreetings.Count == 0)
         {
-            Settings.SpecialDateGreetings.Add(new SpecialDateGreeting { Name = "周一早晨", DayOfWeek = 1, StartHour = 0, StartMinute = 0, EndHour = 12, EndMinute = 0, Text = "本周还有 5 天到周末 😭" });
-            Settings.SpecialDateGreetings.Add(new SpecialDateGreeting { Name = "周三", DayOfWeek = 3, StartHour = 0, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "周三了，过半了！📈" });
-            Settings.SpecialDateGreetings.Add(new SpecialDateGreeting { Name = "周五下午", DayOfWeek = 5, StartHour = 12, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "周五周五，敲锣打鼓 🥁" });
-            Settings.SpecialDateGreetings.Add(new SpecialDateGreeting { Name = "周末", DayOfWeek = 6, StartHour = 0, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "享受假期吧" });
-            Settings.SpecialDateGreetings.Add(new SpecialDateGreeting { Name = "周末", DayOfWeek = 7, StartHour = 0, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "享受假期吧" });
+            Settings.SpecialDateGreetings.Add(new SpecialDateGreeting { Name = "周一早晨", DayOfWeek = 1, StartHour = 0, StartMinute = 0, EndHour = 12, EndMinute = 0, Text = "", Tag = "周一" });
+            Settings.SpecialDateGreetings.Add(new SpecialDateGreeting { Name = "周三", DayOfWeek = 3, StartHour = 0, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "", Tag = "周三" });
+            Settings.SpecialDateGreetings.Add(new SpecialDateGreeting { Name = "周五下午", DayOfWeek = 5, StartHour = 12, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "", Tag = "周五" });
+            Settings.SpecialDateGreetings.Add(new SpecialDateGreeting { Name = "周末", DayOfWeek = 6, StartHour = 0, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "", Tag = "周六" });
+            Settings.SpecialDateGreetings.Add(new SpecialDateGreeting { Name = "周末", DayOfWeek = 7, StartHour = 0, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "", Tag = "周日" });
         }
         if (Settings.HolidayColors.Count == 0)
         {
@@ -102,6 +102,11 @@ public class HolidayService
             Settings.TermColors["立冬"] = "#607D8B"; Settings.TermColors["小雪"] = "#607D8B"; Settings.TermColors["大雪"] = "#607D8B";
             Settings.TermColors["冬至"] = "#2196F3"; Settings.TermColors["小寒"] = "#2196F3"; Settings.TermColors["大寒"] = "#2196F3";
         }
+        if (Settings.TempGreetings.Count == 0)
+        {
+            foreach (var g in LocalGreetingDB.DefaultTempGreetings)
+                Settings.TempGreetings.Add(new TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text });
+        }
     }
 
     public void SaveSettings()
@@ -112,7 +117,6 @@ public class HolidayService
             File.WriteAllText(_settingsPath, JsonSerializer.Serialize(Settings, opt));
         }
         catch { }
-        // 触发设置变更事件，通知所有组件刷新
         SettingsChanged?.Invoke();
     }
 
@@ -151,7 +155,6 @@ public class HolidayService
             }
         }
         catch { }
-        // 按名称去重，只保留每个节日的第一天（避免假期多天重复显示同一个节日）
         return list.GroupBy(h => h.Name).Select(g => g.OrderBy(h => h.Date).First()).OrderBy(h => h.Date).ToList();
     }
 
@@ -243,7 +246,6 @@ public class HolidayService
     public double GetYearRatio()
     {
         var y = DateTime.Now.Year;
-        // 使用内置数据获取准确的放假天数（网络数据 DaysOff 不准确）
         var allHolidays = LoadBuiltIn().Where(h => h.Date.Year == y && !h.IsWorkday).ToList();
         var custom = Settings.CustomHolidays.Where(ch =>
         {
@@ -256,88 +258,106 @@ public class HolidayService
         return totalHolidayDays > 0 ? (double)remaining / totalHolidayDays : 0;
     }
 
+    // ===== 农历年度缓存 =====
+
     public async Task<LunarInfo?> GetLunarAsync()
+    {
+        var year = DateTime.Now.Year;
+
+        // 尝试加载年度缓存
+        var yearCache = LoadLunarYearCache(year);
+        if (yearCache != null)
+        {
+            var today = DateTime.Now.Date;
+            var info = yearCache.FirstOrDefault(x => x.Date == today);
+            if (info != null) return info;
+        }
+
+        if (!Settings.LunarAutoRefresh) return null;
+
+        // 刷新整年缓存
+        await RefreshLunarYearAsync(year);
+        yearCache = LoadLunarYearCache(year);
+        if (yearCache != null)
+        {
+            var today = DateTime.Now.Date;
+            return yearCache.FirstOrDefault(x => x.Date == today);
+        }
+        return null;
+    }
+
+    List<LunarInfo>? LoadLunarYearCache(int year)
     {
         try
         {
-            if (File.Exists(_lunarCachePath))
+            if (File.Exists(_lunarYearCachePath))
             {
-                var cached = JsonSerializer.Deserialize<LunarInfo>(File.ReadAllText(_lunarCachePath));
-                if (cached != null && cached.Date == DateTime.Now.Date) return cached;
-            }
-        }
-        catch { }
-        if (!Settings.LunarAutoRefresh) return null;
-        try
-        {
-            using var c = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            var r = await c.GetStringAsync($"https://api.mu-jie.cc/lunar?date={DateTime.Now:yyyy-MM-dd}");
-            using var doc = JsonDocument.Parse(r);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("code", out var cp) && cp.GetInt32() == 200 && root.TryGetProperty("data", out var dp))
-            {
-                var info = new LunarInfo
-                {
-                    Date = DateTime.Now.Date,
-                    gzYear = GetStr(dp, "gzYear") + "年",
-                    IMonthCn = GetStr(dp, "IMonthCn"),
-                    IDayCn = GetStr(dp, "IDayCn"),
-                    Animal = GetStr(dp, "Animal"),
-                    Term = GetStr(dp, "Term"),
-                    lunarDate = GetStr(dp, "lunarDate")
-                };
-                File.WriteAllText(_lunarCachePath, JsonSerializer.Serialize(info));
-                return info;
+                var json = File.ReadAllText(_lunarYearCachePath);
+                var cache = JsonSerializer.Deserialize<LunarYearCache>(json);
+                if (cache != null && cache.Year == year && cache.Data.Count > 0)
+                    return cache.Data;
             }
         }
         catch { }
         return null;
     }
 
-    string GetStr(JsonElement e, string p) => e.TryGetProperty(p, out var v) ? (v.GetString() ?? "") : "";
-
-    public async Task RefreshGreetingsAsync(bool force = false)
+    async Task RefreshLunarYearAsync(int year)
     {
-        if (!Settings.GreetingOnline) return;
-        // 每天只刷新一次，除非强制刷新
-        var today = DateTime.Now.Date;
-        if (!force && Settings.LastGreetingRefreshDate.HasValue && Settings.LastGreetingRefreshDate.Value.Date == today) return;
-
         try
         {
-            using var c = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            // 根据时段数量获取对应数量的问候语
-            var refreshedCount = 0;
-            foreach (var slot in Settings.TimeSlotGreetings)
+            var list = new List<LunarInfo>();
+            var totalDays = DateTime.IsLeapYear(year) ? 366 : 365;
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+
+            for (int i = 0; i < totalDays; i++)
             {
+                var date = new DateTime(year, 1, 1).AddDays(i);
                 try
                 {
-                    var r = await c.GetStringAsync("https://v1.hitokoto.cn/?c=k&encode=json");
+                    var r = await client.GetStringAsync($"https://api.mu-jie.cc/lunar?date={date:yyyy-MM-dd}");
                     using var doc = JsonDocument.Parse(r);
                     var root = doc.RootElement;
-                    if (root.TryGetProperty("hitokoto", out var hp))
+                    if (root.TryGetProperty("code", out var cp) && cp.GetInt32() == 200 && root.TryGetProperty("data", out var dp))
                     {
-                        var text = hp.GetString() ?? "";
-                        if (!string.IsNullOrEmpty(text))
+                        list.Add(new LunarInfo
                         {
-                            slot.Text = text;
-                            refreshedCount++;
-                        }
+                            Date = date,
+                            gzYear = GetStr(dp, "gzYear") + "年",
+                            IMonthCn = GetStr(dp, "IMonthCn"),
+                            IDayCn = GetStr(dp, "IDayCn"),
+                            Animal = GetStr(dp, "Animal"),
+                            Term = GetStr(dp, "Term"),
+                            lunarDate = GetStr(dp, "lunarDate")
+                        });
                     }
-                    // 稍微延迟避免请求过快
-                    await Task.Delay(200);
                 }
                 catch { }
+
+                // 每30天保存一次中间结果，避免全部失败
+                if (i % 30 == 0 && list.Count > 0)
+                {
+                    SaveLunarYearCache(year, list);
+                }
             }
 
-            if (refreshedCount > 0)
-            {
-                Settings.LastGreetingRefreshDate = today;
-                SaveSettings();
-            }
+            if (list.Count > 0)
+                SaveLunarYearCache(year, list);
         }
         catch { }
     }
+
+    void SaveLunarYearCache(int year, List<LunarInfo> data)
+    {
+        try
+        {
+            var cache = new LunarYearCache { Year = year, Data = data };
+            File.WriteAllText(_lunarYearCachePath, JsonSerializer.Serialize(cache, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch { }
+    }
+
+    string GetStr(JsonElement e, string p) => e.TryGetProperty(p, out var v) ? (v.GetString() ?? "") : "";
 
     public Color ParseColor(string hex)
     {
@@ -376,4 +396,10 @@ public class HolidayService
     }
 
     public bool IsNetLoaded => _netLoaded;
+}
+
+public class LunarYearCache
+{
+    public int Year { get; set; }
+    public List<LunarInfo> Data { get; set; } = new();
 }
