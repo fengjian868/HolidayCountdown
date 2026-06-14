@@ -11,7 +11,7 @@ using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.SettingsPages;
 
-[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时", "\uE8F5", "\uE8F5")]
+[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE8F5", "\uE8F5")]
 public class UnifiedSettingsPage : SettingsPageBase
 {
     private readonly HolidayService _svc;
@@ -25,7 +25,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         _svc = new HolidayService();
         _tabs = new (string, string, Func<Control>)[]
         {
-            ("\uE8F5", "节假日倒计时设置", BuildHolidayPanel),
+            ("\uE8F5", "节假日", BuildHolidayPanel),
             ("\uE713", "设置", BuildGeneralPanel),
             ("\uE9D2", "问候语", BuildGreetingPanel),
             ("\uE9CA", "24节气", BuildSolarTermPanel),
