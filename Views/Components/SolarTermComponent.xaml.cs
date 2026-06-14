@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -24,16 +25,14 @@ namespace HolidayCountdown.Views.Components;
 public class SolarTermComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
-    private TextBlock _txt = null!;
+    private StackPanel _panel = null!;
     private HolidayService? _svc;
     private SolarTermInfo? _currentTerm;
 
     public SolarTermComponent()
     {
-        var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
-        panel.Children.Add(_txt);
-        Content = panel;
+        _panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+        Content = _panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(10) };
         _timer.Tick += (s, e) => Update();
         _timer.Start();
@@ -139,36 +138,60 @@ public class SolarTermComponent : ComponentBase
 
     void Update()
     {
-        if (_svc == null || _currentTerm == null) { _txt.Text = ""; return; }
+        if (_svc == null || _currentTerm == null) { _panel.Children.Clear(); return; }
         try
         {
             var now = DateTime.Now;
             var days = (_currentTerm.NextDate.Date - now.Date).Days;
             var color = _svc.GetTermColor(_currentTerm.Name);
 
+            _panel.Children.Clear();
+
             var showProgress = _svc.Settings.SolarTermShowProgressRing;
 
             if (showProgress && days <= 15 && days >= 0)
             {
                 var progress = 1.0 - (double)days / 15.0;
-                var arc = GetArcText(progress);
-                _txt.Text = $"🌿 {_currentTerm.Name} {arc}";
-                _txt.Foreground = new SolidColorBrush(color);
+                _panel.Children.Add(CreateArcRing(days, progress, color));
             }
-            else
+
+            var nameBlock = new TextBlock
             {
-                _txt.Text = $"🌿 {_currentTerm.Name}";
-                _txt.Foreground = new SolidColorBrush(color);
-            }
+                Text = _currentTerm.Name,
+                Foreground = new SolidColorBrush(color),
+                FontWeight = FontWeight.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            _panel.Children.Add(nameBlock);
+
+            var daysBlock = new TextBlock
+            {
+                Text = days == 0 ? "今天" : $"还有{days}天",
+                VerticalAlignment = VerticalAlignment.Center,
+                Opacity = 0.8
+            };
+            _panel.Children.Add(daysBlock);
         }
-        catch { _txt.Text = ""; }
+        catch { _panel.Children.Clear(); }
     }
 
-    string GetArcText(double progress)
+    Control CreateArcRing(int days, double progress, Color color)
     {
-        var chars = new[] { "○", "◔", "◑", "◕", "●" };
-        var idx = Math.Min((int)(progress * chars.Length), chars.Length - 1);
-        return chars[idx];
+        var container = new Border
+        {
+            Width = 32,
+            Height = 32,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Background = Brushes.Transparent
+        };
+
+        var inner = new Grid { Width = 28, Height = 28, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
+        inner.Children.Add(new Arc { Width = 28, Height = 28, StartAngle = -90, SweepAngle = 360, Stroke = new SolidColorBrush(Color.Parse("#20FFFFFF")), StrokeThickness = 2.5, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center });
+        inner.Children.Add(new Arc { Width = 28, Height = 28, StartAngle = -90, SweepAngle = progress * 360, Stroke = new SolidColorBrush(color), StrokeThickness = 2.5, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center });
+        inner.Children.Add(new TextBlock { Text = days.ToString(), FontSize = 9, FontWeight = FontWeight.Bold, Foreground = new SolidColorBrush(color), VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center });
+        container.Child = inner;
+        return container;
     }
 
     string GetNextTermName(string current)
