@@ -53,6 +53,18 @@ public class GreetingComponent : ComponentBase
             var hour = now.Hour;
             var minute = now.Minute;
 
+            // 每天自动刷新问候语（如果开启且今天还没刷新过）
+            if (_svc.Settings.AutoRefreshGreetings)
+            {
+                var today = now.Date;
+                if (_svc.Settings.LastGreetingRefreshDate != today)
+                {
+                    RefreshDailyGreetings();
+                    _svc.Settings.LastGreetingRefreshDate = today;
+                    _svc.SaveSettings();
+                }
+            }
+
             // 1. 放学提醒
             var schoolEnd = new DateTime(now.Year, now.Month, now.Day, _svc.Settings.SchoolEndHour, _svc.Settings.SchoolEndMinute, 0);
             var reminderStart = schoolEnd.AddMinutes(-_svc.Settings.SchoolEndReminderMinutes);
@@ -111,7 +123,7 @@ public class GreetingComponent : ComponentBase
                     // 如果特殊日期文本为空，使用本地数据库按标签获取
                     if (!string.IsNullOrEmpty(special.Tag))
                     {
-                        var tagText = LocalGreetingDB.GetDaily(special.Tag, LocalGreetingDB.TimeSlotGreetings);
+                        var tagText = LocalGreetingDB.GetDaily(special.Tag, LocalGreetingDB.WeeklyReminders);
                         if (!string.IsNullOrEmpty(tagText))
                         {
                             _txt.Text = tagText;
@@ -150,6 +162,33 @@ public class GreetingComponent : ComponentBase
             _txt.Text = "";
         }
         catch { _txt.Text = ""; }
+    }
+
+    void RefreshDailyGreetings()
+    {
+        if (_svc == null) return;
+        try
+        {
+            // 刷新时段问候语
+            foreach (var slot in _svc.Settings.TimeSlotGreetings)
+            {
+                if (string.IsNullOrEmpty(slot.Text) && !string.IsNullOrEmpty(slot.Tag))
+                {
+                    var tagText = LocalGreetingDB.GetDaily(slot.Tag, LocalGreetingDB.TimeSlotGreetings);
+                    if (!string.IsNullOrEmpty(tagText)) slot.Text = tagText;
+                }
+            }
+            // 刷新特殊日期问候语
+            foreach (var special in _svc.Settings.SpecialDateGreetings)
+            {
+                if (string.IsNullOrEmpty(special.Text) && !string.IsNullOrEmpty(special.Tag))
+                {
+                    var tagText = LocalGreetingDB.GetDaily(special.Tag, LocalGreetingDB.WeeklyReminders);
+                    if (!string.IsNullOrEmpty(tagText)) special.Text = tagText;
+                }
+            }
+        }
+        catch { }
     }
 
     string GetDayName(int dow)

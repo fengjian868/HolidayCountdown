@@ -260,6 +260,9 @@ public class UnifiedSettingsPage : SettingsPageBase
         var togglePanel = new StackPanel { Spacing = 0 };
         togglePanel.Children.Add(SettingItem("启用问候语", null,
             Toggle(_svc.Settings.ShowGreeting, v => _svc.Settings.ShowGreeting = v)));
+        togglePanel.Children.Add(Separator());
+        togglePanel.Children.Add(SettingItem("每天自动刷新问候语", "开启后每天自动从本地数据库随机刷新一条问候语",
+            Toggle(_svc.Settings.AutoRefreshGreetings, v => _svc.Settings.AutoRefreshGreetings = v)));
         s.Children.Add(Expander("开关", "问候语基础设置", togglePanel));
 
         var weeklyPanel = new StackPanel { Spacing = 0 };
@@ -335,12 +338,20 @@ public class UnifiedSettingsPage : SettingsPageBase
                 {
                     if (TimeSpan.TryParse(v, out var ts)) { slot.EndHour = ts.Hours; slot.EndMinute = ts.Minutes; }
                 });
-                var textBox = Text(slot.Text, 160, v => slot.Text = v);
+                var tags = new[] { "早晨", "上午", "中午", "下午", "傍晚", "晚上" };
+                var tagCombo = new ComboBox { Width = 60 };
+                foreach (var t in tags) tagCombo.Items.Add(t);
+                tagCombo.SelectedItem = tags.Contains(slot.Tag) ? slot.Tag : GetTimeSlotTag(slot.StartHour);
+                tagCombo.SelectionChanged += (a, b) => slot.Tag = tagCombo.SelectedItem?.ToString() ?? GetTimeSlotTag(slot.StartHour);
+                var textBox = Text(slot.Text, 140, v => slot.Text = v);
                 var refreshBtn = new Button { Content = "刷新", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FF2196F3")) };
                 refreshBtn.Click += (a, e) =>
                 {
-                    var tag = GetTimeSlotTag(slot.StartHour);
-                    slot.Text = LocalGreetingDB.GetDaily(tag, LocalGreetingDB.TimeSlotGreetings);
+                    var tag = string.IsNullOrEmpty(slot.Tag) ? GetTimeSlotTag(slot.StartHour) : slot.Tag;
+                    var seed = DateTime.Now.Year * 10000 + DateTime.Now.Month * 100 + DateTime.Now.Day + DateTime.Now.Hour * 100 + DateTime.Now.Minute + new Random().Next(10000);
+                    var rng = new Random(seed);
+                    if (LocalGreetingDB.TimeSlotGreetings.TryGetValue(tag, out var list) && list.Count > 0)
+                        slot.Text = list[rng.Next(list.Count)];
                     RefreshList();
                 };
                 var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
@@ -350,6 +361,8 @@ public class UnifiedSettingsPage : SettingsPageBase
                 row.Children.Add(startBox);
                 row.Children.Add(new TextBlock { Text = "到", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 row.Children.Add(endBox);
+                row.Children.Add(new TextBlock { Text = "标签", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(tagCombo);
                 row.Children.Add(textBox);
                 row.Children.Add(refreshBtn);
                 row.Children.Add(delBtn);
@@ -411,11 +424,19 @@ public class UnifiedSettingsPage : SettingsPageBase
                 dayCombo.SelectionChanged += (a, b) => item.DayOfWeek = dayCombo.SelectedIndex + 1;
                 var enabledChk = new CheckBox { Content = "启用", IsChecked = item.Enabled };
                 enabledChk.IsCheckedChanged += (a, b) => item.Enabled = enabledChk.IsChecked == true;
+                var tags = new[] { "周一", "周二", "周三", "周四", "周五", "周六", "周日", "周末" };
+                var tagCombo = new ComboBox { Width = 60 };
+                foreach (var t in tags) tagCombo.Items.Add(t);
+                tagCombo.SelectedItem = tags.Contains(item.Tag) ? item.Tag : (item.DayOfWeek == 6 || item.DayOfWeek == 7 ? "周末" : $"周{new[] { "一", "二", "三", "四", "五", "六", "日" }[item.DayOfWeek - 1]}");
+                tagCombo.SelectionChanged += (a, b) => item.Tag = tagCombo.SelectedItem?.ToString() ?? "";
                 var refreshBtn = new Button { Content = "刷新", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FF2196F3")) };
                 refreshBtn.Click += (a, e) =>
                 {
-                    var tag = item.DayOfWeek == 6 || item.DayOfWeek == 7 ? "周末" : $"周{new[] { "一", "二", "三", "四", "五", "六", "日" }[item.DayOfWeek - 1]}";
-                    item.Text = LocalGreetingDB.GetDaily(tag, LocalGreetingDB.WeeklyReminders);
+                    var tag = string.IsNullOrEmpty(item.Tag) ? (item.DayOfWeek == 6 || item.DayOfWeek == 7 ? "周末" : $"周{new[] { "一", "二", "三", "四", "五", "六", "日" }[item.DayOfWeek - 1]}") : item.Tag;
+                    var seed = DateTime.Now.Year * 10000 + DateTime.Now.Month * 100 + DateTime.Now.Day + DateTime.Now.Hour * 100 + DateTime.Now.Minute + new Random().Next(10000);
+                    var rng = new Random(seed);
+                    if (LocalGreetingDB.WeeklyReminders.TryGetValue(tag, out var list) && list.Count > 0)
+                        item.Text = list[rng.Next(list.Count)];
                     RefreshList();
                 };
                 var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
@@ -423,6 +444,7 @@ public class UnifiedSettingsPage : SettingsPageBase
 
                 headerRow.Children.Add(nameBox);
                 headerRow.Children.Add(dayCombo);
+                headerRow.Children.Add(tagCombo);
                 headerRow.Children.Add(enabledChk);
                 headerRow.Children.Add(refreshBtn);
                 headerRow.Children.Add(delBtn);
@@ -437,7 +459,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 {
                     if (TimeSpan.TryParse(v, out var ts)) { item.EndHour = ts.Hours; item.EndMinute = ts.Minutes; }
                 });
-                var textBox = Text(item.Text, 180, v => item.Text = v);
+                var textBox = Text(item.Text, 160, v => item.Text = v);
 
                 timeRow.Children.Add(new TextBlock { Text = "从", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 timeRow.Children.Add(startBox);

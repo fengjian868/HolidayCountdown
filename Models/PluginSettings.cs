@@ -25,6 +25,7 @@ public class PluginSettings
 
     // 问候语
     public bool ShowGreeting { get; set; } = true;
+    public bool AutoRefreshGreetings { get; set; } = true;
     public DateTime? LastGreetingRefreshDate { get; set; }
     public List<TimeSlotGreeting> TimeSlotGreetings { get; set; } = new();
     public List<SpecialDateGreeting> SpecialDateGreetings { get; set; } = new();
