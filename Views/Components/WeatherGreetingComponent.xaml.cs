@@ -277,9 +277,13 @@ public class WeatherGreetingComponent : ComponentBase
                 return ("", null, null, null, city, $"无Weather属性。相关属性: {string.Join(", ", props)}");
             }
 
-            // 列出 WeatherInfo 对象的所有属性名和值，用于诊断和自动匹配
-            var weatherProps = weatherObj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            var propDict = weatherProps.ToDictionary(p => p.Name, p => p.GetValue(weatherObj)?.ToString() ?? "null");
+            // WeatherInfo 对象结构：Current=CurrentWeather, Alerts=List<WeatherAlert>
+            // 需要先读取 Current 属性获取实际天气数据
+            var currentWeatherObj = GetPropertyValue(weatherObj, "Current");
+            if (currentWeatherObj != null)
+            {
+                weatherObj = currentWeatherObj; // 切换到 CurrentWeather 对象读取数据
+            }
 
             // 尝试多种可能的属性名读取天气文本
             var weatherText = GetPropertyValue(weatherObj, "WeatherText")?.ToString()
@@ -294,11 +298,28 @@ public class WeatherGreetingComponent : ComponentBase
                 ?? (GetPropertyValue(weatherObj, "CurrentTemperature") as double?)
                 ?? (GetPropertyValue(weatherObj, "Temperature2m") as double?);
 
-            // 尝试多种可能的属性名读取预警
-            var warning = GetPropertyValue(weatherObj, "WeatherWarning")?.ToString()
-                ?? GetPropertyValue(weatherObj, "Warning")?.ToString()
-                ?? GetPropertyValue(weatherObj, "WeatherWarnings")?.ToString()
-                ?? "";
+            // 尝试多种可能的属性名读取预警（从 Alerts 列表读取）
+            var alertsObj = GetPropertyValue(weatherObj, "Alerts");
+            string? warning = null;
+            if (alertsObj is System.Collections.IEnumerable alerts && alertsObj is not string)
+            {
+                var alertTexts = new List<string>();
+                foreach (var alert in alerts)
+                {
+                    var alertText = GetPropertyValue(alert, "Title")?.ToString()
+                        ?? GetPropertyValue(alert, "Description")?.ToString()
+                        ?? GetPropertyValue(alert, "Alert")?.ToString()
+                        ?? "";
+                    if (!string.IsNullOrEmpty(alertText)) alertTexts.Add(alertText);
+                }
+                if (alertTexts.Count > 0) warning = string.Join("; ", alertTexts);
+            }
+            if (string.IsNullOrEmpty(warning))
+            {
+                warning = GetPropertyValue(weatherObj, "WeatherWarning")?.ToString()
+                    ?? GetPropertyValue(weatherObj, "Warning")?.ToString()
+                    ?? "";
+            }
 
             // 尝试多种可能的属性名读取图标
             var icon = GetPropertyValue(weatherObj, "WeatherIcon")?.ToString()
@@ -308,6 +329,8 @@ public class WeatherGreetingComponent : ComponentBase
 
             if (string.IsNullOrEmpty(weatherText) && !temp.HasValue)
             {
+                var weatherProps = weatherObj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                var propDict = weatherProps.ToDictionary(p => p.Name, p => p.GetValue(weatherObj)?.ToString() ?? "null");
                 var propsInfo = string.Join(", ", propDict.Select(kv => $"{kv.Key}={kv.Value}"));
                 return ("", null, null, null, city, $"Weather对象存在但无数据。类型: {weatherObj.GetType().Name}, 属性: {propsInfo}");
             }
