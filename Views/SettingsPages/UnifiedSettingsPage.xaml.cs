@@ -153,6 +153,26 @@ public class UnifiedSettingsPage : SettingsPageBase
         studyPanel.Children.Add(Separator());
         studyPanel.Children.Add(SettingItem("显示图标", "在学习时长前显示图标",
             Toggle(_svc.Settings.StudyTimeShowIcon, v => _svc.Settings.StudyTimeShowIcon = v)));
+        studyPanel.Children.Add(Separator());
+        var resetStudyBtn = new Button { Content = "🔄 重置今日时长", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
+        resetStudyBtn.Click += (a, e) =>
+        {
+            var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClassIsland", "Plugins", "HolidayCountdown");
+            var studyTimePath = Path.Combine(dataDir, "study_time.json");
+            try
+            {
+                if (File.Exists(studyTimePath))
+                {
+                    var json = File.ReadAllText(studyTimePath);
+                    var data = JsonSerializer.Deserialize<Dictionary<string, double>>(json) ?? new Dictionary<string, double>();
+                    var key = DateTime.Now.ToString("yyyy-MM-dd");
+                    data[key] = 0;
+                    File.WriteAllText(studyTimePath, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
+                }
+            }
+            catch { }
+        };
+        studyPanel.Children.Add(SettingItem("重置今日时长", "将今日学习时长清零", resetStudyBtn));
         s.Children.Add(Expander("学习时长统计", "学习时长统计组件设置", studyPanel));
 
         s.Children.Add(SaveButton(() => _svc.SaveSettings()));
