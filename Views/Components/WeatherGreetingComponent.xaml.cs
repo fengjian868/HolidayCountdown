@@ -50,7 +50,21 @@ public class WeatherGreetingComponent : ComponentBase
         try
         {
             var (weatherText, temp, warning, icon) = GetWeatherInfo();
-            if (string.IsNullOrEmpty(weatherText)) { _txt.Text = ""; return; }
+
+            // 如果ClassIsland没有天气数据，显示温度提醒或默认提示
+            if (string.IsNullOrEmpty(weatherText))
+            {
+                if (temp.HasValue)
+                {
+                    var tempReminder = GetTempReminder(temp);
+                    _txt.Text = string.IsNullOrEmpty(tempReminder) ? "" : $"🌡️ {tempReminder}";
+                }
+                else
+                {
+                    _txt.Text = "";
+                }
+                return;
+            }
 
             // 检查预警
             if (_svc.Settings.WeatherWarningOverride && !string.IsNullOrEmpty(warning))
@@ -63,10 +77,10 @@ public class WeatherGreetingComponent : ComponentBase
             var greeting = GetWeatherGreeting(weatherText);
 
             // 温度提醒
-            var tempReminder = GetTempReminder(temp);
-            if (!string.IsNullOrEmpty(tempReminder))
+            var tempReminder2 = GetTempReminder(temp);
+            if (!string.IsNullOrEmpty(tempReminder2))
             {
-                greeting = string.IsNullOrEmpty(greeting) ? tempReminder : $"{greeting}，{tempReminder}";
+                greeting = string.IsNullOrEmpty(greeting) ? tempReminder2 : $"{greeting}，{tempReminder2}";
             }
 
             // 使用模板排版
