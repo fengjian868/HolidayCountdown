@@ -609,7 +609,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             var h = new Models.CustomHoliday { Name = "新节日", Date = DateTime.Now.AddDays(1) };
             _svc.Settings.CustomHolidays.Add(h);
             AutoSave();
-            SwitchTab(3);
+            SwitchTab(5);
         };
         p.Children.Add(btn);
         return p;
@@ -617,7 +617,7 @@ public class UnifiedSettingsPage : SettingsPageBase
 
     Control MakeCustomHolidayItem(Models.CustomHoliday h)
     {
-        var g = new Grid { ColumnDefinitions = new ColumnDefinitions("120 100 80 Auto Auto"), Margin = new Thickness(16, 8, 16, 8) };
+        var g = new Grid { ColumnDefinitions = new ColumnDefinitions("120 100 120 Auto Auto"), Margin = new Thickness(16, 8, 16, 8) };
         var n = new TextBox { Text = h.Name, Margin = new Thickness(0, 0, 8, 0) };
         n.TextChanged += (a, b) => { h.Name = n.Text ?? ""; AutoSave(); };
         Grid.SetColumn(n, 0);
@@ -625,7 +625,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var dateText = new TextBlock { Text = $"{h.Date.Month}月{h.Date.Day}日", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
         Grid.SetColumn(dateText, 1);
 
-        var d = new DatePicker { SelectedDate = h.Date, Margin = new Thickness(0, 0, 8, 0) };
+        var d = new DatePicker { SelectedDate = h.Date, Margin = new Thickness(0, 0, 8, 0), Width = 120 };
         d.SelectedDateChanged += (a, b) =>
         {
             if (d.SelectedDate.HasValue)
@@ -642,7 +642,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         Grid.SetColumn(r, 3);
 
         var del = new Button { Content = "删除", Width = 50 };
-        del.Click += (a, b) => { _svc.Settings.CustomHolidays.Remove(h); AutoSave(); SwitchTab(3); };
+        del.Click += (a, b) => { _svc.Settings.CustomHolidays.Remove(h); AutoSave(); SwitchTab(5); };
         Grid.SetColumn(del, 4);
 
         g.Children.Add(n); g.Children.Add(dateText); g.Children.Add(d); g.Children.Add(r); g.Children.Add(del);
