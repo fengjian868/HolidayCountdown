@@ -533,6 +533,16 @@ public static class LocalGreetingDB
     }
 
     /// <summary>
+    /// 根据标签从本地数据库获取随机问候语（真正随机，每次调用结果不同）
+    /// </summary>
+    public static string GetRandom(string tag, Dictionary<string, List<string>> db)
+    {
+        if (!db.TryGetValue(tag, out var list) || list.Count == 0) return "";
+        var rng = new Random();
+        return list[rng.Next(list.Count)];
+    }
+
+    /// <summary>
     /// 温度区间默认问候语
     /// </summary>
     public static readonly List<TempGreeting> DefaultTempGreetings = new()

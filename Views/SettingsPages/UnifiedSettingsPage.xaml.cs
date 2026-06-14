@@ -776,7 +776,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 refreshBtn.Click += (a, e) =>
                 {
                     var tag = string.IsNullOrEmpty(item.Tag) ? "舒适" : item.Tag;
-                    item.Text = LocalGreetingDB.GetDaily(tag, new Dictionary<string, List<string>> { [tag] = new() { item.Text } });
+                    item.Text = LocalGreetingDB.GetRandom(tag, new Dictionary<string, List<string>> { [tag] = new() { item.Text } });
                     AutoSave();
                     RefreshList();
                 };
@@ -861,7 +861,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 refreshBtn.Click += (a, e) =>
                 {
                     var tag = string.IsNullOrEmpty(kv.Tag) ? "默认" : kv.Tag;
-                    kv.Text = LocalGreetingDB.GetDaily(tag, new Dictionary<string, List<string>> { [tag] = new() { kv.Text } });
+                    kv.Text = LocalGreetingDB.GetRandom(tag, new Dictionary<string, List<string>> { [tag] = new() { kv.Text } });
                     AutoSave();
                     RefreshList();
                 };
