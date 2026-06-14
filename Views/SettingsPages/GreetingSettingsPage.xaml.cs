@@ -29,13 +29,28 @@ public class GreetingSettingsPage : SettingsPageBase
         togglePanel.Children.Add(SettingsUI.Separator());
         togglePanel.Children.Add(SettingsUI.SettingItem("合并到节假日组件", "问候语显示在节假日下方",
             SettingsUI.Toggle(_svc.Settings.MergeGreeting, v => _svc.Settings.MergeGreeting = v)));
-        togglePanel.Children.Add(SettingsUI.Separator());
-        togglePanel.Children.Add(SettingsUI.SettingItem("联网刷新问候语", "每5分钟从网络获取新文案",
-            SettingsUI.Toggle(_svc.Settings.GreetingOnline, v => _svc.Settings.GreetingOnline = v)));
-        togglePanel.Children.Add(SettingsUI.Separator());
-        togglePanel.Children.Add(SettingsUI.SettingItem("周日晚修提醒", "周日17-21点显示晚修提示",
-            SettingsUI.Toggle(_svc.Settings.ShowSundayEveningStudy, v => _svc.Settings.ShowSundayEveningStudy = v)));
         s.Children.Add(SettingsUI.Expander("开关", "问候语基础设置", togglePanel));
+
+        // 每周提醒
+        var weeklyPanel = new StackPanel { Spacing = 0 };
+        weeklyPanel.Children.Add(SettingsUI.SettingItem("启用每周提醒", null,
+            SettingsUI.Toggle(_svc.Settings.WeeklyReminderEnabled, v => _svc.Settings.WeeklyReminderEnabled = v)));
+        weeklyPanel.Children.Add(SettingsUI.Separator());
+        var dayCombo = new ComboBox { Width = 80, HorizontalAlignment = HorizontalAlignment.Right };
+        var days = new[] { "周一", "周二", "周三", "周四", "周五", "周六", "周日" };
+        foreach (var d in days) dayCombo.Items.Add(d);
+        dayCombo.SelectedIndex = _svc.Settings.WeeklyReminderDay == 7 ? 6 : _svc.Settings.WeeklyReminderDay - 1;
+        dayCombo.SelectionChanged += (a, b) => _svc.Settings.WeeklyReminderDay = dayCombo.SelectedIndex == 6 ? 7 : dayCombo.SelectedIndex + 1;
+        weeklyPanel.Children.Add(SettingsUI.SettingItem("提醒日期", "每周哪天显示提醒", dayCombo));
+        weeklyPanel.Children.Add(SettingsUI.Separator());
+        weeklyPanel.Children.Add(SettingsUI.SettingItem("开始时间（时）", "提醒开始显示的小时",
+            SettingsUI.Number(_svc.Settings.WeeklyReminderStartHour, 0, 23, v => _svc.Settings.WeeklyReminderStartHour = v)));
+        weeklyPanel.Children.Add(SettingsUI.Separator());
+        weeklyPanel.Children.Add(SettingsUI.SettingItem("结束时间（时）", "提醒结束显示的小时",
+            SettingsUI.Number(_svc.Settings.WeeklyReminderEndHour, 0, 23, v => _svc.Settings.WeeklyReminderEndHour = v)));
+        weeklyPanel.Children.Add(SettingsUI.Separator());
+        weeklyPanel.Children.Add(SettingsUI.Info("内置提醒按标签分类，每天自动从本地随机刷新一条。标签：周一/周二/周三/周四/周五/周末"));
+        s.Children.Add(SettingsUI.Expander("每周提醒", "自定义每周提醒的日期和时段", weeklyPanel));
 
         // 放学
         var schoolPanel = new StackPanel { Spacing = 0 };
@@ -61,10 +76,7 @@ public class GreetingSettingsPage : SettingsPageBase
         schoolPanel.Children.Add(SettingsUI.Separator());
         schoolPanel.Children.Add(SettingsUI.SettingItem("放学后文案", null,
             SettingsUI.Text(_svc.Settings.AfterSchoolEndText, 200, v => _svc.Settings.AfterSchoolEndText = v)));
-        schoolPanel.Children.Add(SettingsUI.Separator());
-        schoolPanel.Children.Add(SettingsUI.SettingItem("晚修文案", null,
-            SettingsUI.Text(_svc.Settings.SundayEveningStudyText, 200, v => _svc.Settings.SundayEveningStudyText = v)));
-        s.Children.Add(SettingsUI.Expander("放学", "放学和晚修提醒设置", schoolPanel));
+        s.Children.Add(SettingsUI.Expander("放学", "放学提醒设置", schoolPanel));
 
         // 时段文案
         s.Children.Add(SettingsUI.Expander("时段文案", "自定义多个时间段的问候语", BuildTimeSlotPanel()));
@@ -124,6 +136,8 @@ public class GreetingSettingsPage : SettingsPageBase
         };
         panel.Children.Add(addBtn);
 
+        panel.Children.Add(SettingsUI.Info("留空的时段会自动使用本地数据库按标签（早晨/上午/中午/下午/傍晚/夜晚）每天刷新一条问候语"));
+
         return panel;
     }
 
@@ -141,7 +155,6 @@ public class GreetingSettingsPage : SettingsPageBase
                 var item = items[i];
                 var row = new StackPanel { Spacing = 4, Margin = new Thickness(16, 8, 16, 8) };
 
-                // 第一行：名称 + 星期 + 启用开关 + 删除
                 var headerRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
                 var nameBox = SettingsUI.Text(item.Name, 80, v => item.Name = v);
                 var dayCombo = new ComboBox { Width = 70 };
@@ -160,7 +173,6 @@ public class GreetingSettingsPage : SettingsPageBase
                 headerRow.Children.Add(delBtn);
                 row.Children.Add(headerRow);
 
-                // 第二行：时段
                 var timeRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
                 var startBox = SettingsUI.Text($"{item.StartHour:D2}:{item.StartMinute:D2}", 50, v =>
                 {

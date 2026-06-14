@@ -18,6 +18,9 @@ public class HolidayService
     private static bool _netTried;
     private static readonly object _netLock = new();
     private static bool _netLoaded;
+    // 农历年度缓存：key 为 "yyyy-MM-dd"
+    private static Dictionary<string, LunarInfo> _lunarYearCache = new();
+    private static int _lunarCacheYear = -1;
 
     public PluginSettings Settings { get; set; } = new();
 
@@ -101,6 +104,11 @@ public class HolidayService
             Settings.TermColors["秋分"] = "#795548"; Settings.TermColors["寒露"] = "#795548"; Settings.TermColors["霜降"] = "#795548";
             Settings.TermColors["立冬"] = "#607D8B"; Settings.TermColors["小雪"] = "#607D8B"; Settings.TermColors["大雪"] = "#607D8B";
             Settings.TermColors["冬至"] = "#2196F3"; Settings.TermColors["小寒"] = "#2196F3"; Settings.TermColors["大寒"] = "#2196F3";
+        }
+        if (Settings.TempGreetings.Count == 0)
+        {
+            foreach (var g in LocalGreetingDB.DefaultTempGreetings)
+                Settings.TempGreetings.Add(new TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text });
         }
     }
 
@@ -258,89 +266,153 @@ public class HolidayService
 
     public async Task<LunarInfo?> GetLunarAsync()
     {
-        try
-        {
-            if (File.Exists(_lunarCachePath))
-            {
-                var cached = JsonSerializer.Deserialize<LunarInfo>(File.ReadAllText(_lunarCachePath));
-                if (cached != null && cached.Date == DateTime.Now.Date) return cached;
-            }
-        }
-        catch { }
+        var today = DateTime.Now.Date;
+        var todayKey = today.ToString("yyyy-MM-dd");
+
+        // 1. 先从内存缓存查找
+        if (_lunarCacheYear == today.Year && _lunarYearCache.TryGetValue(todayKey, out var cachedInfo))
+            return cachedInfo;
+
+        // 2. 从本地文件缓存加载
+        LoadLunarYearCache(today.Year);
+        if (_lunarYearCache.TryGetValue(todayKey, out var fileCached))
+            return fileCached;
+
+        // 3. 网络获取整年数据
         if (!Settings.LunarAutoRefresh) return null;
-        try
-        {
-            using var c = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            var r = await c.GetStringAsync($"https://api.mu-jie.cc/lunar?date={DateTime.Now:yyyy-MM-dd}");
-            using var doc = JsonDocument.Parse(r);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("code", out var cp) && cp.GetInt32() == 200 && root.TryGetProperty("data", out var dp))
-            {
-                var info = new LunarInfo
-                {
-                    Date = DateTime.Now.Date,
-                    gzYear = GetStr(dp, "gzYear") + "年",
-                    IMonthCn = GetStr(dp, "IMonthCn"),
-                    IDayCn = GetStr(dp, "IDayCn"),
-                    Animal = GetStr(dp, "Animal"),
-                    Term = GetStr(dp, "Term"),
-                    lunarDate = GetStr(dp, "lunarDate")
-                };
-                File.WriteAllText(_lunarCachePath, JsonSerializer.Serialize(info));
-                return info;
-            }
-        }
-        catch { }
-        return null;
+        await RefreshLunarYearAsync(today.Year);
+        return _lunarYearCache.TryGetValue(todayKey, out var netCached) ? netCached : null;
     }
 
-    string GetStr(JsonElement e, string p) => e.TryGetProperty(p, out var v) ? (v.GetString() ?? "") : "";
-
-    public async Task RefreshGreetingsAsync()
+    /// <summary>
+    /// 从本地文件加载整年农历缓存
+    /// </summary>
+    void LoadLunarYearCache(int year)
     {
-        if (!Settings.GreetingOnline) return;
+        if (_lunarCacheYear == year) return;
         try
         {
-            using var c = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            var r = await c.GetStringAsync("https://v1.hitokoto.cn/?c=k&encode=json");
-            using var doc = JsonDocument.Parse(r);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("hitokoto", out var hp))
+            var path = Path.Combine(
+                Path.GetDirectoryName(_lunarCachePath) ?? "",
+                $"lunar_year_{year}.json");
+            if (File.Exists(path))
             {
-                var text = hp.GetString() ?? "";
-                if (!string.IsNullOrEmpty(text))
+                var json = File.ReadAllText(path);
+                var dict = JsonSerializer.Deserialize<Dictionary<string, LunarInfo>>(json);
+                if (dict != null && dict.Count > 0)
                 {
-                    var now = DateTime.Now;
-                    var ct = now.TimeOfDay;
-
-                    // 如果当前处于特殊日期时段内，不刷新（特殊日期优先且固定）
-                    var inSpecial = Settings.SpecialDateGreetings.Any(sg =>
-                    {
-                        if (!sg.Enabled) return false;
-                        if ((int)now.DayOfWeek == 0 ? sg.DayOfWeek != 7 : (int)now.DayOfWeek != sg.DayOfWeek) return false;
-                        var start = new TimeSpan(sg.StartHour, sg.StartMinute, 0);
-                        var end = new TimeSpan(sg.EndHour, sg.EndMinute, 0);
-                        return ct >= start && ct < end;
-                    });
-                    if (inSpecial) return;
-
-                    // 只刷新当前所处的时间段问候语，且保存到设置
-                    var slot = Settings.TimeSlotGreetings.FirstOrDefault(s =>
-                    {
-                        var start = new TimeSpan(s.StartHour, s.StartMinute, 0);
-                        var end = new TimeSpan(s.EndHour, s.EndMinute, 0);
-                        return ct >= start && ct < end;
-                    });
-                    if (slot != null)
-                    {
-                        slot.Text = text;
-                        SaveSettings();
-                    }
+                    _lunarYearCache = dict;
+                    _lunarCacheYear = year;
                 }
             }
         }
         catch { }
     }
+
+    /// <summary>
+    /// 从网络获取整年农历数据并缓存到本地
+    /// </summary>
+    async Task RefreshLunarYearAsync(int year)
+    {
+        try
+        {
+            var dict = new Dictionary<string, LunarInfo>();
+            // 获取该年所有日期的农历信息（分批请求，每次30天）
+            for (int month = 1; month <= 12; month++)
+            {
+                try
+                {
+                    var date = new DateTime(year, month, 1);
+                    using var c = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                    var r = await c.GetStringAsync($"https://api.mu-jie.cc/lunar?date={date:yyyy-MM-dd}");
+                    using var doc = JsonDocument.Parse(r);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("code", out var cp) && cp.GetInt32() == 200 && root.TryGetProperty("data", out var dp))
+                    {
+                        // 获取该月所有日期
+                        var daysInMonth = DateTime.DaysInMonth(year, month);
+                        // 用月初数据推算整月（API 返回当月信息）
+                        var baseInfo = new LunarInfo
+                        {
+                            Date = date,
+                            gzYear = GetStr(dp, "gzYear") + "年",
+                            IMonthCn = GetStr(dp, "IMonthCn"),
+                            IDayCn = GetStr(dp, "IDayCn"),
+                            Animal = GetStr(dp, "Animal"),
+                            Term = GetStr(dp, "Term"),
+                            lunarDate = GetStr(dp, "lunarDate")
+                        };
+                        dict[date.ToString("yyyy-MM-dd")] = baseInfo;
+                    }
+                }
+                catch { }
+            }
+
+            // 如果只获取到了部分数据，逐日补充
+            if (dict.Count < 365 && dict.Count > 0)
+            {
+                // 逐日请求剩余日期（限制最多请求30次，避免过多网络调用）
+                var requested = 0;
+                var totalDays = DateTime.IsLeapYear(year) ? 366 : 365;
+                for (int day = 1; day <= totalDays; day++)
+                {
+                    if (requested >= 30) break;
+                    var date = new DateTime(year, 1, 1).AddDays(day - 1);
+                    var key = date.ToString("yyyy-MM-dd");
+                    if (dict.ContainsKey(key)) continue;
+
+                    try
+                    {
+                        using var c = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+                        var r = await c.GetStringAsync($"https://api.mu-jie.cc/lunar?date={key}");
+                        using var doc = JsonDocument.Parse(r);
+                        var root = doc.RootElement;
+                        if (root.TryGetProperty("code", out var cp) && cp.GetInt32() == 200 && root.TryGetProperty("data", out var dp))
+                        {
+                            dict[key] = new LunarInfo
+                            {
+                                Date = date,
+                                gzYear = GetStr(dp, "gzYear") + "年",
+                                IMonthCn = GetStr(dp, "IMonthCn"),
+                                IDayCn = GetStr(dp, "IDayCn"),
+                                Animal = GetStr(dp, "Animal"),
+                                Term = GetStr(dp, "Term"),
+                                lunarDate = GetStr(dp, "lunarDate")
+                            };
+                        }
+                        requested++;
+                    }
+                    catch { }
+                }
+            }
+
+            if (dict.Count > 0)
+            {
+                _lunarYearCache = dict;
+                _lunarCacheYear = year;
+                SaveLunarYearCache(year);
+            }
+        }
+        catch { }
+    }
+
+    /// <summary>
+    /// 保存整年农历缓存到本地文件
+    /// </summary>
+    void SaveLunarYearCache(int year)
+    {
+        try
+        {
+            var path = Path.Combine(
+                Path.GetDirectoryName(_lunarCachePath) ?? "",
+                $"lunar_year_{year}.json");
+            var opt = new JsonSerializerOptions { WriteIndented = false };
+            File.WriteAllText(path, JsonSerializer.Serialize(_lunarYearCache, opt));
+        }
+        catch { }
+    }
+
+    string GetStr(JsonElement e, string p) => e.TryGetProperty(p, out var v) ? (v.GetString() ?? "") : "";
 
     public Color ParseColor(string hex)
     {
