@@ -31,11 +31,11 @@ public class UnifiedSettingsPage : SettingsPageBase
         {
             ("\uE8F5", "节假日", BuildHolidayPanel),
             ("\uE713", "设置", BuildGeneralPanel),
-            ("\uE9D2", "问候语", BuildGreetingPanel),
+            ("\uE97A", "问候语", BuildGreetingPanel),
             ("\uE9CA", "24节气", BuildSolarTermPanel),
-            ("\uE787", "农历", BuildLunarPanel),
-            ("\uE915", "自定义", BuildCustomHolidayPanel),
-            ("\uE7BE", "寒暑假", BuildVacationPanel),
+            ("\uE8C0", "农历", BuildLunarPanel),
+            ("\uE716", "自定义", BuildCustomHolidayPanel),
+            ("\uE7BF", "寒暑假", BuildVacationPanel),
             ("\uE753", "天气", BuildWeatherPanel),
             ("\uE946", "关于", BuildAboutPanel),
         };
