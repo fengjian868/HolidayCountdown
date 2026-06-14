@@ -166,7 +166,7 @@ public class WeatherGreetingComponent : ComponentBase
             using var ipDoc = JsonDocument.Parse(ipInfo);
             var lat = ipDoc.RootElement.GetProperty("latitude").GetDouble();
             var lon = ipDoc.RootElement.GetProperty("longitude").GetDouble();
-            var city = ipDoc.RootElement.TryGetProperty("city", out var c) ? c.GetString() : "";
+            var city = ipDoc.RootElement.TryGetProperty("city", out var c) ? (c.GetString() ?? "") : "";
             return await QueryOpenMeteoAsync(client, lat, lon, city);
         }
         catch { return ("", null); }

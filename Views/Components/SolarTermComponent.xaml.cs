@@ -244,8 +244,9 @@ public class SolarTermComponent : ComponentBase
             var nextTerm = CalculateNextTerm(now);
             if (nextTerm == null) { _panel.Children.Clear(); return; }
 
-            var days = (nextTerm.Date.Date - now.Date).Days;
-            var color = _svc.GetTermColor(nextTerm.Name);
+            var term = nextTerm.Value;
+            var days = (term.Date.Date - now.Date).Days;
+            var color = _svc.GetTermColor(term.Name);
 
             _panel.Children.Clear();
 
@@ -253,14 +254,14 @@ public class SolarTermComponent : ComponentBase
 
             if (showProgress && days <= 15 && days >= 0)
             {
-                var totalDays = Math.Max(1, (nextTerm.Date.Date - nextTerm.PrevDate.Date).Days);
+                var totalDays = Math.Max(1, (term.Date.Date - term.PrevDate.Date).Days);
                 var progress = 1.0 - (double)days / totalDays;
                 _panel.Children.Add(CreateArcRing(days, progress, color));
             }
 
             var nameBlock = new TextBlock
             {
-                Text = nextTerm.Name,
+                Text = term.Name,
                 Foreground = new SolidColorBrush(color),
                 FontWeight = FontWeight.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
