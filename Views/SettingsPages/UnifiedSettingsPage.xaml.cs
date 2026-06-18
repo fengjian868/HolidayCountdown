@@ -38,8 +38,8 @@ public class UnifiedSettingsPage : SettingsPageBase
         {
             ("\uE8F5", "节假日", BuildHolidayPanel),
             ("\uE713", "设置", BuildGeneralPanel),
-            ("\uE97A", "问候语", BuildGreetingPanel),
-            ("\uE9CA", "24节气", BuildSolarTermPanel),
+            ("💬", "问候语", BuildGreetingPanel),
+            ("🌿", "24节气", BuildSolarTermPanel),
             ("\uE8C0", "农历", BuildLunarPanel),
             ("\uE716", "自定义", BuildCustomHolidayPanel),
             ("\uE7BF", "寒暑假", BuildVacationPanel),
@@ -548,7 +548,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     Control BuildLunarPanel()
     {
         var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("🌙 农历日期设置"));
+        s.Children.Add(PageHeader("\uE8C0 农历日期设置"));
 
         var displayPanel = new StackPanel { Spacing = 0 };
         displayPanel.Children.Add(SettingItem("显示农历", null,
