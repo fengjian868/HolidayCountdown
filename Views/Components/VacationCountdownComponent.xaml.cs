@@ -14,7 +14,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "F6A7B8C9-D0E1-2345-F012-123456789015",
     "寒暑假倒计时",
-    "\uE8F3",
+    "\uE716",
     "显示距离寒暑假的剩余周数和天数"
 )]
 public class VacationCountdownComponent : ComponentBase
