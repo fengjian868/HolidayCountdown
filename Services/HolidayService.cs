@@ -396,6 +396,75 @@ public class HolidayService
     }
 
     public bool IsNetLoaded => _netLoaded;
+
+    /// <summary>
+    /// 判断今天是否为调休上班日
+    /// </summary>
+    public bool IsTodayWorkday()
+    {
+        return _holidays.Any(h => h.Date.Date == DateTime.Now.Date && h.IsWorkday);
+    }
+
+    /// <summary>
+    /// 判断今天是否为24节气日
+    /// </summary>
+    public bool IsTodaySolarTerm()
+    {
+        var today = DateTime.Now.Date;
+        var yearCache = LoadLunarYearCache(today.Year);
+        if (yearCache != null)
+        {
+            var info = yearCache.FirstOrDefault(x => x.Date == today);
+            return info != null && !string.IsNullOrEmpty(info.Term);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 获取今天节气名称，无则返回空字符串
+    /// </summary>
+    public string GetTodaySolarTermName()
+    {
+        var today = DateTime.Now.Date;
+        var yearCache = LoadLunarYearCache(today.Year);
+        if (yearCache != null)
+        {
+            var info = yearCache.FirstOrDefault(x => x.Date == today);
+            return info?.Term ?? "";
+        }
+        return "";
+    }
+
+    /// <summary>
+    /// 一键刷新全部文案问候语
+    /// </summary>
+    public void RefreshAllGreetings()
+    {
+        // 重置每日刷新标记，让问候语组件重新随机
+        Settings.LastGreetingRefreshDate = null;
+
+        // 刷新时段问候语
+        foreach (var slot in Settings.TimeSlotGreetings)
+        {
+            if (!string.IsNullOrEmpty(slot.Tag))
+            {
+                var tagText = LocalGreetingDB.GetDaily(slot.Tag, LocalGreetingDB.TimeSlotGreetings);
+                if (!string.IsNullOrEmpty(tagText)) slot.Text = tagText;
+            }
+        }
+
+        // 刷新特殊日期问候语
+        foreach (var special in Settings.SpecialDateGreetings)
+        {
+            if (!string.IsNullOrEmpty(special.Tag))
+            {
+                var tagText = LocalGreetingDB.GetDaily(special.Tag, LocalGreetingDB.WeeklyReminders);
+                if (!string.IsNullOrEmpty(tagText)) special.Text = tagText;
+            }
+        }
+
+        SaveSettings();
+    }
 }
 
 public class LunarYearCache
