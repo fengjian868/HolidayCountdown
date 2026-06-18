@@ -27,7 +27,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     private StackPanel _contentPanel = null!;
     private ScrollViewer _scrollViewer = null!;
 
-    private readonly (string Icon, string Label, Func<Control> Build)[] _tabs;
+    private readonly (string Icon, string Label, Func<Control> Build, bool Experimental)[] _tabs;
     private int _currentIndex = -1;
 
     public UnifiedSettingsPage()
@@ -35,18 +35,21 @@ public class UnifiedSettingsPage : SettingsPageBase
         _svc = new HolidayService();
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _svc.SaveSettings(); };
-        _tabs = new (string, string, Func<Control>)[]
+        _tabs = new (string, string, Func<Control>, bool)[]
         {
             // 关于页放在最左侧
-            ("\uE946", "关于", BuildAboutPanel),
-            ("\uE8F5", "节假日", BuildHolidayPanel),
-            ("\uE713", "设置", BuildGeneralPanel),
-            ("💬", "问候语", BuildGreetingPanel),
-            ("🌿", "24节气", BuildSolarTermPanel),
-            ("\uE8C0", "农历", BuildLunarPanel),
-            ("\uE716", "自定义", BuildCustomHolidayPanel),
-            ("\uE7BF", "寒暑假", BuildVacationPanel),
-            ("\uE753", "天气", BuildWeatherPanel),
+            ("\uE946", "关于", BuildAboutPanel, false),
+            ("\uE8F5", "节假日", BuildHolidayPanel, false),
+            ("\uE713", "设置", BuildGeneralPanel, false),
+            ("💬", "问候语", BuildGreetingPanel, false),
+            ("🌿", "24节气", BuildSolarTermPanel, false),
+            ("\uE8C0", "农历", BuildLunarPanel, false),
+            ("\uE716", "自定义", BuildCustomHolidayPanel, false),
+            ("\uE7BF", "寒暑假", BuildVacationPanel, false),
+            ("\uE753", "天气", BuildWeatherPanel, false),
+            // 实验性功能独立配置页
+            ("\uE7BE", "课表", BuildClassSchedulePanel, true),
+            ("\uE9D1", "学习", BuildStudyTimePanel, true),
         };
         Content = Build();
     }
@@ -98,7 +101,8 @@ public class UnifiedSettingsPage : SettingsPageBase
                 Background = Brushes.Transparent,
                 CornerRadius = new CornerRadius(6),
                 Cursor = new Cursor(StandardCursorType.Hand),
-                Tag = idx
+                Tag = idx,
+                IsVisible = !(tab.Experimental && _svc.Settings.HideExperimentalFeatures)
             };
             btn.PointerPressed += (s, e) => SwitchTab(idx);
             _tabButtons.Add(btn);
@@ -132,6 +136,15 @@ public class UnifiedSettingsPage : SettingsPageBase
 
     void SwitchTab(int index)
     {
+        // 若目标 Tab 被隐藏，则跳到第一个可见 Tab
+        if (index < 0 || index >= _tabs.Length || (_tabs[index].Experimental && _svc.Settings.HideExperimentalFeatures))
+        {
+            for (int i = 0; i < _tabs.Length; i++)
+            {
+                if (!_tabs[i].Experimental || !_svc.Settings.HideExperimentalFeatures)
+                { index = i; break; }
+            }
+        }
         _currentIndex = index;
         foreach (var btn in _tabButtons)
         {
@@ -158,7 +171,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("⚙️ 设置"));
 
         // 实验性功能总开关
-        s.Children.Add(SettingItem("隐藏实验性功能", "开启后隐藏课程表联动、学习时长统计等测试版设置项",
+        s.Children.Add(SettingItem("隐藏实验性功能", "开启后隐藏课表、学习等测试版设置项",
             Toggle(_svc.Settings.HideExperimentalFeatures, v =>
             {
                 _svc.Settings.HideExperimentalFeatures = v;
@@ -167,44 +180,113 @@ public class UnifiedSettingsPage : SettingsPageBase
             })));
         s.Children.Add(Separator());
 
-        if (!_svc.Settings.HideExperimentalFeatures)
-        {
-            var schedulePanel = new StackPanel { Spacing = 0 };
-            schedulePanel.Children.Add(SettingItem("启用课程表联动", "读取ClassIsland课程表，显示当前课程/课间倒计时",
-                Toggle(_svc.Settings.ClassScheduleEnabled, v => { _svc.Settings.ClassScheduleEnabled = v; AutoSave(); })));
-            schedulePanel.Children.Add(Separator());
-            schedulePanel.Children.Add(SettingItem("显示图标", "在课程表信息前显示图标",
-                Toggle(_svc.Settings.ClassScheduleShowIcon, v => { _svc.Settings.ClassScheduleShowIcon = v; AutoSave(); })));
-            s.Children.Add(Expander("课程表联动", "课程表联动组件设置", schedulePanel));
+        return s;
+    }
 
-            var studyPanel = new StackPanel { Spacing = 0 };
-            studyPanel.Children.Add(SettingItem("启用学习时长统计", "记录ClassIsland运行时长，显示今日学习时长",
-                Toggle(_svc.Settings.StudyTimeEnabled, v => { _svc.Settings.StudyTimeEnabled = v; AutoSave(); })));
-            studyPanel.Children.Add(Separator());
-            studyPanel.Children.Add(SettingItem("显示图标", "在学习时长前显示图标",
-                Toggle(_svc.Settings.StudyTimeShowIcon, v => { _svc.Settings.StudyTimeShowIcon = v; AutoSave(); })));
-            studyPanel.Children.Add(Separator());
-            var resetStudyBtn = new Button { Content = "🔄 重置今日时长", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
-            resetStudyBtn.Click += (a, e) =>
+    Control BuildClassSchedulePanel()
+    {
+        var s = new StackPanel { Spacing = 0 };
+        s.Children.Add(PageHeader("\uE7BE 课程表联动设置"));
+
+        var schedulePanel = new StackPanel { Spacing = 0 };
+        schedulePanel.Children.Add(SettingItem("启用课程表联动", "读取ClassIsland课程表，显示当前课程/课间倒计时",
+            Toggle(_svc.Settings.ClassScheduleEnabled, v => { _svc.Settings.ClassScheduleEnabled = v; AutoSave(); })));
+        schedulePanel.Children.Add(Separator());
+        schedulePanel.Children.Add(SettingItem("显示图标", "在课程表信息前显示学科图标",
+            Toggle(_svc.Settings.ClassScheduleShowIcon, v => { _svc.Settings.ClassScheduleShowIcon = v; AutoSave(); })));
+        schedulePanel.Children.Add(Separator());
+        schedulePanel.Children.Add(SettingItem("显示学科名", "是否显示课程名称",
+            Toggle(_svc.Settings.ClassScheduleShowSubject, v => { _svc.Settings.ClassScheduleShowSubject = v; AutoSave(); })));
+        s.Children.Add(Expander("基础设置", "课程表联动组件基础设置", schedulePanel));
+
+        var noClassPanel = new StackPanel { Spacing = 0 };
+        noClassPanel.Children.Add(SettingItem("上午文案", "05:00~11:00 无课程时显示",
+            Text(_svc.Settings.NoClassMorningText, 220, v => { _svc.Settings.NoClassMorningText = v; AutoSave(); })));
+        noClassPanel.Children.Add(Separator());
+        noClassPanel.Children.Add(SettingItem("中午文案", "11:00~13:00 无课程时显示",
+            Text(_svc.Settings.NoClassNoonText, 220, v => { _svc.Settings.NoClassNoonText = v; AutoSave(); })));
+        noClassPanel.Children.Add(Separator());
+        noClassPanel.Children.Add(SettingItem("下午文案", "13:00~18:00 无课程时显示",
+            Text(_svc.Settings.NoClassAfternoonText, 220, v => { _svc.Settings.NoClassAfternoonText = v; AutoSave(); })));
+        noClassPanel.Children.Add(Separator());
+        noClassPanel.Children.Add(SettingItem("晚间文案", "18:00~05:00 无课程时显示",
+            Text(_svc.Settings.NoClassEveningText, 220, v => { _svc.Settings.NoClassEveningText = v; AutoSave(); })));
+        s.Children.Add(Expander("无课程文案", "无课程时按时段显示的内容", noClassPanel));
+
+        var preClassPanel = new StackPanel { Spacing = 0 };
+        preClassPanel.Children.Add(SettingItem("课前提示分钟", "上课前多少分钟开始显示下节课和总课时",
+            Number(_svc.Settings.PreClassMinutes, 0, 60, v => { _svc.Settings.PreClassMinutes = v; AutoSave(); })));
+        s.Children.Add(Expander("课前提示", "上课前提前显示下节课信息", preClassPanel));
+
+        var warningPanel = new StackPanel { Spacing = 0 };
+        warningPanel.Children.Add(SettingItem("启用课间警示", "课间剩余时间较少时变红提醒",
+            Toggle(_svc.Settings.BreakWarningEnabled, v => { _svc.Settings.BreakWarningEnabled = v; AutoSave(); })));
+        warningPanel.Children.Add(Separator());
+        warningPanel.Children.Add(SettingItem("警示分钟", "剩余多少分钟时触发警示",
+            Number(_svc.Settings.BreakWarningMinutes, 0, 30, v => { _svc.Settings.BreakWarningMinutes = v; AutoSave(); })));
+        warningPanel.Children.Add(Separator());
+        warningPanel.Children.Add(SettingItem("警示颜色", null,
+            ColorPicker(_svc.Settings.BreakWarningColor, c => { _svc.Settings.BreakWarningColor = c; AutoSave(); })));
+        s.Children.Add(Expander("课间警示", "课间剩余时间较少时高亮显示", warningPanel));
+
+        var templatePanel = new StackPanel { Spacing = 0 };
+        templatePanel.Children.Add(SettingItem("上课模板", "占位符：{icon} {subject} {remaining}",
+            Text(_svc.Settings.ClassScheduleOnClassTemplate, 320, v => { _svc.Settings.ClassScheduleOnClassTemplate = v; AutoSave(); })));
+        templatePanel.Children.Add(Separator());
+        templatePanel.Children.Add(SettingItem("课间模板", "占位符：{icon} {remaining} {next} {total}",
+            Text(_svc.Settings.ClassScheduleBreakTemplate, 320, v => { _svc.Settings.ClassScheduleBreakTemplate = v; AutoSave(); })));
+        templatePanel.Children.Add(Separator());
+        templatePanel.Children.Add(SettingItem("准备上课模板", "占位符：{icon} {next} {total}",
+            Text(_svc.Settings.ClassSchedulePrepareTemplate, 320, v => { _svc.Settings.ClassSchedulePrepareTemplate = v; AutoSave(); })));
+        templatePanel.Children.Add(Separator());
+        templatePanel.Children.Add(SettingItem("放学模板", "占位符：{icon}",
+            Text(_svc.Settings.ClassScheduleAfterSchoolTemplate, 320, v => { _svc.Settings.ClassScheduleAfterSchoolTemplate = v; AutoSave(); })));
+        templatePanel.Children.Add(Separator());
+        templatePanel.Children.Add(SettingItem("无课程模板", "占位符：{icon} {text}",
+            Text(_svc.Settings.ClassScheduleNoClassTemplate, 320, v => { _svc.Settings.ClassScheduleNoClassTemplate = v; AutoSave(); })));
+        s.Children.Add(Expander("显示模板", "自定义各类状态的显示格式", templatePanel));
+
+        return s;
+    }
+
+    Control BuildStudyTimePanel()
+    {
+        var s = new StackPanel { Spacing = 0 };
+        s.Children.Add(PageHeader("\uE9D1 学习时长统计设置"));
+
+        var studyPanel = new StackPanel { Spacing = 0 };
+        studyPanel.Children.Add(SettingItem("启用学习时长统计", "记录ClassIsland运行时长，显示今日学习时长",
+            Toggle(_svc.Settings.StudyTimeEnabled, v => { _svc.Settings.StudyTimeEnabled = v; AutoSave(); })));
+        studyPanel.Children.Add(Separator());
+        studyPanel.Children.Add(SettingItem("显示图标", "在学习时长前显示图标",
+            Toggle(_svc.Settings.StudyTimeShowIcon, v => { _svc.Settings.StudyTimeShowIcon = v; AutoSave(); })));
+        studyPanel.Children.Add(Separator());
+        studyPanel.Children.Add(SettingItem("仅统计上课时间", "开启后只累加上课状态时长，否则统计 ClassIsland 总运行时长",
+            Toggle(_svc.Settings.StudyTimeCountClassTimeOnly, v => { _svc.Settings.StudyTimeCountClassTimeOnly = v; AutoSave(); })));
+        studyPanel.Children.Add(Separator());
+        studyPanel.Children.Add(SettingItem("每周重置", "开启后按自然周统计，否则按日统计",
+            Toggle(_svc.Settings.StudyTimeWeeklyReset, v => { _svc.Settings.StudyTimeWeeklyReset = v; AutoSave(); })));
+        studyPanel.Children.Add(Separator());
+        var resetStudyBtn = new Button { Content = "🔄 重置当前统计", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
+        resetStudyBtn.Click += (a, e) =>
+        {
+            var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClassIsland", "Plugins", "HolidayCountdown");
+            var studyTimePath = Path.Combine(dataDir, "study_time.json");
+            try
             {
-                var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClassIsland", "Plugins", "HolidayCountdown");
-                var studyTimePath = Path.Combine(dataDir, "study_time.json");
-                try
+                if (File.Exists(studyTimePath))
                 {
-                    if (File.Exists(studyTimePath))
-                    {
-                        var json = File.ReadAllText(studyTimePath);
-                        var data = JsonSerializer.Deserialize<Dictionary<string, double>>(json) ?? new Dictionary<string, double>();
-                        var key = DateTime.Now.ToString("yyyy-MM-dd");
-                        data[key] = 0;
-                        File.WriteAllText(studyTimePath, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
-                    }
+                    var json = File.ReadAllText(studyTimePath);
+                    var data = JsonSerializer.Deserialize<Dictionary<string, double>>(json) ?? new Dictionary<string, double>();
+                    var key = DateTime.Now.ToString("yyyy-MM-dd");
+                    data[key] = 0;
+                    File.WriteAllText(studyTimePath, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
                 }
-                catch { }
-            };
-            studyPanel.Children.Add(SettingItem("重置今日时长", "将今日学习时长清零", resetStudyBtn));
-            s.Children.Add(Expander("学习时长统计", "学习时长统计组件设置", studyPanel));
-        }
+            }
+            catch { }
+        };
+        studyPanel.Children.Add(SettingItem("重置今日时长", "将今日学习时长清零", resetStudyBtn));
+        s.Children.Add(Expander("基础设置", "学习时长统计组件基础设置", studyPanel));
 
         return s;
     }

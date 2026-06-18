@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Avalonia;
@@ -45,14 +46,14 @@ public class ClassScheduleComponent : ComponentBase
 
     void Update()
     {
-        if (_svc == null || !_svc.Settings.ClassScheduleEnabled) { _txt.Text = ""; return; }
+        if (_svc == null || !_svc.Settings.ClassScheduleEnabled) { _txt.Text = ""; ResetColor(); return; }
         try
         {
             var lessonsService = GetLessonsService();
-            if (lessonsService == null) { _txt.Text = ""; return; }
+            if (lessonsService == null) { _txt.Text = ""; ResetColor(); return; }
 
             var currentStateObj = GetPropertyValue(lessonsService, "CurrentState");
-            if (currentStateObj == null) { _txt.Text = ""; return; }
+            if (currentStateObj == null) { _txt.Text = ""; ResetColor(); return; }
 
             int state = (int)currentStateObj;
             // TimeState: 0=None, 1=OnClass, 2=PrepareOnClass, 3=Breaking, 4=AfterSchool
@@ -64,9 +65,10 @@ public class ClassScheduleComponent : ComponentBase
             var isClassPlanLoaded = GetPropertyValue(lessonsService, "IsClassPlanLoaded");
             var isClassPlanEnabled = GetPropertyValue(lessonsService, "IsClassPlanEnabled");
 
-            if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = ""; return; }
-            if (isClassPlanLoaded is bool loaded && !loaded) { _txt.Text = ""; return; }
+            if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = ""; ResetColor(); return; }
+            if (isClassPlanLoaded is bool loaded && !loaded) { _txt.Text = GetNoClassText(); ResetColor(); return; }
 
+            ResetColor();
             string result = "";
 
             switch (state)
@@ -75,41 +77,64 @@ public class ClassScheduleComponent : ComponentBase
                     {
                         var subjectName = GetSubjectName(currentSubject);
                         var leftTime = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
-                        var icon = _svc.Settings.ClassScheduleShowIcon ? "📖 " : "";
-                        if (leftTime.TotalSeconds > 0)
-                            result = $"{icon}{subjectName} 还有{FormatTime(leftTime)}";
-                        else
-                            result = $"{icon}{subjectName}";
+                        var icon = _svc.Settings.ClassScheduleShowIcon ? GetSubjectIcon(subjectName) + " " : "";
+                        var subjectDisplay = _svc.Settings.ClassScheduleShowSubject ? subjectName : "";
+                        result = ApplyTemplate(_svc.Settings.ClassScheduleOnClassTemplate, new Dictionary<string, string>
+                        {
+                            ["icon"] = icon,
+                            ["subject"] = subjectDisplay,
+                            ["remaining"] = FormatTime(leftTime)
+                        });
                     }
                     break;
                 case 3: // Breaking
                     {
                         var nextName = GetSubjectName(nextSubject);
-                        // 课间状态时，ClassIsland 的 OnClassLeftTime 表示距离下节课开始的剩余时间
                         var leftTime = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
                         var icon = _svc.Settings.ClassScheduleShowIcon ? "☕ " : "";
-                        if (!string.IsNullOrEmpty(nextName) && nextName != "未安排")
-                            result = $"{icon}课间 还有{FormatTime(leftTime)} → {nextName}";
-                        else
-                            result = $"{icon}课间休息 还有{FormatTime(leftTime)}";
+                        var total = TryGetNextClassTotalTime(lessonsService);
+                        var totalStr = total.HasValue ? $"（{FormatTime(total.Value)}）" : "";
+                        var template = leftTime.TotalMinutes <= _svc.Settings.PreClassMinutes && !string.IsNullOrEmpty(nextName) && nextName != "未安排"
+                            ? _svc.Settings.ClassSchedulePrepareTemplate
+                            : _svc.Settings.ClassScheduleBreakTemplate;
+                        result = ApplyTemplate(template, new Dictionary<string, string>
+                        {
+                            ["icon"] = icon,
+                            ["remaining"] = FormatTime(leftTime),
+                            ["next"] = nextName,
+                            ["total"] = totalStr
+                        });
+
+                        // 课间时长警示
+                        if (_svc.Settings.BreakWarningEnabled && leftTime.TotalMinutes <= _svc.Settings.BreakWarningMinutes && leftTime.TotalSeconds > 0)
+                            _txt.Foreground = new SolidColorBrush(Color.Parse(_svc.Settings.BreakWarningColor));
                     }
                     break;
                 case 4: // AfterSchool
                     {
                         var icon = _svc.Settings.ClassScheduleShowIcon ? "🏠 " : "";
-                        result = $"{icon}放学了";
+                        result = ApplyTemplate(_svc.Settings.ClassScheduleAfterSchoolTemplate, new Dictionary<string, string>
+                        {
+                            ["icon"] = icon
+                        });
                     }
                     break;
                 case 2: // PrepareOnClass
                     {
                         var nextName = GetSubjectName(nextSubject);
                         var icon = _svc.Settings.ClassScheduleShowIcon ? "🔔 " : "";
-                        result = $"{icon}准备上课 → {nextName}";
+                        var total = TryGetNextClassTotalTime(lessonsService);
+                        var totalStr = total.HasValue ? $"（{FormatTime(total.Value)}）" : "";
+                        result = ApplyTemplate(_svc.Settings.ClassSchedulePrepareTemplate, new Dictionary<string, string>
+                        {
+                            ["icon"] = icon,
+                            ["next"] = nextName,
+                            ["total"] = totalStr
+                        });
                     }
                     break;
                 default: // None
                     {
-                        // Try to show next class info if available
                         var nextName = GetSubjectName(nextSubject);
                         if (!string.IsNullOrEmpty(nextName) && nextName != "未安排")
                         {
@@ -118,7 +143,11 @@ public class ClassScheduleComponent : ComponentBase
                         }
                         else
                         {
-                            result = "";
+                            result = ApplyTemplate(_svc.Settings.ClassScheduleNoClassTemplate, new Dictionary<string, string>
+                            {
+                                ["icon"] = "",
+                                ["text"] = GetNoClassText()
+                            });
                         }
                     }
                     break;
@@ -126,7 +155,77 @@ public class ClassScheduleComponent : ComponentBase
 
             _txt.Text = result;
         }
-        catch { _txt.Text = ""; }
+        catch { _txt.Text = ""; ResetColor(); }
+    }
+
+    void ResetColor() => _txt.Foreground = Brushes.White;
+
+    string GetNoClassText()
+    {
+        if (_svc == null) return "";
+        var h = DateTime.Now.Hour;
+        if (h >= 5 && h < 11) return _svc.Settings.NoClassMorningText;
+        if (h >= 11 && h < 13) return _svc.Settings.NoClassNoonText;
+        if (h >= 13 && h < 18) return _svc.Settings.NoClassAfternoonText;
+        return _svc.Settings.NoClassEveningText;
+    }
+
+    string GetSubjectIcon(string subjectName)
+    {
+        var s = subjectName.ToLower();
+        if (s.Contains("语文")) return "📖";
+        if (s.Contains("数学")) return "📐";
+        if (s.Contains("英语")) return "🔤";
+        if (s.Contains("物理")) return "⚛️";
+        if (s.Contains("化学")) return "🧪";
+        if (s.Contains("生物")) return "🧬";
+        if (s.Contains("历史")) return "🏛️";
+        if (s.Contains("地理")) return "🌍";
+        if (s.Contains("政治")) return "🏛️";
+        if (s.Contains("体育")) return "🏃";
+        if (s.Contains("音乐")) return "🎵";
+        if (s.Contains("美术")) return "🎨";
+        if (s.Contains("信息") || s.Contains("电脑") || s.Contains("计算机")) return "💻";
+        return "📖";
+    }
+
+    TimeSpan? TryGetNextClassTotalTime(object? lessonsService)
+    {
+        try
+        {
+            var nextItem = GetPropertyValue(lessonsService, "NextTimeLayoutItem") ?? GetPropertyValue(lessonsService, "CurrentTimeLayoutItem");
+            if (nextItem == null) return null;
+            var start = GetPropertyValue(nextItem, "StartTime");
+            var end = GetPropertyValue(nextItem, "EndTime");
+            if (start == null || end == null) return null;
+            var startTs = ToTimeSpan(start);
+            var endTs = ToTimeSpan(end);
+            if (startTs.HasValue && endTs.HasValue)
+            {
+                var dur = endTs.Value - startTs.Value;
+                if (dur.TotalMinutes < 0) dur += TimeSpan.FromHours(24);
+                return dur;
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    TimeSpan? ToTimeSpan(object obj)
+    {
+        if (obj is TimeSpan ts) return ts;
+        if (obj is DateTime dt) return dt.TimeOfDay;
+        if (obj is TimeOnly to) return to.ToTimeSpan();
+        if (TimeSpan.TryParse(obj?.ToString(), out var parsed)) return parsed;
+        return null;
+    }
+
+    string ApplyTemplate(string template, Dictionary<string, string> values)
+    {
+        if (string.IsNullOrEmpty(template)) return "";
+        foreach (var kv in values)
+            template = template.Replace($"{{{kv.Key}}}", kv.Value ?? "");
+        return template.Trim();
     }
 
     string GetSubjectName(object? subject)

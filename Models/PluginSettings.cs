@@ -106,10 +106,26 @@ public class PluginSettings
     // 课程表联动
     public bool ClassScheduleEnabled { get; set; } = true;
     public bool ClassScheduleShowIcon { get; set; } = true;
+    public bool ClassScheduleShowSubject { get; set; } = true;
+    public string NoClassMorningText { get; set; } = "上午好，暂无课程";
+    public string NoClassNoonText { get; set; } = "中午好，暂无课程";
+    public string NoClassAfternoonText { get; set; } = "下午好，暂无课程";
+    public string NoClassEveningText { get; set; } = "晚上好，暂无课程";
+    public int PreClassMinutes { get; set; } = 5;
+    public bool BreakWarningEnabled { get; set; } = true;
+    public int BreakWarningMinutes { get; set; } = 3;
+    public string BreakWarningColor { get; set; } = "#FFE53935";
+    public string ClassScheduleOnClassTemplate { get; set; } = "{icon}{subject} 还有{remaining}";
+    public string ClassScheduleBreakTemplate { get; set; } = "{icon}课间 还有{remaining} → {next}{total}";
+    public string ClassSchedulePrepareTemplate { get; set; } = "{icon}准备上课 → {next}{total}";
+    public string ClassScheduleAfterSchoolTemplate { get; set; } = "{icon}放学了";
+    public string ClassScheduleNoClassTemplate { get; set; } = "{text}";
 
     // 学习时长统计
     public bool StudyTimeEnabled { get; set; } = true;
     public bool StudyTimeShowIcon { get; set; } = true;
+    public bool StudyTimeCountClassTimeOnly { get; set; } = false;
+    public bool StudyTimeWeeklyReset { get; set; } = false;
 }
 
 public class CustomHoliday

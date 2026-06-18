@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
@@ -59,17 +61,22 @@ public class StudyTimeComponent : ComponentBase
 
         try
         {
-            var today = DateTime.Now.Date;
-            var key = today.ToString("yyyy-MM-dd");
+            var now = DateTime.Now;
+            var elapsedMinutes = (now - _lastUpdate).TotalMinutes;
+            _lastUpdate = now;
+
+            // 若只统计已上课时长，则仅在上课状态时累加
+            if (_svc.Settings.StudyTimeCountClassTimeOnly)
+            {
+                var state = GetCurrentState();
+                if (state != 1) elapsedMinutes = 0;
+            }
+
+            var key = GetCurrentKey();
 
             lock (_saveLock)
             {
                 var data = LoadStudyData();
-
-                // 只累加距离上次更新的时长，多个实例共享时不会重复统计
-                var now = DateTime.Now;
-                var elapsedMinutes = (now - _lastUpdate).TotalMinutes;
-                _lastUpdate = now;
 
                 if (!data.ContainsKey(key)) data[key] = 0;
                 data[key] = data[key] + elapsedMinutes;
@@ -78,10 +85,72 @@ public class StudyTimeComponent : ComponentBase
 
                 var totalMinutes = data[key];
                 var icon = _svc.Settings.StudyTimeShowIcon ? "📚 " : "";
-                _txt.Text = $"{icon}今日已学习 {FormatDuration(totalMinutes)}";
+                var timeScope = _svc.Settings.StudyTimeWeeklyReset ? "本周" : "今日";
+                var action = _svc.Settings.StudyTimeCountClassTimeOnly ? "已上课" : "已学习";
+                _txt.Text = $"{icon}{timeScope}{action} {FormatDuration(totalMinutes)}";
             }
         }
         catch { _txt.Text = ""; }
+    }
+
+    string GetCurrentKey()
+    {
+        if (_svc?.Settings.StudyTimeWeeklyReset == true)
+        {
+            var now = DateTime.Now;
+            return $"{now.Year}-W{ISOWeek.GetWeekOfYear(now)}";
+        }
+        return DateTime.Now.ToString("yyyy-MM-dd");
+    }
+
+    int GetCurrentState()
+    {
+        try
+        {
+            var svc = GetLessonsService();
+            if (svc == null) return 0;
+            var stateObj = GetPropertyValue(svc, "CurrentState");
+            return stateObj as int? ?? 0;
+        }
+        catch { return 0; }
+    }
+
+    object? GetLessonsService()
+    {
+        try
+        {
+            var appHostType = Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Shared")
+                ?? Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Core")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .FirstOrDefault(t => t.Name == "IAppHost");
+
+            if (appHostType == null) return null;
+
+            var tryGetService = appHostType.GetMethod("TryGetService", BindingFlags.Public | BindingFlags.Static);
+            if (tryGetService == null || !tryGetService.IsGenericMethodDefinition) return null;
+
+            var lessonsServiceType = Type.GetType("ClassIsland.Core.Abstractions.Services.ILessonsService, ClassIsland.Core")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .FirstOrDefault(t => t.Name == "ILessonsService" || t.Name == "LessonsService");
+
+            if (lessonsServiceType == null) return null;
+
+            var genericMethod = tryGetService.MakeGenericMethod(lessonsServiceType);
+            return genericMethod.Invoke(null, null);
+        }
+        catch { return null; }
+    }
+
+    object? GetPropertyValue(object obj, string propName)
+    {
+        try
+        {
+            var prop = obj.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
+            return prop?.GetValue(obj);
+        }
+        catch { return null; }
     }
 
     string FormatDuration(double totalMinutes)
