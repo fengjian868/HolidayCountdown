@@ -16,7 +16,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "F1E2D3C4-B5A6-7890-1234-567890ABCDEF",
     "节假日+问候语",
-    "bitmap(avares://HolidayCountdown/icon.png)",
+    "\uE8F5",
     "合并显示节假日倒计时和时段问候语，可配置是否分开"
 )]
 public class CombinedComponent : ComponentBase

@@ -9,8 +9,6 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using Avalonia.Threading;
 using ClassIsland.Core.Attributes;
 using ClassIsland.Core.Abstractions.Controls;
@@ -19,7 +17,7 @@ using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.SettingsPages;
 
-[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "bitmap(avares://HolidayCountdown/icon.png)", "bitmap(avares://HolidayCountdown/icon.png)")]
+[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE364", "\uE364")]
 public class UnifiedSettingsPage : SettingsPageBase
 {
     private readonly HolidayService _svc;
@@ -68,21 +66,15 @@ public class UnifiedSettingsPage : SettingsPageBase
             VerticalAlignment = VerticalAlignment.Center
         };
 
-        // 顶部导航栏左侧显示插件 logo
-        try
+        // 顶部导航栏左侧显示设置页图标
+        tabBar.Children.Add(new TextBlock
         {
-            using var stream = AssetLoader.Open(new Uri("avares://HolidayCountdown/icon.png"));
-            var logo = new Image
-            {
-                Source = new Bitmap(stream),
-                Width = 22,
-                Height = 22,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 10, 0)
-            };
-            tabBar.Children.Add(logo);
-        }
-        catch { }
+            Text = "\uE364",
+            FontFamily = new FontFamily("Segoe MDL2 Assets"),
+            FontSize = 22,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 10, 0)
+        });
 
         for (int i = 0; i < _tabs.Length; i++)
         {
