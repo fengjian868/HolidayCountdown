@@ -13,4 +13,7 @@
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="icon.png" />
+  </ItemGroup>
 </Project>

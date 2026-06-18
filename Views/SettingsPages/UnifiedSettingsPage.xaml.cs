@@ -6,8 +6,11 @@ using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using ClassIsland.Core.Attributes;
 using ClassIsland.Core.Abstractions.Controls;
@@ -16,18 +19,21 @@ using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.SettingsPages;
 
-[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE713", "\uE713")]
+[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "bitmap(avares://HolidayCountdown/icon.png)", "bitmap(avares://HolidayCountdown/icon.png)")]
 public class UnifiedSettingsPage : SettingsPageBase
 {
     private readonly HolidayService _svc;
-    private StackPanel _contentPanel = null!;
-    private ScrollViewer _scrollViewer = null!;
+    private readonly List<Border> _tabButtons = new();
+    private readonly DispatcherTimer _saveTimer;
 
     private readonly (string Icon, string Label, Func<Control> Build)[] _tabs;
+    private int _currentIndex = -1;
 
     public UnifiedSettingsPage()
     {
         _svc = new HolidayService();
+        _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _svc.SaveSettings(); };
         _tabs = new (string, string, Func<Control>)[]
         {
             ("\uE8F5", "节假日", BuildHolidayPanel),
@@ -55,32 +61,51 @@ public class UnifiedSettingsPage : SettingsPageBase
             Orientation = Orientation.Horizontal,
             Spacing = 4,
             Margin = new Thickness(16, 12, 16, 8),
-            HorizontalAlignment = HorizontalAlignment.Left
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Center
         };
+
+        // 顶部导航栏左侧显示插件 logo
+        try
+        {
+            using var stream = AssetLoader.Open(new Uri("avares://HolidayCountdown/icon.png"));
+            var logo = new Image
+            {
+                Source = new Bitmap(stream),
+                Width = 22,
+                Height = 22,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            tabBar.Children.Add(logo);
+        }
+        catch { }
 
         for (int i = 0; i < _tabs.Length; i++)
         {
             var idx = i;
             var tab = _tabs[i];
-            var btn = new Button
+            var content = new StackPanel
             {
-                Content = new StackPanel
+                Orientation = Orientation.Horizontal,
+                Spacing = 4,
+                Children =
                 {
-                    Orientation = Orientation.Horizontal,
-                    Spacing = 4,
-                    Children =
-                    {
-                        new TextBlock { Text = tab.Icon, FontSize = 14, VerticalAlignment = VerticalAlignment.Center },
-                        new TextBlock { Text = tab.Label, FontSize = 13, VerticalAlignment = VerticalAlignment.Center }
-                    }
-                },
+                    new TextBlock { Text = tab.Icon, FontSize = 14, VerticalAlignment = VerticalAlignment.Center },
+                    new TextBlock { Text = tab.Label, FontSize = 13, VerticalAlignment = VerticalAlignment.Center }
+                }
+            };
+            var btn = new Border
+            {
+                Child = content,
                 Padding = new Thickness(10, 6),
                 Background = Brushes.Transparent,
-                BorderThickness = new Thickness(0),
                 CornerRadius = new CornerRadius(6),
+                Cursor = new Cursor(StandardCursorType.Hand),
                 Tag = idx
             };
-            btn.Click += (s, e) => SwitchTab(idx);
+            btn.PointerPressed += (s, e) => SwitchTab(idx);
+            _tabButtons.Add(btn);
             tabBar.Children.Add(btn);
         }
         Grid.SetRow(tabBar, 0);
@@ -111,20 +136,14 @@ public class UnifiedSettingsPage : SettingsPageBase
 
     void SwitchTab(int index)
     {
-        var tabBar = (Content as Grid)?.Children[0] as StackPanel;
-        if (tabBar != null)
+        _currentIndex = index;
+        foreach (var btn in _tabButtons)
         {
-            foreach (var child in tabBar.Children)
-            {
-                if (child is Button btn && btn.Tag is int idx)
-                {
-                    bool active = idx == index;
-                    btn.Background = active
-                        ? new SolidColorBrush(Color.Parse("#FF2196F3"))
-                        : Brushes.Transparent;
-                    btn.Opacity = active ? 1.0 : 0.7;
-                }
-            }
+            bool active = btn.Tag is int idx && idx == index;
+            btn.Background = active
+                ? new SolidColorBrush(Color.Parse("#FF2196F3"))
+                : Brushes.Transparent;
+            btn.Opacity = active ? 1.0 : 0.7;
         }
 
         _contentPanel.Children.Clear();
@@ -1023,7 +1042,12 @@ public class UnifiedSettingsPage : SettingsPageBase
         Margin = new Thickness(16, 0, 16, 0)
     };
 
-    void AutoSave() => _svc.SaveSettings();
+    void AutoSave()
+    {
+        // 延迟 500ms 保存，避免每次按键都触发文件写入和全局事件
+        _saveTimer.Stop();
+        _saveTimer.Start();
+    }
 
     static ToggleSwitch Toggle(bool value, Action<bool> onChanged)
     {

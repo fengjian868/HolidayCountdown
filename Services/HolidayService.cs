@@ -14,7 +14,7 @@ public class HolidayService
 {
     private readonly List<Holiday> _builtIn;
     private List<Holiday> _holidays = new();
-    private readonly string _cachePath, _settingsPath, _lunarCachePath, _lunarYearCachePath;
+    private readonly string _cachePath, _settingsPath, _lunarCachePath, _lunarYearCachePath, _lunarMonthCachePath;
     private static bool _netTried;
     private static readonly object _netLock = new();
     private static bool _netLoaded;
@@ -36,6 +36,7 @@ public class HolidayService
         _settingsPath = Path.Combine(dir, "settings.json");
         _lunarCachePath = Path.Combine(dir, "lunar_cache.json");
         _lunarYearCachePath = Path.Combine(dir, "lunar_year_cache.json");
+        _lunarMonthCachePath = Path.Combine(dir, "lunar_month_cache.json");
         LoadSettings();
         if (CacheValid()) { var c = LoadCache(); if (c.Count > 0) _holidays = c; }
         if (!_netTried)
@@ -262,28 +263,94 @@ public class HolidayService
 
     public async Task<LunarInfo?> GetLunarAsync()
     {
-        var year = DateTime.Now.Year;
+        var today = DateTime.Now.Date;
+        var monthKey = today.ToString("yyyy-MM");
 
-        // 尝试加载年度缓存
-        var yearCache = LoadLunarYearCache(year);
-        if (yearCache != null)
+        // 优先使用本月本地缓存
+        var monthCache = LoadLunarMonthCache(monthKey);
+        if (monthCache != null)
         {
-            var today = DateTime.Now.Date;
-            var info = yearCache.FirstOrDefault(x => x.Date == today);
+            var info = monthCache.Data.FirstOrDefault(x => x.Date == today);
             if (info != null) return info;
         }
 
         if (!Settings.LunarAutoRefresh) return null;
 
-        // 刷新整年缓存
-        await RefreshLunarYearAsync(year);
-        yearCache = LoadLunarYearCache(year);
-        if (yearCache != null)
+        // 每日自动刷新一次当月数据
+        await RefreshLunarMonthAsync(today.Year, today.Month);
+        monthCache = LoadLunarMonthCache(monthKey);
+        return monthCache?.Data.FirstOrDefault(x => x.Date == today);
+    }
+
+    LunarMonthCache? LoadLunarMonthCache(string month)
+    {
+        try
         {
-            var today = DateTime.Now.Date;
-            return yearCache.FirstOrDefault(x => x.Date == today);
+            if (File.Exists(_lunarMonthCachePath))
+            {
+                var json = File.ReadAllText(_lunarMonthCachePath);
+                var cache = JsonSerializer.Deserialize<LunarMonthCache>(json);
+                if (cache != null && cache.Month == month && cache.Data.Count > 0 && cache.LastRefresh.Date == DateTime.Now.Date)
+                    return cache;
+            }
         }
+        catch { }
         return null;
+    }
+
+    async Task RefreshLunarMonthAsync(int year, int month)
+    {
+        try
+        {
+            var list = new List<LunarInfo>();
+            var daysInMonth = DateTime.DaysInMonth(year, month);
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                var date = new DateTime(year, month, day);
+                try
+                {
+                    var r = await client.GetStringAsync($"https://api.mu-jie.cc/lunar?date={date:yyyy-MM-dd}");
+                    using var doc = JsonDocument.Parse(r);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("code", out var cp) && cp.GetInt32() == 200 && root.TryGetProperty("data", out var dp))
+                    {
+                        list.Add(new LunarInfo
+                        {
+                            Date = date,
+                            gzYear = GetStr(dp, "gzYear") + "年",
+                            IMonthCn = GetStr(dp, "IMonthCn"),
+                            IDayCn = GetStr(dp, "IDayCn"),
+                            Animal = GetStr(dp, "Animal"),
+                            Term = GetStr(dp, "Term"),
+                            lunarDate = GetStr(dp, "lunarDate")
+                        });
+                    }
+                }
+                catch { }
+            }
+
+            if (list.Count > 0)
+            {
+                SaveLunarMonthCache(new LunarMonthCache
+                {
+                    Month = $"{year:0000}-{month:00}",
+                    LastRefresh = DateTime.Now,
+                    Data = list
+                });
+            }
+        }
+        catch { }
+    }
+
+    void SaveLunarMonthCache(LunarMonthCache cache)
+    {
+        try
+        {
+            File.WriteAllText(_lunarMonthCachePath, JsonSerializer.Serialize(cache, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch { }
     }
 
     List<LunarInfo>? LoadLunarYearCache(int year)

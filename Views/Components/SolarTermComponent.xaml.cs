@@ -21,7 +21,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "C3D4E5F6-A7B8-9012-CDEF-345678901234",
     "24节气",
-    "\uE9CA",
+    "bitmap(avares://HolidayCountdown/icon.png)",
     "显示当前24节气倒计时"
 )]
 public class SolarTermComponent : ComponentBase

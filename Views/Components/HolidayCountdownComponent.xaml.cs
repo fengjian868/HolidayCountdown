@@ -16,7 +16,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "A1B2C3D4-E5F6-7890-ABCD-EF1234567890",
     "节假日倒计时",
-    "\uE8F5",
+    "bitmap(avares://HolidayCountdown/icon.png)",
     "显示距离最近节假日的倒计时，横向排列，带弧形进度环"
 )]
 public class HolidayCountdownComponent : ComponentBase

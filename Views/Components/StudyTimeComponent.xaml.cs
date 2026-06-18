@@ -18,7 +18,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "E5F6A7B8-C9D0-1234-EF01-234567890ABC",
     "学习时长统计 [测试版]",
-    "\uE9D1",
+    "bitmap(avares://HolidayCountdown/icon.png)",
     "记录ClassIsland运行时长，显示今日学习时长（测试版，不稳定）"
 )]
 public class StudyTimeComponent : ComponentBase
@@ -26,8 +26,9 @@ public class StudyTimeComponent : ComponentBase
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
     private HolidayService? _svc;
-    private DateTime _sessionStart;
-    private DateTime _lastUpdate;
+    private static readonly DateTime _sessionStart = DateTime.Now;
+    private static DateTime _lastUpdate = DateTime.Now;
+    private static readonly object _saveLock = new();
     private static readonly string DataDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "ClassIsland", "Plugins", "HolidayCountdown");
@@ -35,8 +36,7 @@ public class StudyTimeComponent : ComponentBase
 
     public StudyTimeComponent()
     {
-        _sessionStart = DateTime.Now;
-        _lastUpdate = DateTime.Now;
+        // 多个组件实例共享同一会话计时，避免重复统计或统计丢失
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
         panel.Children.Add(_txt);
@@ -60,23 +60,26 @@ public class StudyTimeComponent : ComponentBase
         try
         {
             var today = DateTime.Now.Date;
-            var data = LoadStudyData();
             var key = today.ToString("yyyy-MM-dd");
 
-            // Only add elapsed time since last update
-            var now = DateTime.Now;
-            var elapsedMinutes = (now - _lastUpdate).TotalMinutes;
-            _lastUpdate = now;
+            lock (_saveLock)
+            {
+                var data = LoadStudyData();
 
-            if (!data.ContainsKey(key)) data[key] = 0;
-            data[key] = data[key] + elapsedMinutes;
+                // 只累加距离上次更新的时长，多个实例共享时不会重复统计
+                var now = DateTime.Now;
+                var elapsedMinutes = (now - _lastUpdate).TotalMinutes;
+                _lastUpdate = now;
 
-            // Save updated data
-            SaveStudyData(data);
+                if (!data.ContainsKey(key)) data[key] = 0;
+                data[key] = data[key] + elapsedMinutes;
 
-            var totalMinutes = data[key];
-            var icon = _svc.Settings.StudyTimeShowIcon ? "📚 " : "";
-            _txt.Text = $"{icon}今日已学习 {FormatDuration(totalMinutes)}";
+                SaveStudyData(data);
+
+                var totalMinutes = data[key];
+                var icon = _svc.Settings.StudyTimeShowIcon ? "📚 " : "";
+                _txt.Text = $"{icon}今日已学习 {FormatDuration(totalMinutes)}";
+            }
         }
         catch { _txt.Text = ""; }
     }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -16,7 +17,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "B2C3D4E5-F6A7-8901-BCDE-F23456789012",
     "天气问候",
-    "\uE753",
+    "bitmap(avares://HolidayCountdown/icon.png)",
     "根据ClassIsland天气温度显示穿衣提醒，支持预警提示"
 )]
 public class WeatherGreetingComponent : ComponentBase
@@ -31,7 +32,7 @@ public class WeatherGreetingComponent : ComponentBase
         var panel = new Grid { ColumnDefinitions = new ColumnDefinitions("*"), VerticalAlignment = VerticalAlignment.Center };
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
         Grid.SetColumn(_txt, 0); panel.Children.Add(_txt); Content = panel;
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) }; _timer.Tick += (s, e) => Update(); _timer.Start();
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) }; _timer.Tick += (s, e) => Update(); _timer.Start();
         Dispatcher.UIThread.Post(() => { _svc = new HolidayService(); HolidayService.SettingsChanged += OnSettingsChanged; Update(); });
     }
 
@@ -45,34 +46,79 @@ public class WeatherGreetingComponent : ComponentBase
     {
         if (_svc == null || !_svc.Settings.WeatherGreetingEnabled) { _txt.Text = ""; return; }
 
-        var (temp, weatherCode, warnings) = GetWeatherData();
+        var (temp, weatherCode, weatherText, warnings, updateTime) = GetWeatherData();
 
-        // 用温度+天气代码+预警拼接成key，判断天气是否有变化
-        var currentKey = $"{temp}|{weatherCode}|{string.Join(",", warnings)}";
-        // 即使key相同也更新（因为定时器就是用来刷新的），但保留key用于调试
-        _lastWeatherKey = currentKey;
+        // 保留 key 用于调试
+        _lastWeatherKey = $"{temp}|{weatherCode}|{string.Join(",", warnings)}";
 
         // 优先根据温度给出穿衣提醒
-        var greet = GetTempGreeting(temp);
+        var greeting = GetTempGreeting(temp);
 
-        // 如果温度获取失败，回退到天气关键词匹配
-        if (string.IsNullOrEmpty(greet) && !string.IsNullOrEmpty(weatherCode))
+        // 如果温度提醒为空，回退到天气关键词匹配
+        var actualWeatherText = weatherText;
+        if (string.IsNullOrEmpty(greeting) && !string.IsNullOrEmpty(weatherCode))
         {
-            var weatherText = GetWeatherTextByCode(weatherCode);
-            greet = GetWeatherGreeting(weatherText);
+            actualWeatherText = GetWeatherTextByCode(weatherCode);
+            greeting = GetWeatherGreeting(actualWeatherText);
         }
+        if (string.IsNullOrEmpty(actualWeatherText)) actualWeatherText = GetWeatherTextByCode(weatherCode ?? "");
 
         // 预警提醒
-        var warningText = GetWarningText(warnings);
-        if (!string.IsNullOrEmpty(warningText))
+        var warning = GetWarningText(warnings);
+        if (!string.IsNullOrEmpty(warning) && _svc.Settings.WeatherWarningOverride)
         {
-            if (_svc.Settings.WeatherWarningOverride)
-                greet = warningText; // 预警覆盖普通提醒
-            else
-                greet = warningText + " " + greet; // 预警+普通提醒
+            greeting = warning;
+            warning = "";
         }
 
-        _txt.Text = greet;
+        // 按模板排版
+        var template = _svc.Settings.WeatherTemplate ?? "{greeting}";
+        var icon = GetWeatherIcon(actualWeatherText);
+        var result = template
+            .Replace("{greeting}", greeting)
+            .Replace("{temp}", temp.HasValue ? $"{temp.Value}°C" : "")
+            .Replace("{weather}", actualWeatherText)
+            .Replace("{warning}", warning)
+            .Replace("{icon}", icon);
+        result = Regex.Replace(result, @"\s+", " ").Trim();
+
+        // 天气数据过旧时给出提示
+        var stale = GetStaleWarning(updateTime);
+        if (!string.IsNullOrEmpty(stale))
+            result = string.IsNullOrEmpty(result) ? stale : $"{result} {stale}";
+
+        _txt.Text = result;
+    }
+
+    /// <summary>
+    /// 根据天气文本返回对应图标
+    /// </summary>
+    string GetWeatherIcon(string? weatherText)
+    {
+        if (string.IsNullOrEmpty(weatherText)) return "";
+        var t = weatherText;
+        if (t.Contains("晴")) return "☀️";
+        if (t.Contains("多云")) return "⛅";
+        if (t.Contains("阴")) return "☁️";
+        if (t.Contains("雷阵雨")) return "⛈️";
+        if (t.Contains("雷")) return "⚡";
+        if (t.Contains("雨")) return "🌧️";
+        if (t.Contains("雪")) return "❄️";
+        if (t.Contains("雾") || t.Contains("霾")) return "🌫️";
+        if (t.Contains("风") || t.Contains("沙")) return "🍃";
+        if (t.Contains("冰雹")) return "🧊";
+        return "🌤️";
+    }
+
+    /// <summary>
+    /// 天气数据超过半小时未更新则提示
+    /// </summary>
+    string GetStaleWarning(DateTime? updateTime)
+    {
+        if (!updateTime.HasValue) return "";
+        var elapsed = DateTime.Now - updateTime.Value;
+        if (elapsed.TotalMinutes >= 30) return "(天气未刷新)";
+        return "";
     }
 
     /// <summary>
@@ -209,22 +255,23 @@ public class WeatherGreetingComponent : ComponentBase
     }
 
     /// <summary>
-    /// 获取天气数据：温度、天气代码、预警列表
+    /// 获取天气数据：温度、天气代码、天气文本、预警列表、更新时间
     /// </summary>
-    (double? temp, string? weatherCode, string[] warnings) GetWeatherData()
+    (double? temp, string? weatherCode, string? weatherText, string[] warnings, DateTime? updateTime) GetWeatherData()
     {
         try
         {
             var settings = GetSettingsServiceSettings();
-            if (settings == null) return (null, null, Array.Empty<string>());
+            if (settings == null) return (null, null, null, Array.Empty<string>(), null);
 
             var lastWeatherInfo = GetPropertyValue(settings, "LastWeatherInfo");
-            if (lastWeatherInfo == null) return (null, null, Array.Empty<string>());
+            if (lastWeatherInfo == null) return (null, null, null, Array.Empty<string>(), null);
 
-            // 获取 Current 中的温度
+            // 获取 Current 中的温度、天气代码与文本
             var current = GetPropertyValue(lastWeatherInfo, "Current");
             double? temp = null;
             string? weatherCode = null;
+            string? weatherText = null;
             if (current != null)
             {
                 var temperature = GetPropertyValue(current, "Temperature");
@@ -234,14 +281,38 @@ public class WeatherGreetingComponent : ComponentBase
                     if (double.TryParse(tempValue, out var t)) temp = t;
                 }
                 weatherCode = GetPropertyValue(current, "Weather")?.ToString();
+                weatherText = GetPropertyValue(current, "WeatherText")?.ToString()
+                    ?? GetPropertyValue(current, "WeatherDescription")?.ToString()
+                    ?? GetPropertyValue(current, "Text")?.ToString();
             }
 
             // 获取所有预警
             var warnings = GetAllAlertTitles(lastWeatherInfo);
 
-            return (temp, weatherCode, warnings);
+            // 获取天气更新时间
+            var updateTime = GetDateTimeProperty(lastWeatherInfo, "UpdateTime")
+                ?? GetDateTimeProperty(lastWeatherInfo, "FetchTime")
+                ?? GetDateTimeProperty(lastWeatherInfo, "LastUpdateTime")
+                ?? GetDateTimeProperty(lastWeatherInfo, "UpdatedTime");
+
+            return (temp, weatherCode, weatherText, warnings, updateTime);
         }
-        catch { return (null, null, Array.Empty<string>()); }
+        catch { return (null, null, null, Array.Empty<string>(), null); }
+    }
+
+    DateTime? GetDateTimeProperty(object obj, string propName)
+    {
+        try
+        {
+            var prop = obj.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
+            if (prop == null) return null;
+            var value = prop.GetValue(obj);
+            if (value is DateTime dt) return dt;
+            if (value is DateTimeOffset dto) return dto.DateTime;
+            if (DateTime.TryParse(value?.ToString(), out var parsed)) return parsed;
+            return null;
+        }
+        catch { return null; }
     }
 
     object? GetSettingsServiceSettings()
