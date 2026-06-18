@@ -44,8 +44,8 @@ public class UnifiedSettingsPage : SettingsPageBase
             ("💬", "问候语", BuildGreetingPanel, false),
             ("🌿", "24节气", BuildSolarTermPanel, false),
             ("\uE8C0", "农历", BuildLunarPanel, false),
-            ("\uE716", "自定义", BuildCustomHolidayPanel, false),
-            ("\uE7BF", "寒暑假", BuildVacationPanel, false),
+            ("\uE70F", "自定义", BuildCustomHolidayPanel, false),
+            ("\uE8F3", "寒暑假", BuildVacationPanel, false),
             ("\uE753", "天气", BuildWeatherPanel, false),
             // 实验性功能独立配置页
             ("\uE7BE", "课表", BuildClassSchedulePanel, true),
