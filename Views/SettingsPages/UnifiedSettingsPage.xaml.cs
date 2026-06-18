@@ -38,15 +38,16 @@ public class UnifiedSettingsPage : SettingsPageBase
         _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _svc.SaveSettings(); };
         _tabs = new (string, string, Func<Control>)[]
         {
-            ("\uE8F5", "节假日", BuildHolidayPanel),
-            ("\uE713", "设置", BuildGeneralPanel),
-            ("\uE97A", "问候语", BuildGreetingPanel),
-            ("\uE9CA", "24节气", BuildSolarTermPanel),
-            ("\uE8C0", "农历", BuildLunarPanel),
-            ("\uE716", "自定义", BuildCustomHolidayPanel),
-            ("\uE7BF", "寒暑假", BuildVacationPanel),
-            ("\uE753", "天气", BuildWeatherPanel),
-            ("\uE946", "关于", BuildAboutPanel),
+            // Tab 图标与对应页面大标题图标保持一致
+            ("📅", "节假日", BuildHolidayPanel),
+            ("⚙️", "设置", BuildGeneralPanel),
+            ("💬", "问候语", BuildGreetingPanel),
+            ("🌿", "24节气", BuildSolarTermPanel),
+            ("🌙", "农历", BuildLunarPanel),
+            ("🎂", "自定义", BuildCustomHolidayPanel),
+            ("🏖️", "寒暑假", BuildVacationPanel),
+            ("🌤️", "天气", BuildWeatherPanel),
+            ("ℹ️", "关于", BuildAboutPanel),
         };
         Content = Build();
     }
