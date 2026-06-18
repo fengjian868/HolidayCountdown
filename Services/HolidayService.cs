@@ -108,6 +108,13 @@ public class HolidayService
             foreach (var g in LocalGreetingDB.DefaultTempGreetings)
                 Settings.TempGreetings.Add(new TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text, Tag = g.Tag });
         }
+        if (Settings.NoClassTimeSlots.Count == 0)
+        {
+            Settings.NoClassTimeSlots.Add(new NoClassTimeSlot { Name = "上午", StartHour = 5, StartMinute = 0, EndHour = 11, EndMinute = 0, Text = Settings.NoClassMorningText });
+            Settings.NoClassTimeSlots.Add(new NoClassTimeSlot { Name = "中午", StartHour = 11, StartMinute = 0, EndHour = 13, EndMinute = 0, Text = Settings.NoClassNoonText });
+            Settings.NoClassTimeSlots.Add(new NoClassTimeSlot { Name = "下午", StartHour = 13, StartMinute = 0, EndHour = 18, EndMinute = 0, Text = Settings.NoClassAfternoonText });
+            Settings.NoClassTimeSlots.Add(new NoClassTimeSlot { Name = "晚间", StartHour = 18, StartMinute = 0, EndHour = 5, EndMinute = 0, Text = Settings.NoClassEveningText });
+        }
     }
 
     public void SaveSettings()

@@ -61,7 +61,8 @@ public class CombinedComponent : ComponentBase
                 Text = greet,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
-                Opacity = 0.9
+                Opacity = 0.9,
+                Foreground = Brushes.Black
             });
         }
 
@@ -112,7 +113,7 @@ public class CombinedComponent : ComponentBase
                 var daysText = days == 0 ? "就是今天！" : $"还有 {days} 天";
                 if (_svc.Settings.ShowDaysOff && h.DaysOff > 1 && days >= 0)
                     daysText += $"（放{h.DaysOff}天）";
-                textCol.Children.Add(new TextBlock { Text = daysText, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8, FontSize = 11 });
+                textCol.Children.Add(new TextBlock { Text = daysText, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8, FontSize = 11, Foreground = Brushes.Black });
                 item.Children.Add(textCol);
 
                 row.Children.Add(item);
@@ -121,7 +122,7 @@ public class CombinedComponent : ComponentBase
         }
         else
         {
-            _main.Children.Add(new TextBlock { Text = "暂无节假日", HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.5 });
+            _main.Children.Add(new TextBlock { Text = "暂无节假日", HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.5, Foreground = Brushes.Black });
         }
 
         // 放假占比
@@ -133,7 +134,8 @@ public class CombinedComponent : ComponentBase
                 Text = $"当年假期剩余 {ratio:P0}",
                 HorizontalAlignment = HorizontalAlignment.Center,
                 FontSize = 10,
-                Opacity = 0.6
+                Opacity = 0.6,
+                Foreground = Brushes.Black
             });
         }
     }

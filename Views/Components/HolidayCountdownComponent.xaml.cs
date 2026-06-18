@@ -86,14 +86,14 @@ public class HolidayCountdownComponent : ComponentBase
                 nameDaysRow.Children.Add(new TextBlock { Text = h.Name, Foreground = new SolidColorBrush(color), FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
                 var daysText = days == 0 ? "今天" : $"还有{days}天";
                 if (_svc.Settings.ShowDaysOff && h.DaysOff > 1 && days >= 0) daysText += $"(放{h.DaysOff}天)";
-                nameDaysRow.Children.Add(new TextBlock { Text = daysText, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8 });
+                nameDaysRow.Children.Add(new TextBlock { Text = daysText, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8, Foreground = Brushes.Black });
                 firstRow.Children.Add(nameDaysRow);
                 item.Children.Add(firstRow);
 
                 // 第二行：显示该节日放假天数（如"放假3天"），字体稍小
                 if (i == 0 && h.DaysOff > 1)
                 {
-                    item.Children.Add(new TextBlock { Text = $"放假{h.DaysOff}天", HorizontalAlignment = HorizontalAlignment.Left, FontSize = 10, Opacity = 0.5, Margin = new Thickness(36, 0, 0, 0) });
+                    item.Children.Add(new TextBlock { Text = $"放假{h.DaysOff}天", HorizontalAlignment = HorizontalAlignment.Left, FontSize = 10, Opacity = 0.5, Margin = new Thickness(36, 0, 0, 0), Foreground = Brushes.Black });
                 }
 
                 row.Children.Add(item);
@@ -103,7 +103,7 @@ public class HolidayCountdownComponent : ComponentBase
         }
         else
         {
-            _main.Children.Add(new TextBlock { Text = "暂无节假日", HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.5 });
+            _main.Children.Add(new TextBlock { Text = "暂无节假日", HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.5, Foreground = Brushes.Black });
         }
     }
 

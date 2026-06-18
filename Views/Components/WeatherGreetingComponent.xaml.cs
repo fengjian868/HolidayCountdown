@@ -30,7 +30,7 @@ public class WeatherGreetingComponent : ComponentBase
     public WeatherGreetingComponent()
     {
         var panel = new Grid { ColumnDefinitions = new ColumnDefinitions("*"), VerticalAlignment = VerticalAlignment.Center };
-        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
+        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9, Foreground = Brushes.Black };
         Grid.SetColumn(_txt, 0); panel.Children.Add(_txt); Content = panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) }; _timer.Tick += (s, e) => Update(); _timer.Start();
         Dispatcher.UIThread.Post(() => { _svc = new HolidayService(); HolidayService.SettingsChanged += OnSettingsChanged; Update(); });

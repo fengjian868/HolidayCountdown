@@ -27,7 +27,7 @@ public class GreetingComponent : ComponentBase
     public GreetingComponent()
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
+        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9, Foreground = Brushes.Black };
         panel.Children.Add(_txt);
         Content = panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };

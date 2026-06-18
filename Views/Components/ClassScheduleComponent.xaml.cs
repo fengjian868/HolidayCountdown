@@ -29,7 +29,7 @@ public class ClassScheduleComponent : ComponentBase
     public ClassScheduleComponent()
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
+        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9, Foreground = Brushes.Black };
         panel.Children.Add(_txt);
         Content = panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -158,16 +158,28 @@ public class ClassScheduleComponent : ComponentBase
         catch { _txt.Text = ""; ResetColor(); }
     }
 
-    void ResetColor() => _txt.Foreground = Brushes.White;
+    void ResetColor() => _txt.Foreground = Brushes.Black;
 
     string GetNoClassText()
     {
         if (_svc == null) return "";
-        var h = DateTime.Now.Hour;
-        if (h >= 5 && h < 11) return _svc.Settings.NoClassMorningText;
-        if (h >= 11 && h < 13) return _svc.Settings.NoClassNoonText;
-        if (h >= 13 && h < 18) return _svc.Settings.NoClassAfternoonText;
-        return _svc.Settings.NoClassEveningText;
+        var now = DateTime.Now;
+        var minutes = now.Hour * 60 + now.Minute;
+        foreach (var slot in _svc.Settings.NoClassTimeSlots.OrderBy(x => x.StartHour * 60 + x.StartMinute))
+        {
+            var start = slot.StartHour * 60 + slot.StartMinute;
+            var end = slot.EndHour * 60 + slot.EndMinute;
+            if (start <= end)
+            {
+                if (minutes >= start && minutes < end) return slot.Text;
+            }
+            else
+            {
+                // 跨天时段（如 18:00 ~ 05:00）
+                if (minutes >= start || minutes < end) return slot.Text;
+            }
+        }
+        return "";
     }
 
     string GetSubjectIcon(string subjectName)

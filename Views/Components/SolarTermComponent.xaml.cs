@@ -275,7 +275,8 @@ public class SolarTermComponent : ComponentBase
             {
                 Text = days == 0 ? "今天" : $"还有{days}天",
                 VerticalAlignment = VerticalAlignment.Center,
-                Opacity = 0.8
+                Opacity = 0.8,
+                Foreground = Brushes.Black
             };
             _panel.Children.Add(daysBlock);
 

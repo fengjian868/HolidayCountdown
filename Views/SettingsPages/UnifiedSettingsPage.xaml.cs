@@ -200,17 +200,56 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("基础设置", "课程表联动组件基础设置", schedulePanel));
 
         var noClassPanel = new StackPanel { Spacing = 0 };
-        noClassPanel.Children.Add(SettingItem("上午文案", "05:00~11:00 无课程时显示",
-            Text(_svc.Settings.NoClassMorningText, 220, v => { _svc.Settings.NoClassMorningText = v; AutoSave(); })));
-        noClassPanel.Children.Add(Separator());
-        noClassPanel.Children.Add(SettingItem("中午文案", "11:00~13:00 无课程时显示",
-            Text(_svc.Settings.NoClassNoonText, 220, v => { _svc.Settings.NoClassNoonText = v; AutoSave(); })));
-        noClassPanel.Children.Add(Separator());
-        noClassPanel.Children.Add(SettingItem("下午文案", "13:00~18:00 无课程时显示",
-            Text(_svc.Settings.NoClassAfternoonText, 220, v => { _svc.Settings.NoClassAfternoonText = v; AutoSave(); })));
-        noClassPanel.Children.Add(Separator());
-        noClassPanel.Children.Add(SettingItem("晚间文案", "18:00~05:00 无课程时显示",
-            Text(_svc.Settings.NoClassEveningText, 220, v => { _svc.Settings.NoClassEveningText = v; AutoSave(); })));
+        var noClassListPanel = new StackPanel { Spacing = 0 };
+
+        void RefreshNoClassList()
+        {
+            noClassListPanel.Children.Clear();
+            var slots = _svc.Settings.NoClassTimeSlots.OrderBy(x => x.StartHour * 60 + x.StartMinute).ToList();
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var slot = slots[i];
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(16, 8, 16, 8) };
+                var nameBox = Text(slot.Name, 70, v => { slot.Name = v; AutoSave(); });
+                var startBox = Text($"{slot.StartHour:D2}:{slot.StartMinute:D2}", 50, v =>
+                {
+                    if (TimeSpan.TryParse(v, out var ts)) { slot.StartHour = ts.Hours; slot.StartMinute = ts.Minutes; AutoSave(); }
+                });
+                var endBox = Text($"{slot.EndHour:D2}:{slot.EndMinute:D2}", 50, v =>
+                {
+                    if (TimeSpan.TryParse(v, out var ts)) { slot.EndHour = ts.Hours; slot.EndMinute = ts.Minutes; AutoSave(); }
+                });
+                var textBox = Text(slot.Text, 180, v => { slot.Text = v; AutoSave(); });
+                var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
+                delBtn.Click += (a, e) => { _svc.Settings.NoClassTimeSlots.Remove(slot); AutoSave(); RefreshNoClassList(); };
+
+                row.Children.Add(new TextBlock { Text = "名称", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(nameBox);
+                row.Children.Add(new TextBlock { Text = "从", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(startBox);
+                row.Children.Add(new TextBlock { Text = "到", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(endBox);
+                row.Children.Add(new TextBlock { Text = "文案", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                row.Children.Add(textBox);
+                row.Children.Add(delBtn);
+                noClassListPanel.Children.Add(row);
+                if (i < slots.Count - 1)
+                    noClassListPanel.Children.Add(Separator());
+            }
+        }
+
+        RefreshNoClassList();
+        noClassPanel.Children.Add(noClassListPanel);
+
+        var addNoClassBtn = new Button { Content = "+ 添加时段", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 4, 16, 8) };
+        addNoClassBtn.Click += (a, e) =>
+        {
+            _svc.Settings.NoClassTimeSlots.Add(new Models.NoClassTimeSlot { Name = "新时段", StartHour = 0, StartMinute = 0, EndHour = 23, EndMinute = 59, Text = "" });
+            AutoSave();
+            RefreshNoClassList();
+        };
+        noClassPanel.Children.Add(addNoClassBtn);
+        noClassPanel.Children.Add(Info("按当前时间匹配第一个满足条件的时段，可自由添加、删除、修改时段和文案"));
         s.Children.Add(Expander("无课程文案", "无课程时按时段显示的内容", noClassPanel));
 
         var preClassPanel = new StackPanel { Spacing = 0 };
@@ -230,19 +269,19 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("课间警示", "课间剩余时间较少时高亮显示", warningPanel));
 
         var templatePanel = new StackPanel { Spacing = 0 };
-        templatePanel.Children.Add(SettingItem("上课模板", "占位符：{icon} {subject} {remaining}",
+        templatePanel.Children.Add(SettingItem("上课模板", "{icon}=学科图标 {subject}=学科名 {remaining}=本节课剩余时间",
             Text(_svc.Settings.ClassScheduleOnClassTemplate, 320, v => { _svc.Settings.ClassScheduleOnClassTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("课间模板", "占位符：{icon} {remaining} {next} {total}",
+        templatePanel.Children.Add(SettingItem("课间模板", "{icon}=学科图标 {remaining}=课间剩余时间 {next}=下节课名 {total}=下节课总时长",
             Text(_svc.Settings.ClassScheduleBreakTemplate, 320, v => { _svc.Settings.ClassScheduleBreakTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("准备上课模板", "占位符：{icon} {next} {total}",
+        templatePanel.Children.Add(SettingItem("准备上课模板", "{icon}=学科图标 {next}=下节课名 {total}=下节课总时长",
             Text(_svc.Settings.ClassSchedulePrepareTemplate, 320, v => { _svc.Settings.ClassSchedulePrepareTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("放学模板", "占位符：{icon}",
+        templatePanel.Children.Add(SettingItem("放学模板", "{icon}=学科图标（固定放学图标）",
             Text(_svc.Settings.ClassScheduleAfterSchoolTemplate, 320, v => { _svc.Settings.ClassScheduleAfterSchoolTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("无课程模板", "占位符：{icon} {text}",
+        templatePanel.Children.Add(SettingItem("无课程模板", "{icon}=学科图标 {text}=无课程文案",
             Text(_svc.Settings.ClassScheduleNoClassTemplate, 320, v => { _svc.Settings.ClassScheduleNoClassTemplate = v; AutoSave(); })));
         s.Children.Add(Expander("显示模板", "自定义各类状态的显示格式", templatePanel));
 
