@@ -259,6 +259,9 @@ public class SolarTermComponent : ComponentBase
                 _panel.Children.Add(CreateArcRing(days, progress, color));
             }
 
+            // 恢复 1.2.0.2 版本的节气叶子图标
+            _panel.Children.Add(new TextBlock { Text = "🌿", FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
+
             var nameBlock = new TextBlock
             {
                 Text = term.Name,
@@ -275,6 +278,9 @@ public class SolarTermComponent : ComponentBase
                 Opacity = 0.8
             };
             _panel.Children.Add(daysBlock);
+
+            if (days == 0)
+                _panel.Children.Add(new TextBlock { Text = "✨", FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
         }
         catch { _panel.Children.Clear(); }
     }
