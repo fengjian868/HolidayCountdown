@@ -775,6 +775,9 @@ public class UnifiedSettingsPage : SettingsPageBase
 
     StackPanel BuildTempPanel()
     {
+        // 打开面板时先对齐一次，确保展示无重叠区间
+        _svc.AlignTempGreetings();
+
         var panel = new StackPanel { Spacing = 8 };
         var listPanel = new StackPanel { Spacing = 0 };
 
@@ -787,12 +790,8 @@ public class UnifiedSettingsPage : SettingsPageBase
                 var item = items[i];
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(16, 8, 16, 8) };
 
-                var minBox = new TextBox { Text = item.MinTemp.ToString(), Width = 45 };
-                minBox.LostFocus += (a, b) =>
-                {
-                    if (int.TryParse(minBox.Text, out var v)) { item.MinTemp = v; AutoSave(); }
-                    else minBox.Text = item.MinTemp.ToString();
-                };
+                // 下限由上一区间上限自动推导，只读
+                var minBox = new TextBox { Text = item.MinTemp.ToString(), Width = 45, IsReadOnly = true, Opacity = 0.6 };
 
                 var maxBox = new TextBox { Text = item.MaxTemp == 999 ? "" : item.MaxTemp.ToString(), Width = 45, Watermark = "∞" };
                 maxBox.LostFocus += (a, b) =>
@@ -800,7 +799,9 @@ public class UnifiedSettingsPage : SettingsPageBase
                     if (string.IsNullOrEmpty(maxBox.Text)) item.MaxTemp = 999;
                     else if (int.TryParse(maxBox.Text, out var v)) item.MaxTemp = v;
                     else maxBox.Text = item.MaxTemp == 999 ? "" : item.MaxTemp.ToString();
+                    _svc.AlignTempGreetings();
                     AutoSave();
+                    RefreshList();
                 };
 
                 var tags = new[] { "极寒", "寒冷", "偏冷", "凉", "微凉", "舒适", "偏热", "炎热", "极热" };
@@ -818,7 +819,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                     RefreshList();
                 };
                 var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
-                delBtn.Click += (a, e) => { _svc.Settings.TempGreetings.Remove(item); AutoSave(); RefreshList(); };
+                delBtn.Click += (a, e) => { _svc.Settings.TempGreetings.Remove(item); _svc.AlignTempGreetings(); AutoSave(); RefreshList(); };
 
                 row.Children.Add(new TextBlock { Text = "≥", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
                 row.Children.Add(minBox);
@@ -844,6 +845,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         addBtn.Click += (a, e) =>
         {
             _svc.Settings.TempGreetings.Add(new Models.TempGreeting { MinTemp = 0, MaxTemp = 999, Text = "", Tag = "" });
+            _svc.AlignTempGreetings();
             AutoSave();
             RefreshList();
         };
@@ -855,6 +857,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             _svc.Settings.TempGreetings.Clear();
             foreach (var g in Models.LocalGreetingDB.DefaultTempGreetings)
                 _svc.Settings.TempGreetings.Add(new Models.TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text, Tag = g.Tag });
+            _svc.AlignTempGreetings();
             AutoSave();
             RefreshList();
         };

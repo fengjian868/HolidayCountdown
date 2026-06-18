@@ -121,6 +121,32 @@ public class HolidayService
         SettingsChanged?.Invoke();
     }
 
+    /// <summary>
+    /// 自动对齐温度区间：排序后首项固定 -999，后续每项 Min = 上一项 Max + 1，避免重叠
+    /// </summary>
+    public void AlignTempGreetings()
+    {
+        var items = Settings.TempGreetings.OrderBy(g => g.MinTemp).ToList();
+        if (items.Count == 0) return;
+
+        // 第一项固定为 -999 ~ Max
+        items[0].MinTemp = -999;
+        if (items[0].MaxTemp <= -999) items[0].MaxTemp = 0;
+
+        for (int i = 1; i < items.Count; i++)
+        {
+            items[i].MinTemp = items[i - 1].MaxTemp + 1;
+            // 如果上限不合法，给默认跨度；最后一项若原先是 999 则保持无界
+            if (items[i].MaxTemp <= items[i].MinTemp)
+            {
+                if (i == items.Count - 1)
+                    items[i].MaxTemp = 999;
+                else
+                    items[i].MaxTemp = items[i].MinTemp + 5;
+            }
+        }
+    }
+
     bool CacheValid() => File.Exists(_cachePath) && (DateTime.Now - new FileInfo(_cachePath).LastWriteTime).TotalDays < 7;
 
     async Task RefreshNetAsync()
