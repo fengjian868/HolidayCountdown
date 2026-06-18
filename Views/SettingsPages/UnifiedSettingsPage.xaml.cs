@@ -25,6 +25,8 @@ public class UnifiedSettingsPage : SettingsPageBase
     private readonly HolidayService _svc;
     private readonly List<Border> _tabButtons = new();
     private readonly DispatcherTimer _saveTimer;
+    private StackPanel _contentPanel = null!;
+    private ScrollViewer _scrollViewer = null!;
 
     private readonly (string Icon, string Label, Func<Control> Build)[] _tabs;
     private int _currentIndex = -1;
