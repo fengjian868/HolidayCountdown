@@ -1071,7 +1071,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             FontWeight = FontWeight.Bold,
             Foreground = new SolidColorBrush(Color.Parse("#FF2196F3"))
         });
-        infoPanel.Children.Add(new TextBlock { Text = "版本: v1.2.0.3 (正式版)", FontSize = 14, Opacity = 0.7 });
+        infoPanel.Children.Add(new TextBlock { Text = "版本: v1.2.1.0 (测试版)", FontSize = 14, Opacity = 0.7 });
         infoPanel.Children.Add(new TextBlock { Text = "作者: fengjian868", FontSize = 14, Opacity = 0.7 });
         infoPanel.Children.Add(new TextBlock { Text = "GitHub: https://github.com/fengjian868/HolidayCountdown", FontSize = 12, Opacity = 0.5 });
         var repoBtn = new Button
@@ -1090,7 +1090,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Card(infoPanel));
 
         var changelogPanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
-        changelogPanel.Children.Add(new TextBlock { Text = "v1.2.0.3 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) });
+        changelogPanel.Children.Add(new TextBlock { Text = "v1.2.1.0 测试版更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) });
         changelogPanel.Children.Add(new TextBlock { Text = "- 新增：课程表联动组件（显示当前课程/课间倒计时）", FontSize = 12, Opacity = 0.8 });
         changelogPanel.Children.Add(new TextBlock { Text = "- 新增：学习时长统计组件（记录今日学习时长）", FontSize = 12, Opacity = 0.8 });
         changelogPanel.Children.Add(new TextBlock { Text = "- 新增：统一设置页（顶部横向Tab切换）", FontSize = 12, Opacity = 0.8 });
@@ -1103,7 +1103,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         changelogPanel.Children.Add(new TextBlock { Text = "- 修复：PluginSdk 降级到 2.0.0.2 兼容稳定版", FontSize = 12, Opacity = 0.8 });
         changelogPanel.Children.Add(new TextBlock { Text = "- 优化：CI 打包体积（删除非Windows运行时）", FontSize = 12, Opacity = 0.8 });
         changelogPanel.Children.Add(new TextBlock { Text = "- 优化：设置项修改后自动保存，无需手动点击保存", FontSize = 12, Opacity = 0.8 });
-        s.Children.Add(Expander("更新日志", "v1.2.0.3 版本更新内容", changelogPanel, expanded: true));
+        s.Children.Add(Expander("更新日志", "v1.2.1.0 测试版更新内容", changelogPanel, expanded: true));
 
         var featurePanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
         featurePanel.Children.Add(new TextBlock { Text = "- 节假日倒计时（调休提醒、进度环、放假天数）", FontSize = 12, Opacity = 0.8 });
