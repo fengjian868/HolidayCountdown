@@ -189,9 +189,6 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("\uE7BE 课程表联动设置"));
 
         var schedulePanel = new StackPanel { Spacing = 0 };
-        schedulePanel.Children.Add(SettingItem("启用课程表联动", "读取ClassIsland课程表，显示当前课程/课间倒计时",
-            Toggle(_svc.Settings.ClassScheduleEnabled, v => { _svc.Settings.ClassScheduleEnabled = v; AutoSave(); })));
-        schedulePanel.Children.Add(Separator());
         schedulePanel.Children.Add(SettingItem("显示图标", "在课程表信息前显示学科图标",
             Toggle(_svc.Settings.ClassScheduleShowIcon, v => { _svc.Settings.ClassScheduleShowIcon = v; AutoSave(); })));
         schedulePanel.Children.Add(Separator());
@@ -418,9 +415,6 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("💬 问候语设置"));
 
         var togglePanel = new StackPanel { Spacing = 0 };
-        togglePanel.Children.Add(SettingItem("启用问候语", null,
-            Toggle(_svc.Settings.ShowGreeting, v => { _svc.Settings.ShowGreeting = v; AutoSave(); })));
-        togglePanel.Children.Add(Separator());
         togglePanel.Children.Add(SettingItem("每天自动刷新问候语", "开启后每天自动从本地数据库随机刷新一条问候语",
             Toggle(_svc.Settings.AutoRefreshGreetings, v => { _svc.Settings.AutoRefreshGreetings = v; AutoSave(); })));
         togglePanel.Children.Add(Separator());
@@ -696,9 +690,6 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("\uE8C0 农历日期设置"));
 
         var displayPanel = new StackPanel { Spacing = 0 };
-        displayPanel.Children.Add(SettingItem("显示农历", null,
-            Toggle(_svc.Settings.ShowLunarDate, v => { _svc.Settings.ShowLunarDate = v; AutoSave(); })));
-        displayPanel.Children.Add(Separator());
         displayPanel.Children.Add(SettingItem("自动网络刷新", "有网络时自动获取最新农历",
             Toggle(_svc.Settings.LunarAutoRefresh, v => { _svc.Settings.LunarAutoRefresh = v; AutoSave(); })));
         s.Children.Add(Expander("显示", "农历组件基础设置", displayPanel));
@@ -827,11 +818,6 @@ public class UnifiedSettingsPage : SettingsPageBase
         var s = new StackPanel { Spacing = 0 };
         s.Children.Add(PageHeader("🏖️ 寒暑假设置"));
 
-        var togglePanel = new StackPanel { Spacing = 0 };
-        togglePanel.Children.Add(SettingItem("显示寒暑假倒计时", null,
-            Toggle(_svc.Settings.ShowVacationCountdown, v => { _svc.Settings.ShowVacationCountdown = v; AutoSave(); })));
-        s.Children.Add(Expander("开关", "寒暑假组件总开关", togglePanel));
-
         var summerPanel = new StackPanel { Spacing = 0 };
         summerPanel.Children.Add(SettingItem("开始日期", null,
             Date(_svc.Settings.SummerStart, v => { _svc.Settings.SummerStart = v; AutoSave(); })));
@@ -855,11 +841,6 @@ public class UnifiedSettingsPage : SettingsPageBase
     {
         var s = new StackPanel { Spacing = 0 };
         s.Children.Add(PageHeader("🌤️ 天气问候设置"));
-
-        var togglePanel = new StackPanel { Spacing = 0 };
-        togglePanel.Children.Add(SettingItem("启用天气问候", "根据ClassIsland天气显示问候语",
-            Toggle(_svc.Settings.WeatherGreetingEnabled, v => { _svc.Settings.WeatherGreetingEnabled = v; AutoSave(); })));
-        s.Children.Add(Expander("开关", "天气问候组件总开关", togglePanel));
 
         var layoutPanel = new StackPanel { Spacing = 0 };
         var presets = new[] { "仅问候", "图标+问候", "温度+问候", "完整信息" };

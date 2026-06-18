@@ -142,7 +142,7 @@ public class CombinedComponent : ComponentBase
 
     string GetGreetingText()
     {
-        if (!_svc.Settings.ShowGreeting) return "";
+
         var now = DateTime.Now;
         var s = _svc.Settings;
         var ct = now.TimeOfDay;

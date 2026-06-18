@@ -46,7 +46,7 @@ public class ClassScheduleComponent : ComponentBase
 
     void Update()
     {
-        if (_svc == null || !_svc.Settings.ClassScheduleEnabled) { _txt.Text = ""; ResetColor(); return; }
+        if (_svc == null) { _txt.Text = ""; ResetColor(); return; }
         try
         {
             var lessonsService = GetLessonsService();

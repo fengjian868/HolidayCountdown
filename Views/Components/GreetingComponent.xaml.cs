@@ -44,7 +44,7 @@ public class GreetingComponent : ComponentBase
 
     void Update()
     {
-        if (_svc == null || !_svc.Settings.ShowGreeting) { _txt.Text = ""; return; }
+        if (_svc == null) { _txt.Text = ""; return; }
 
         try
         {

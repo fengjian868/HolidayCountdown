@@ -44,7 +44,7 @@ public class LunarDateComponent : ComponentBase
 
     async Task RefreshAsync()
     {
-        if (_svc == null || !_svc.Settings.ShowLunarDate) { UpdateText(""); return; }
+        if (_svc == null) { UpdateText(""); return; }
         try
         {
             // 使用 HolidayService 的月度缓存，每日自动刷新，避免每次联网

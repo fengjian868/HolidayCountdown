@@ -44,7 +44,7 @@ public class WeatherGreetingComponent : ComponentBase
 
     void Update()
     {
-        if (_svc == null || !_svc.Settings.WeatherGreetingEnabled) { _txt.Text = ""; return; }
+        if (_svc == null) { _txt.Text = ""; return; }
 
         var (temp, weatherCode, weatherText, warnings, updateTime) = GetWeatherData();
 

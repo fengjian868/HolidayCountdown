@@ -40,7 +40,7 @@ public class VacationCountdownComponent : ComponentBase
     void Update()
     {
         _main.Children.Clear();
-        if (_svc == null || !_svc.Settings.ShowVacationCountdown) return;
+        if (_svc == null) return;
         var now = DateTime.Now; var s = _svc.Settings;
         var targets = new[] { ("暑假", s.SummerStart, s.SummerEnd), ("寒假", s.WinterStart, s.WinterEnd) };
         
