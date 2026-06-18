@@ -8,6 +8,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 using ClassIsland.Core.Attributes;
 using ClassIsland.Core.Abstractions.Controls;
 using HolidayCountdown.Models;
@@ -256,6 +257,20 @@ public class UnifiedSettingsPage : SettingsPageBase
     {
         var s = new StackPanel { Spacing = 0 };
         s.Children.Add(PageHeader("💬 问候语设置"));
+
+        var actionPanel = new StackPanel { Spacing = 0 };
+        var refreshBtn = new Button { Content = "🔄 一键刷新全部文案", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
+        refreshBtn.Click += (a, e) =>
+        {
+            _svc.RefreshAllGreetings();
+            refreshBtn.Content = "✅ 已刷新";
+            Dispatcher.UIThread.Post(() => refreshBtn.Content = "🔄 一键刷新全部文案", DispatcherPriority.Background);
+        };
+        actionPanel.Children.Add(SettingItem("刷新全部文案", "立即重新随机时段问候语和特殊日期问候语", refreshBtn));
+        actionPanel.Children.Add(Separator());
+        var todayStatus = new TextBlock { Text = $"今天：{(_svc.IsTodayWorkday() ? "调休上班" : "正常")} / {(_svc.IsTodaySolarTerm() ? $"24节气-{_svc.GetTodaySolarTermName()}" : "非节气")}", Opacity = 0.7, FontSize = 12 };
+        actionPanel.Children.Add(SettingItem("今日状态", null, todayStatus));
+        s.Children.Add(Expander("操作", "手动刷新与今日特殊状态", actionPanel));
 
         var togglePanel = new StackPanel { Spacing = 0 };
         togglePanel.Children.Add(SettingItem("启用问候语", null,
@@ -1017,20 +1032,46 @@ public class UnifiedSettingsPage : SettingsPageBase
         return t;
     }
 
-    static NumericUpDown Number(int value, int min, int max, Action<int> onChanged)
+    static TextBox Number(int value, int min, int max, Action<int> onChanged)
     {
-        var n = new NumericUpDown
+        var t = new TextBox
         {
-            Minimum = min,
-            Maximum = max,
-            Value = value,
-            Width = 80,
-            FormatString = "0",
-            Increment = 1,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right
+            Text = value.ToString(),
+            Width = 60,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center
         };
-        n.ValueChanged += (s, e) => onChanged((int)(n.Value ?? 0));
-        return n;
+        t.LostFocus += (s, e) =>
+        {
+            if (int.TryParse(t.Text, out var n))
+            {
+                n = Math.Max(min, Math.Min(max, n));
+                t.Text = n.ToString();
+                onChanged(n);
+            }
+            else
+            {
+                t.Text = value.ToString();
+            }
+        };
+        t.KeyDown += (s, e) =>
+        {
+            if (e.Key == Avalonia.Input.Key.Enter)
+            {
+                if (int.TryParse(t.Text, out var n))
+                {
+                    n = Math.Max(min, Math.Min(max, n));
+                    t.Text = n.ToString();
+                    onChanged(n);
+                }
+                else
+                {
+                    t.Text = value.ToString();
+                }
+            }
+        };
+        return t;
     }
 
     static TextBox Text(string value, int width, Action<string> onChanged)
