@@ -133,7 +133,7 @@ public class WeatherGreetingComponent : ComponentBase
         var items = _svc?.Settings.TempGreetings;
         if (items != null && items.Count > 0)
         {
-            var match = items.FirstOrDefault(x => t >= x.MinTemp && t < x.MaxTemp);
+            var match = items.FirstOrDefault(x => t >= x.MinTemp && t <= x.MaxTemp);
             if (match != null) return match.Text;
         }
 
