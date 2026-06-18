@@ -844,7 +844,9 @@ public class UnifiedSettingsPage : SettingsPageBase
         var addBtn = new Button { Content = "+ 添加温度区间", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
         addBtn.Click += (a, e) =>
         {
-            _svc.Settings.TempGreetings.Add(new Models.TempGreeting { MinTemp = 0, MaxTemp = 999, Text = "", Tag = "" });
+            var last = _svc.Settings.TempGreetings.OrderBy(g => g.MinTemp).LastOrDefault();
+            var start = last != null ? last.MaxTemp + 1 : 0;
+            _svc.Settings.TempGreetings.Add(new Models.TempGreeting { MinTemp = start, MaxTemp = 999, Text = "", Tag = "" });
             _svc.AlignTempGreetings();
             AutoSave();
             RefreshList();
