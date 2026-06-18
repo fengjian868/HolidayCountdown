@@ -294,14 +294,24 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("\uE9D1 学习时长统计设置"));
 
         var studyPanel = new StackPanel { Spacing = 0 };
-        studyPanel.Children.Add(SettingItem("启用学习时长统计", "记录ClassIsland运行时长，显示今日学习时长",
-            Toggle(_svc.Settings.StudyTimeEnabled, v => { _svc.Settings.StudyTimeEnabled = v; AutoSave(); })));
+        var modeCombo = new ComboBox { Width = 160, HorizontalAlignment = HorizontalAlignment.Right };
+        var modes = new[] { "关闭", "统计总运行时长", "仅统计上课时间" };
+        foreach (var m in modes) modeCombo.Items.Add(m);
+        modeCombo.SelectedIndex = !_svc.Settings.StudyTimeEnabled ? 0 : (_svc.Settings.StudyTimeCountClassTimeOnly ? 2 : 1);
+        modeCombo.SelectionChanged += (a, b) =>
+        {
+            switch (modeCombo.SelectedIndex)
+            {
+                case 0: _svc.Settings.StudyTimeEnabled = false; break;
+                case 1: _svc.Settings.StudyTimeEnabled = true; _svc.Settings.StudyTimeCountClassTimeOnly = false; break;
+                case 2: _svc.Settings.StudyTimeEnabled = true; _svc.Settings.StudyTimeCountClassTimeOnly = true; break;
+            }
+            AutoSave();
+        };
+        studyPanel.Children.Add(SettingItem("学习时长统计", "关闭 / 统计 ClassIsland 总运行时长 / 仅累加上课状态时长", modeCombo));
         studyPanel.Children.Add(Separator());
         studyPanel.Children.Add(SettingItem("显示图标", "在学习时长前显示图标",
             Toggle(_svc.Settings.StudyTimeShowIcon, v => { _svc.Settings.StudyTimeShowIcon = v; AutoSave(); })));
-        studyPanel.Children.Add(Separator());
-        studyPanel.Children.Add(SettingItem("仅统计上课时间", "开启后只累加上课状态时长，否则统计 ClassIsland 总运行时长",
-            Toggle(_svc.Settings.StudyTimeCountClassTimeOnly, v => { _svc.Settings.StudyTimeCountClassTimeOnly = v; AutoSave(); })));
         studyPanel.Children.Add(Separator());
         studyPanel.Children.Add(SettingItem("每周重置", "开启后按自然周统计，否则按日统计",
             Toggle(_svc.Settings.StudyTimeWeeklyReset, v => { _svc.Settings.StudyTimeWeeklyReset = v; AutoSave(); })));
@@ -407,26 +417,15 @@ public class UnifiedSettingsPage : SettingsPageBase
         var s = new StackPanel { Spacing = 0 };
         s.Children.Add(PageHeader("💬 问候语设置"));
 
-        var actionPanel = new StackPanel { Spacing = 0 };
-        var refreshBtn = new Button { Content = "🔄 一键刷新全部文案", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
-        refreshBtn.Click += (a, e) =>
-        {
-            _svc.RefreshAllGreetings();
-            refreshBtn.Content = "✅ 已刷新";
-            Dispatcher.UIThread.Post(() => refreshBtn.Content = "🔄 一键刷新全部文案", DispatcherPriority.Background);
-        };
-        actionPanel.Children.Add(SettingItem("刷新全部文案", "立即重新随机时段问候语和特殊日期问候语", refreshBtn));
-        actionPanel.Children.Add(Separator());
-        var todayStatus = new TextBlock { Text = $"今天：{(_svc.IsTodayWorkday() ? "调休上班" : "正常")} / {(_svc.IsTodaySolarTerm() ? $"24节气-{_svc.GetTodaySolarTermName()}" : "非节气")}", Opacity = 0.7, FontSize = 12 };
-        actionPanel.Children.Add(SettingItem("今日状态", null, todayStatus));
-        s.Children.Add(Expander("操作", "手动刷新与今日特殊状态", actionPanel));
-
         var togglePanel = new StackPanel { Spacing = 0 };
         togglePanel.Children.Add(SettingItem("启用问候语", null,
             Toggle(_svc.Settings.ShowGreeting, v => { _svc.Settings.ShowGreeting = v; AutoSave(); })));
         togglePanel.Children.Add(Separator());
         togglePanel.Children.Add(SettingItem("每天自动刷新问候语", "开启后每天自动从本地数据库随机刷新一条问候语",
             Toggle(_svc.Settings.AutoRefreshGreetings, v => { _svc.Settings.AutoRefreshGreetings = v; AutoSave(); })));
+        togglePanel.Children.Add(Separator());
+        var todayStatus = new TextBlock { Text = $"今天：{(_svc.IsTodayWorkday() ? "调休上班" : "正常")} / {(_svc.IsTodaySolarTerm() ? $"24节气-{_svc.GetTodaySolarTermName()}" : "非节气")}", Opacity = 0.7, FontSize = 12 };
+        togglePanel.Children.Add(SettingItem("今日状态", null, todayStatus));
         s.Children.Add(Expander("开关", "问候语基础设置", togglePanel));
 
         var weeklyPanel = new StackPanel { Spacing = 0 };
@@ -547,6 +546,16 @@ public class UnifiedSettingsPage : SettingsPageBase
             RefreshList();
         };
         panel.Children.Add(addBtn);
+
+        var refreshAllBtn = new Button { Content = "🔄 一键刷新全部文案", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 0, 16, 8) };
+        refreshAllBtn.Click += (a, e) =>
+        {
+            _svc.RefreshAllGreetings();
+            refreshAllBtn.Content = "✅ 已刷新";
+            Dispatcher.UIThread.Post(() => refreshAllBtn.Content = "🔄 一键刷新全部文案", DispatcherPriority.Background);
+            RefreshList();
+        };
+        panel.Children.Add(refreshAllBtn);
 
         panel.Children.Add(Info("留空的时段会自动使用本地数据库按标签（早晨/上午/中午/下午/傍晚/晚上）每天刷新一条问候语"));
 
