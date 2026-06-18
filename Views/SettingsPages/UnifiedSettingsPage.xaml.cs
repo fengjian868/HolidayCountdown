@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -36,6 +37,8 @@ public class UnifiedSettingsPage : SettingsPageBase
         _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _svc.SaveSettings(); };
         _tabs = new (string, string, Func<Control>)[]
         {
+            // 关于页放在最左侧
+            ("\uE946", "关于", BuildAboutPanel),
             ("\uE8F5", "节假日", BuildHolidayPanel),
             ("\uE713", "设置", BuildGeneralPanel),
             ("💬", "问候语", BuildGreetingPanel),
@@ -44,7 +47,6 @@ public class UnifiedSettingsPage : SettingsPageBase
             ("\uE716", "自定义", BuildCustomHolidayPanel),
             ("\uE7BF", "寒暑假", BuildVacationPanel),
             ("\uE753", "天气", BuildWeatherPanel),
-            ("\uE946", "关于", BuildAboutPanel),
         };
         Content = Build();
     }
@@ -155,41 +157,54 @@ public class UnifiedSettingsPage : SettingsPageBase
         var s = new StackPanel { Spacing = 0 };
         s.Children.Add(PageHeader("⚙️ 设置"));
 
-        var schedulePanel = new StackPanel { Spacing = 0 };
-        schedulePanel.Children.Add(SettingItem("启用课程表联动", "读取ClassIsland课程表，显示当前课程/课间倒计时",
-            Toggle(_svc.Settings.ClassScheduleEnabled, v => { _svc.Settings.ClassScheduleEnabled = v; AutoSave(); })));
-        schedulePanel.Children.Add(Separator());
-        schedulePanel.Children.Add(SettingItem("显示图标", "在课程表信息前显示图标",
-            Toggle(_svc.Settings.ClassScheduleShowIcon, v => { _svc.Settings.ClassScheduleShowIcon = v; AutoSave(); })));
-        s.Children.Add(Expander("课程表联动", "课程表联动组件设置", schedulePanel));
-
-        var studyPanel = new StackPanel { Spacing = 0 };
-        studyPanel.Children.Add(SettingItem("启用学习时长统计", "记录ClassIsland运行时长，显示今日学习时长",
-            Toggle(_svc.Settings.StudyTimeEnabled, v => { _svc.Settings.StudyTimeEnabled = v; AutoSave(); })));
-        studyPanel.Children.Add(Separator());
-        studyPanel.Children.Add(SettingItem("显示图标", "在学习时长前显示图标",
-            Toggle(_svc.Settings.StudyTimeShowIcon, v => { _svc.Settings.StudyTimeShowIcon = v; AutoSave(); })));
-        studyPanel.Children.Add(Separator());
-        var resetStudyBtn = new Button { Content = "🔄 重置今日时长", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
-        resetStudyBtn.Click += (a, e) =>
-        {
-            var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClassIsland", "Plugins", "HolidayCountdown");
-            var studyTimePath = Path.Combine(dataDir, "study_time.json");
-            try
+        // 实验性功能总开关
+        s.Children.Add(SettingItem("隐藏实验性功能", "开启后隐藏课程表联动、学习时长统计等测试版设置项",
+            Toggle(_svc.Settings.HideExperimentalFeatures, v =>
             {
-                if (File.Exists(studyTimePath))
+                _svc.Settings.HideExperimentalFeatures = v;
+                AutoSave();
+                SwitchTab(_currentIndex);
+            })));
+        s.Children.Add(Separator());
+
+        if (!_svc.Settings.HideExperimentalFeatures)
+        {
+            var schedulePanel = new StackPanel { Spacing = 0 };
+            schedulePanel.Children.Add(SettingItem("启用课程表联动", "读取ClassIsland课程表，显示当前课程/课间倒计时",
+                Toggle(_svc.Settings.ClassScheduleEnabled, v => { _svc.Settings.ClassScheduleEnabled = v; AutoSave(); })));
+            schedulePanel.Children.Add(Separator());
+            schedulePanel.Children.Add(SettingItem("显示图标", "在课程表信息前显示图标",
+                Toggle(_svc.Settings.ClassScheduleShowIcon, v => { _svc.Settings.ClassScheduleShowIcon = v; AutoSave(); })));
+            s.Children.Add(Expander("课程表联动", "课程表联动组件设置", schedulePanel));
+
+            var studyPanel = new StackPanel { Spacing = 0 };
+            studyPanel.Children.Add(SettingItem("启用学习时长统计", "记录ClassIsland运行时长，显示今日学习时长",
+                Toggle(_svc.Settings.StudyTimeEnabled, v => { _svc.Settings.StudyTimeEnabled = v; AutoSave(); })));
+            studyPanel.Children.Add(Separator());
+            studyPanel.Children.Add(SettingItem("显示图标", "在学习时长前显示图标",
+                Toggle(_svc.Settings.StudyTimeShowIcon, v => { _svc.Settings.StudyTimeShowIcon = v; AutoSave(); })));
+            studyPanel.Children.Add(Separator());
+            var resetStudyBtn = new Button { Content = "🔄 重置今日时长", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
+            resetStudyBtn.Click += (a, e) =>
+            {
+                var dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClassIsland", "Plugins", "HolidayCountdown");
+                var studyTimePath = Path.Combine(dataDir, "study_time.json");
+                try
                 {
-                    var json = File.ReadAllText(studyTimePath);
-                    var data = JsonSerializer.Deserialize<Dictionary<string, double>>(json) ?? new Dictionary<string, double>();
-                    var key = DateTime.Now.ToString("yyyy-MM-dd");
-                    data[key] = 0;
-                    File.WriteAllText(studyTimePath, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
+                    if (File.Exists(studyTimePath))
+                    {
+                        var json = File.ReadAllText(studyTimePath);
+                        var data = JsonSerializer.Deserialize<Dictionary<string, double>>(json) ?? new Dictionary<string, double>();
+                        var key = DateTime.Now.ToString("yyyy-MM-dd");
+                        data[key] = 0;
+                        File.WriteAllText(studyTimePath, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
+                    }
                 }
-            }
-            catch { }
-        };
-        studyPanel.Children.Add(SettingItem("重置今日时长", "将今日学习时长清零", resetStudyBtn));
-        s.Children.Add(Expander("学习时长统计", "学习时长统计组件设置", studyPanel));
+                catch { }
+            };
+            studyPanel.Children.Add(SettingItem("重置今日时长", "将今日学习时长清零", resetStudyBtn));
+            s.Children.Add(Expander("学习时长统计", "学习时长统计组件设置", studyPanel));
+        }
 
         return s;
     }
@@ -948,6 +963,19 @@ public class UnifiedSettingsPage : SettingsPageBase
         infoPanel.Children.Add(new TextBlock { Text = "版本: v1.2.0.3 (正式版)", FontSize = 14, Opacity = 0.7 });
         infoPanel.Children.Add(new TextBlock { Text = "作者: fengjian868", FontSize = 14, Opacity = 0.7 });
         infoPanel.Children.Add(new TextBlock { Text = "GitHub: https://github.com/fengjian868/HolidayCountdown", FontSize = 12, Opacity = 0.5 });
+        var repoBtn = new Button
+        {
+            Content = "打开插件仓库",
+            HorizontalAlignment = HorizontalAlignment.Left,
+            Padding = new Thickness(10, 4),
+            Margin = new Thickness(0, 6, 0, 0)
+        };
+        repoBtn.Click += (a, e) =>
+        {
+            try { Process.Start(new ProcessStartInfo("https://github.com/fengjian868/HolidayCountdown") { UseShellExecute = true }); }
+            catch { }
+        };
+        infoPanel.Children.Add(repoBtn);
         s.Children.Add(Card(infoPanel));
 
         var changelogPanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
