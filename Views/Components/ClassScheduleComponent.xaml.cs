@@ -90,7 +90,11 @@ public class ClassScheduleComponent : ComponentBase
                 case 3: // Breaking
                     {
                         var nextName = GetSubjectName(nextSubject);
-                        var leftTime = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
+                        // 课间状态优先使用 OnBreakingTimeLeftTime，没有则回退到 OnClassLeftTime
+                        var breakLeft = onBreakingTimeLeftTime as TimeSpan? ?? TimeSpan.Zero;
+                        if (breakLeft.TotalSeconds <= 0)
+                            breakLeft = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
+                        var leftTime = breakLeft;
                         var icon = _svc.Settings.ClassScheduleShowIcon ? "☕ " : "";
                         var total = TryGetNextClassTotalTime(lessonsService);
                         var totalStr = total.HasValue ? $"（{FormatTime(total.Value)}）" : "";

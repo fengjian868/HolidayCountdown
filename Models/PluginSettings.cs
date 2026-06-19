@@ -38,12 +38,6 @@ public class PluginSettings
     public bool ShowSundayEveningStudy { get; set; } = true;
     public string SundayEveningStudyText { get; set; } = "今晚有晚修，记得按时到教室！";
 
-    // 每周提醒
-    public bool WeeklyReminderEnabled { get; set; } = true;
-    public int WeeklyReminderDay { get; set; } = 1; // 1=周一, 7=周日
-    public int WeeklyReminderStartHour { get; set; } = 0;
-    public int WeeklyReminderEndHour { get; set; } = 23;
-
     // 农历
     public bool ShowLunarDate { get; set; } = true;
     public string LunarDateTemplate { get; set; } = "{gzYear} {IMonthCn}{IDayCn} {Animal}";

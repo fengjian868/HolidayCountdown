@@ -16,7 +16,7 @@ namespace HolidayCountdown.Views.Components;
     "B2C3D4E5-F6A7-8901-BCDE-F23456789013",
     "问候语",
     "fluent(\uE8BD)",
-    "显示时段问候语、放学提醒、每周提醒等"
+    "显示时段问候语、放学提醒、特殊日期问候等"
 )]
 public class GreetingComponent : ComponentBase
 {
@@ -79,25 +79,7 @@ public class GreetingComponent : ComponentBase
                 return;
             }
 
-            // 2. 每周提醒
-            if (_svc.Settings.WeeklyReminderEnabled)
-            {
-                var reminderDay = _svc.Settings.WeeklyReminderDay;
-                var startHour = _svc.Settings.WeeklyReminderStartHour;
-                var endHour = _svc.Settings.WeeklyReminderEndHour;
-                if (dow == reminderDay && hour >= startHour && hour <= endHour)
-                {
-                    var dayName = GetDayName(dow);
-                    var weeklyText = LocalGreetingDB.GetDaily(dayName, LocalGreetingDB.WeeklyReminders);
-                    if (!string.IsNullOrEmpty(weeklyText))
-                    {
-                        _txt.Text = weeklyText;
-                        return;
-                    }
-                }
-            }
-
-            // 3. 周日晚上晚修提醒
+            // 2. 周日晚上晚修提醒
             if (dow == 7 && _svc.Settings.ShowSundayEveningStudy)
             {
                 if (hour >= 18)
@@ -108,12 +90,10 @@ public class GreetingComponent : ComponentBase
             }
 
             // 4. 特殊日期问候
-            foreach (var special in _svc.Settings.SpecialDateGreetings)
+            foreach (var special in _svc.Settings.SpecialDateGreetings.OrderBy(x => x.StartHour * 60 + x.StartMinute))
             {
                 if (!special.Enabled) continue;
-                if (special.DayOfWeek == dow &&
-                    hour >= special.StartHour && (hour > special.StartHour || minute >= special.StartMinute) &&
-                    hour <= special.EndHour && (hour < special.EndHour || minute <= special.EndMinute))
+                if (special.DayOfWeek == dow && IsInTimeRange(special.StartHour, special.StartMinute, special.EndHour, special.EndMinute, hour, minute))
                 {
                     if (!string.IsNullOrEmpty(special.Text))
                     {
@@ -133,13 +113,10 @@ public class GreetingComponent : ComponentBase
                 }
             }
 
-            // 5. 时段问候语
+            // 5. 时段问候语：按开始时间排序，支持跨天，取第一个匹配
             foreach (var slot in _svc.Settings.TimeSlotGreetings.OrderBy(x => x.StartHour * 60 + x.StartMinute))
             {
-                var startMin = slot.StartHour * 60 + slot.StartMinute;
-                var endMin = slot.EndHour * 60 + slot.EndMinute;
-                var nowMin = hour * 60 + minute;
-                if (nowMin >= startMin && nowMin < endMin)
+                if (IsInTimeRange(slot.StartHour, slot.StartMinute, slot.EndHour, slot.EndMinute, hour, minute))
                 {
                     if (!string.IsNullOrEmpty(slot.Text))
                     {
@@ -191,18 +168,16 @@ public class GreetingComponent : ComponentBase
         catch { }
     }
 
-    string GetDayName(int dow)
+    /// <summary>
+    /// 判断当前时间是否落在 [start, end) 区间内；结束时间小于等于开始时间时按跨天处理。
+    /// </summary>
+    static bool IsInTimeRange(int startHour, int startMinute, int endHour, int endMinute, int nowHour, int nowMinute)
     {
-        return dow switch
-        {
-            1 => "周一",
-            2 => "周二",
-            3 => "周三",
-            4 => "周四",
-            5 => "周五",
-            6 => "周六",
-            7 => "周日",
-            _ => "周一"
-        };
+        var start = startHour * 60 + startMinute;
+        var end = endHour * 60 + endMinute;
+        var now = nowHour * 60 + nowMinute;
+        if (end <= start) // 跨天，例如 18:00 ~ 05:00
+            return now >= start || now < end;
+        return now >= start && now < end;
     }
 }

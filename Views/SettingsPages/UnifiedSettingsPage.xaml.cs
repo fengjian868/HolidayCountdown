@@ -40,7 +40,6 @@ public class UnifiedSettingsPage : SettingsPageBase
             // 关于页放在最左侧
             ("\uE946", "关于", BuildAboutPanel),
             ("\uE8F5", "节假日", BuildHolidayPanel),
-            ("\uE713", "设置", BuildGeneralPanel),
             ("\uE8BD", "问候语", BuildGreetingPanel),
             ("\uE9CA", "24节气", BuildSolarTermPanel),
             ("\uE8C0", "农历", BuildLunarPanel),
@@ -154,14 +153,6 @@ public class UnifiedSettingsPage : SettingsPageBase
     }
 
     // ===== Tab Builders =====
-
-    Control BuildGeneralPanel()
-    {
-        var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("\uE713 设置"));
-
-        return s;
-    }
 
     Control BuildClassSchedulePanel()
     {
@@ -401,26 +392,6 @@ public class UnifiedSettingsPage : SettingsPageBase
         var todayStatus = new TextBlock { Text = $"今天：{(_svc.IsTodayWorkday() ? "调休上班" : "正常")} / {(_svc.IsTodaySolarTerm() ? $"24节气-{_svc.GetTodaySolarTermName()}" : "非节气")}", Opacity = 0.7, FontSize = 12 };
         togglePanel.Children.Add(SettingItem("今日状态", null, todayStatus));
         s.Children.Add(Expander("开关", "问候语基础设置", togglePanel));
-
-        var weeklyPanel = new StackPanel { Spacing = 0 };
-        weeklyPanel.Children.Add(SettingItem("启用每周提醒", null,
-            Toggle(_svc.Settings.WeeklyReminderEnabled, v => { _svc.Settings.WeeklyReminderEnabled = v; AutoSave(); })));
-        weeklyPanel.Children.Add(Separator());
-        var dayCombo = new ComboBox { Width = 80, HorizontalAlignment = HorizontalAlignment.Right };
-        var days = new[] { "周一", "周二", "周三", "周四", "周五", "周六", "周日" };
-        foreach (var d in days) dayCombo.Items.Add(d);
-        dayCombo.SelectedIndex = _svc.Settings.WeeklyReminderDay == 7 ? 6 : _svc.Settings.WeeklyReminderDay - 1;
-        dayCombo.SelectionChanged += (a, b) => { _svc.Settings.WeeklyReminderDay = dayCombo.SelectedIndex == 6 ? 7 : dayCombo.SelectedIndex + 1; AutoSave(); };
-        weeklyPanel.Children.Add(SettingItem("提醒日期", "每周哪天显示提醒", dayCombo));
-        weeklyPanel.Children.Add(Separator());
-        weeklyPanel.Children.Add(SettingItem("开始时间（时）", "提醒开始显示的小时",
-            Number(_svc.Settings.WeeklyReminderStartHour, 0, 23, v => { _svc.Settings.WeeklyReminderStartHour = v; AutoSave(); })));
-        weeklyPanel.Children.Add(Separator());
-        weeklyPanel.Children.Add(SettingItem("结束时间（时）", "提醒结束显示的小时",
-            Number(_svc.Settings.WeeklyReminderEndHour, 0, 23, v => { _svc.Settings.WeeklyReminderEndHour = v; AutoSave(); })));
-        weeklyPanel.Children.Add(Separator());
-        weeklyPanel.Children.Add(Info("内置提醒按标签分类，每天自动从本地随机刷新一条。标签：周一/周二/周三/周四/周五/周末"));
-        s.Children.Add(Expander("每周提醒", "自定义每周提醒的日期和时段", weeklyPanel));
 
         var schoolPanel = new StackPanel { Spacing = 0 };
         schoolPanel.Children.Add(SettingItem("放学时间", "时:分",
@@ -1170,46 +1141,25 @@ public class UnifiedSettingsPage : SettingsPageBase
         return t;
     }
 
-    static TextBox Number(int value, int min, int max, Action<int> onChanged)
+    static NumericUpDown Number(int value, int min, int max, Action<int> onChanged)
     {
-        var t = new TextBox
+        var n = new NumericUpDown
         {
-            Text = value.ToString(),
-            Width = 60,
+            Value = value,
+            Minimum = min,
+            Maximum = max,
+            Increment = 1,
+            Width = 100,
             HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
             HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center,
             VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center
         };
-        t.LostFocus += (s, e) =>
+        n.ValueChanged += (s, e) =>
         {
-            if (int.TryParse(t.Text, out var n))
-            {
-                n = Math.Max(min, Math.Min(max, n));
-                t.Text = n.ToString();
-                onChanged(n);
-            }
-            else
-            {
-                t.Text = value.ToString();
-            }
+            var v = (int)Math.Max(min, Math.Min(max, n.Value ?? value));
+            onChanged(v);
         };
-        t.KeyDown += (s, e) =>
-        {
-            if (e.Key == Avalonia.Input.Key.Enter)
-            {
-                if (int.TryParse(t.Text, out var n))
-                {
-                    n = Math.Max(min, Math.Min(max, n));
-                    t.Text = n.ToString();
-                    onChanged(n);
-                }
-                else
-                {
-                    t.Text = value.ToString();
-                }
-            }
-        };
-        return t;
+        return n;
     }
 
     static TextBox Text(string value, int width, Action<string> onChanged)
