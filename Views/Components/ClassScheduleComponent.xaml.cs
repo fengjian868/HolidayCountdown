@@ -89,15 +89,13 @@ public class ClassScheduleComponent : ComponentBase
                     break;
                 case 3: // Breaking
                     {
-                        var nextName = GetSubjectName(nextSubject);
+                        var nextName = GetNextSubjectName(lessonsService, nextSubject);
                         // 课间状态优先使用 OnBreakingTimeLeftTime，没有则回退到 OnClassLeftTime
                         var breakLeft = onBreakingTimeLeftTime as TimeSpan? ?? TimeSpan.Zero;
                         if (breakLeft.TotalSeconds <= 0)
                             breakLeft = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
                         var leftTime = breakLeft;
                         var icon = _svc.Settings.ClassScheduleShowIcon ? "☕ " : "";
-                        var total = TryGetNextClassTotalTime(lessonsService);
-                        var totalStr = total.HasValue ? $"（{FormatTime(total.Value)}）" : "";
                         var template = leftTime.TotalMinutes <= _svc.Settings.PreClassMinutes && !string.IsNullOrEmpty(nextName) && nextName != "未安排"
                             ? _svc.Settings.ClassSchedulePrepareTemplate
                             : _svc.Settings.ClassScheduleBreakTemplate;
@@ -105,8 +103,7 @@ public class ClassScheduleComponent : ComponentBase
                         {
                             ["icon"] = icon,
                             ["remaining"] = FormatTime(leftTime),
-                            ["next"] = nextName,
-                            ["total"] = totalStr
+                            ["next"] = nextName
                         });
 
                         // 课间时长警示
@@ -125,21 +122,18 @@ public class ClassScheduleComponent : ComponentBase
                     break;
                 case 2: // PrepareOnClass
                     {
-                        var nextName = GetSubjectName(nextSubject);
+                        var nextName = GetNextSubjectName(lessonsService, nextSubject);
                         var icon = _svc.Settings.ClassScheduleShowIcon ? "🔔 " : "";
-                        var total = TryGetNextClassTotalTime(lessonsService);
-                        var totalStr = total.HasValue ? $"（{FormatTime(total.Value)}）" : "";
                         result = ApplyTemplate(_svc.Settings.ClassSchedulePrepareTemplate, new Dictionary<string, string>
                         {
                             ["icon"] = icon,
-                            ["next"] = nextName,
-                            ["total"] = totalStr
+                            ["next"] = nextName
                         });
                     }
                     break;
                 default: // None
                     {
-                        var nextName = GetSubjectName(nextSubject);
+                        var nextName = GetNextSubjectName(lessonsService, nextSubject);
                         if (!string.IsNullOrEmpty(nextName) && nextName != "未安排")
                         {
                             var icon = _svc.Settings.ClassScheduleShowIcon ? "📅 " : "";
@@ -205,37 +199,6 @@ public class ClassScheduleComponent : ComponentBase
         return "📖";
     }
 
-    TimeSpan? TryGetNextClassTotalTime(object? lessonsService)
-    {
-        try
-        {
-            var nextItem = GetPropertyValue(lessonsService, "NextTimeLayoutItem") ?? GetPropertyValue(lessonsService, "CurrentTimeLayoutItem");
-            if (nextItem == null) return null;
-            var start = GetPropertyValue(nextItem, "StartTime");
-            var end = GetPropertyValue(nextItem, "EndTime");
-            if (start == null || end == null) return null;
-            var startTs = ToTimeSpan(start);
-            var endTs = ToTimeSpan(end);
-            if (startTs.HasValue && endTs.HasValue)
-            {
-                var dur = endTs.Value - startTs.Value;
-                if (dur.TotalMinutes < 0) dur += TimeSpan.FromHours(24);
-                return dur;
-            }
-        }
-        catch { }
-        return null;
-    }
-
-    TimeSpan? ToTimeSpan(object obj)
-    {
-        if (obj is TimeSpan ts) return ts;
-        if (obj is DateTime dt) return dt.TimeOfDay;
-        if (obj is TimeOnly to) return to.ToTimeSpan();
-        if (TimeSpan.TryParse(obj?.ToString(), out var parsed)) return parsed;
-        return null;
-    }
-
     string ApplyTemplate(string template, Dictionary<string, string> values)
     {
         if (string.IsNullOrEmpty(template)) return "";
@@ -253,6 +216,29 @@ public class ClassScheduleComponent : ComponentBase
             return nameProp?.GetValue(subject)?.ToString() ?? "";
         }
         catch { return ""; }
+    }
+
+    /// <summary>
+    /// 尝试多种来源获取下节课名称：NextSubject、NextTimeLayoutItem.Subject、CurrentTimeLayoutItem.Subject。
+    /// </summary>
+    string GetNextSubjectName(object? lessonsService, object? nextSubject)
+    {
+        var name = GetSubjectName(nextSubject);
+        if (!string.IsNullOrEmpty(name)) return name;
+
+        try
+        {
+            var nextItem = GetPropertyValue(lessonsService, "NextTimeLayoutItem")
+                ?? GetPropertyValue(lessonsService, "CurrentTimeLayoutItem");
+            if (nextItem != null)
+            {
+                name = GetSubjectName(GetPropertyValue(nextItem, "Subject"));
+                if (!string.IsNullOrEmpty(name)) return name;
+            }
+        }
+        catch { }
+
+        return "";
     }
 
     string FormatTime(TimeSpan ts)

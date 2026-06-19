@@ -111,8 +111,8 @@ public class PluginSettings
     public int BreakWarningMinutes { get; set; } = 3;
     public string BreakWarningColor { get; set; } = "#FFE53935";
     public string ClassScheduleOnClassTemplate { get; set; } = "{icon}{subject} 还有{remaining}";
-    public string ClassScheduleBreakTemplate { get; set; } = "{icon}课间 还有{remaining} → {next}{total}";
-    public string ClassSchedulePrepareTemplate { get; set; } = "{icon}准备上课 → {next}{total}";
+    public string ClassScheduleBreakTemplate { get; set; } = "{icon}课间 还有{remaining} → {next}";
+    public string ClassSchedulePrepareTemplate { get; set; } = "{icon}准备上课 → {next}";
     public string ClassScheduleAfterSchoolTemplate { get; set; } = "{icon}放学了";
     public string ClassScheduleNoClassTemplate { get; set; } = "{text}";
 

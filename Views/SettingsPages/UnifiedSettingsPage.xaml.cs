@@ -240,10 +240,10 @@ public class UnifiedSettingsPage : SettingsPageBase
         templatePanel.Children.Add(SettingItem("上课模板", "{icon}=学科图标 {subject}=学科名 {remaining}=本节课剩余时间",
             Text(_svc.Settings.ClassScheduleOnClassTemplate, 320, v => { _svc.Settings.ClassScheduleOnClassTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("课间模板", "{icon}=学科图标 {remaining}=课间剩余时间 {next}=下节课名 {total}=下节课总时长",
+        templatePanel.Children.Add(SettingItem("课间模板", "{icon}=学科图标 {remaining}=课间剩余时间 {next}=下节课名",
             Text(_svc.Settings.ClassScheduleBreakTemplate, 320, v => { _svc.Settings.ClassScheduleBreakTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("准备上课模板", "{icon}=学科图标 {next}=下节课名 {total}=下节课总时长",
+        templatePanel.Children.Add(SettingItem("准备上课模板", "{icon}=学科图标 {next}=下节课名",
             Text(_svc.Settings.ClassSchedulePrepareTemplate, 320, v => { _svc.Settings.ClassSchedulePrepareTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
         templatePanel.Children.Add(SettingItem("放学模板", "{icon}=学科图标（固定放学图标）",
