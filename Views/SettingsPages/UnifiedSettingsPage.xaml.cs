@@ -168,17 +168,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     Control BuildGeneralPanel()
     {
         var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("⚙️ 设置"));
-
-        // 实验性功能总开关
-        s.Children.Add(SettingItem("隐藏实验性功能", "开启后隐藏课表、学习等测试版设置项",
-            Toggle(_svc.Settings.HideExperimentalFeatures, v =>
-            {
-                _svc.Settings.HideExperimentalFeatures = v;
-                AutoSave();
-                SwitchTab(_currentIndex);
-            })));
-        s.Children.Add(Separator());
+        s.Children.Add(PageHeader("\uE713 设置"));
 
         return s;
     }
