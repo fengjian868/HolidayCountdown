@@ -14,7 +14,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "E5F6A7B8-C9D0-1234-EF01-123456789014",
     "自定义节日倒计时",
-    "\uE70F",
+    "fluent(\uE70F)",
     "只显示你添加的自定义节日倒计时"
 )]
 public class CustomHolidayComponent : ComponentBase
