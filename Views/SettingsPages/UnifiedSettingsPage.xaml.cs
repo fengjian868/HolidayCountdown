@@ -27,7 +27,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     private StackPanel _contentPanel = null!;
     private ScrollViewer _scrollViewer = null!;
 
-    private readonly (string Icon, string Label, Func<Control> Build, bool Experimental)[] _tabs;
+    private readonly (string Icon, string Label, Func<Control> Build)[] _tabs;
     private int _currentIndex = -1;
 
     public UnifiedSettingsPage()
@@ -35,21 +35,20 @@ public class UnifiedSettingsPage : SettingsPageBase
         _svc = new HolidayService();
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _svc.SaveSettings(); };
-        _tabs = new (string, string, Func<Control>, bool)[]
+        _tabs = new (string, string, Func<Control>)[]
         {
             // 关于页放在最左侧
-            ("\uE946", "关于", BuildAboutPanel, false),
-            ("\uE8F5", "节假日", BuildHolidayPanel, false),
-            ("\uE713", "设置", BuildGeneralPanel, false),
-            ("\uE8BD", "问候语", BuildGreetingPanel, false),
-            ("\uE9CA", "24节气", BuildSolarTermPanel, false),
-            ("\uE8C0", "农历", BuildLunarPanel, false),
-            ("\uE70F", "自定义", BuildCustomHolidayPanel, false),
-            ("\uE8F3", "寒暑假", BuildVacationPanel, false),
-            ("\uE753", "天气", BuildWeatherPanel, false),
-            // 实验性功能独立配置页
-            ("\uE7BE", "课表", BuildClassSchedulePanel, true),
-            ("\uE9D1", "学习", BuildStudyTimePanel, true),
+            ("\uE946", "关于", BuildAboutPanel),
+            ("\uE8F5", "节假日", BuildHolidayPanel),
+            ("\uE713", "设置", BuildGeneralPanel),
+            ("\uE8BD", "问候语", BuildGreetingPanel),
+            ("\uE9CA", "24节气", BuildSolarTermPanel),
+            ("\uE8C0", "农历", BuildLunarPanel),
+            ("\uE70F", "自定义", BuildCustomHolidayPanel),
+            ("\uE8F3", "寒暑假", BuildVacationPanel),
+            ("\uE753", "天气", BuildWeatherPanel),
+            ("\uE7BE", "课表", BuildClassSchedulePanel),
+            ("\uE9D1", "学习", BuildStudyTimePanel),
         };
         Content = Build();
     }
@@ -101,8 +100,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 Background = Brushes.Transparent,
                 CornerRadius = new CornerRadius(6),
                 Cursor = new Cursor(StandardCursorType.Hand),
-                Tag = idx,
-                IsVisible = !(tab.Experimental && _svc.Settings.HideExperimentalFeatures)
+                Tag = idx
             };
             btn.PointerPressed += (s, e) => SwitchTab(idx);
             _tabButtons.Add(btn);
@@ -136,15 +134,7 @@ public class UnifiedSettingsPage : SettingsPageBase
 
     void SwitchTab(int index)
     {
-        // 若目标 Tab 被隐藏，则跳到第一个可见 Tab
-        if (index < 0 || index >= _tabs.Length || (_tabs[index].Experimental && _svc.Settings.HideExperimentalFeatures))
-        {
-            for (int i = 0; i < _tabs.Length; i++)
-            {
-                if (!_tabs[i].Experimental || !_svc.Settings.HideExperimentalFeatures)
-                { index = i; break; }
-            }
-        }
+        if (index < 0 || index >= _tabs.Length) index = 0;
         _currentIndex = index;
         foreach (var btn in _tabButtons)
         {
@@ -1061,7 +1051,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             FontWeight = FontWeight.Bold,
             Foreground = new SolidColorBrush(Color.Parse("#FF2196F3"))
         });
-        infoPanel.Children.Add(new TextBlock { Text = "版本: v1.2.1.0 (测试版)", FontSize = 14, Opacity = 0.7 });
+        infoPanel.Children.Add(new TextBlock { Text = "版本: v1.3.0.0", FontSize = 14, Opacity = 0.7 });
         infoPanel.Children.Add(new TextBlock { Text = "作者: fengjian868", FontSize = 14, Opacity = 0.7 });
         infoPanel.Children.Add(new TextBlock { Text = "GitHub: https://github.com/fengjian868/HolidayCountdown", FontSize = 12, Opacity = 0.5 });
         var repoBtn = new Button
@@ -1080,20 +1070,21 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Card(infoPanel));
 
         var changelogPanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
-        changelogPanel.Children.Add(new TextBlock { Text = "v1.2.1.0 测试版更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：课程表联动组件（显示当前课程/课间倒计时）", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：学习时长统计组件（记录今日学习时长）", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：统一设置页（顶部横向Tab切换）", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：本地问候语数据库（199条，替代联网刷新）", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：农历年度缓存（避免每日请求网络）", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：天气问候模板自定义排版", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：温度区间穿衣提醒自定义", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：24节气进度环显示开关", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：每周提醒支持自定义日期（周一~周日）", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 修复：PluginSdk 降级到 2.0.0.2 兼容稳定版", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 优化：CI 打包体积（删除非Windows运行时）", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 优化：设置项修改后自动保存，无需手动点击保存", FontSize = 12, Opacity = 0.8 });
-        s.Children.Add(Expander("更新日志", "v1.2.1.0 测试版更新内容", changelogPanel, expanded: true));
+        changelogPanel.Children.Add(new TextBlock { Text = "v1.3.0.0 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) });
+        changelogPanel.Children.Add(new TextBlock { Text = "■ 新增", FontSize = 14, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 8, 0, 4) });
+        changelogPanel.Children.Add(new TextBlock { Text = "- 无课程文案时段自定义功能", FontSize = 12, Opacity = 0.8 });
+        changelogPanel.Children.Add(new TextBlock { Text = "- 组件图标与设置Tab栏统一", FontSize = 12, Opacity = 0.8 });
+        changelogPanel.Children.Add(new TextBlock { Text = "■ 优化", FontSize = 14, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 8, 0, 4) });
+        changelogPanel.Children.Add(new TextBlock { Text = "- 组件字体统一改为黑色", FontSize = 12, Opacity = 0.8 });
+        changelogPanel.Children.Add(new TextBlock { Text = "- 设置页Tab按钮背景样式优化", FontSize = 12, Opacity = 0.8 });
+        changelogPanel.Children.Add(new TextBlock { Text = "■ 删除", FontSize = 14, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 8, 0, 4) });
+        changelogPanel.Children.Add(new TextBlock { Text = "- 移除\"隐藏实验性功能\"开关", FontSize = 12, Opacity = 0.8 });
+        changelogPanel.Children.Add(new TextBlock { Text = "■ 修复", FontSize = 14, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 8, 0, 4) });
+        changelogPanel.Children.Add(new TextBlock { Text = "- 天气问候语不显示问题", FontSize = 12, Opacity = 0.8 });
+        changelogPanel.Children.Add(new TextBlock { Text = "- 组件图标显示异常问题", FontSize = 12, Opacity = 0.8 });
+        changelogPanel.Children.Add(new TextBlock { Text = "■ 修改", FontSize = 14, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 8, 0, 4) });
+        changelogPanel.Children.Add(new TextBlock { Text = "- 学习时长统计合并为三选一模式", FontSize = 12, Opacity = 0.8 });
+        s.Children.Add(Expander("更新日志", "v1.3.0.0 更新内容", changelogPanel, expanded: true));
 
         var featurePanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
         featurePanel.Children.Add(new TextBlock { Text = "- 节假日倒计时（调休提醒、进度环、放假天数）", FontSize = 12, Opacity = 0.8 });

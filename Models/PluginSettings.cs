@@ -74,7 +74,6 @@ public class PluginSettings
     public string? WeatherTemplate { get; set; } = "{greeting}";
     public bool WeatherShowIcon { get; set; } = true;
     public bool WeatherShowTemp { get; set; } = true;
-    public bool HideExperimentalFeatures { get; set; } = true;
     public List<TempGreeting> TempGreetings { get; set; } = new();
     public List<WeatherGreetingItem> WeatherGreetingItems { get; set; } = new()
     {
