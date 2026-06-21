@@ -1,18 +1,25 @@
 name: 功能请求
 description: 提出新的功能建议或改进想法
+title: "（将此栏【替换】为你的标题）"
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        欢迎提出建议！请描述清楚功能场景和预期效果。
+        欢迎提出建议！请在上面的文本框起一个能够清晰描述您建议的标题。
 
-  - type: input
-    id: title
+  - type: markdown
     attributes:
-      label: 功能标题
-      description: 一句话概括这个功能
-      placeholder: 例如：支持自定义倒计时精度
+      value: |
+        > [!IMPORTANT]
+        > 如果要提出**多个**功能请求，请为每一个功能开一个单独的 issue。
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 功能描述
+      description: 请详细描述您希望添加的功能。
+      placeholder: 请在此描述功能详情……
     validations:
       required: true
 
@@ -21,40 +28,33 @@ body:
     attributes:
       label: 使用场景
       description: 这个功能在什么场景下会用到？解决了什么问题？
-      placeholder: |
-        例如：
-        我希望能把课间倒计时精确到秒，
-        这样学生能更清楚还有多久上课。
+      placeholder: 请在此描述使用场景……
     validations:
       required: true
 
   - type: textarea
-    id: description
+    id: expected
     attributes:
-      label: 功能描述
-      description: 具体希望插件怎么做？
-      placeholder: |
-        例如：
-        1. 在设置页增加「倒计时精度」选项
-        2. 可选「只显示分钟」或「显示到秒」
-        3. 组件根据设置动态刷新
+      label: 期望的行为
+      description: 详细地描述您期望这个功能如何工作。
+      placeholder: 请在此描述期望的行为……
     validations:
       required: true
 
   - type: textarea
     id: alternatives
     attributes:
-      label: 替代方案
-      description: 如果没有这个功能，你目前是怎么处理的？或者有没有其他实现思路？
-      placeholder: 例如：目前只能看系统时间手动估算
+      label: 替代方案（可选）
+      description: 如果没有这个功能，您目前是怎么处理的？或者有没有其他实现思路？
+      placeholder: 请在此描述替代方案……
     validations:
       required: false
 
   - type: textarea
     id: additional
     attributes:
-      label: 补充信息
-      description: 其他想补充的内容、参考截图或设计稿
-      placeholder: 可拖拽图片到此处
+      label: 补充信息（可选）
+      description: 其他想补充的内容、参考截图或设计稿。
+      placeholder: 可拖拽图片或粘贴到此处
     validations:
       required: false
