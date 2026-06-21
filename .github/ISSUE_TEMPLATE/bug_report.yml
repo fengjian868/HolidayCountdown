@@ -1,0 +1,95 @@
+name: Bug 反馈
+description: 报告插件运行中遇到的问题
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量填写完整，方便我们快速定位和修复问题。
+
+  - type: input
+    id: version
+    attributes:
+      label: 插件版本
+      description: 你当前使用的 HolidayCountdown 版本号
+      placeholder: 例如 1.3.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: classisland_version
+    attributes:
+      label: ClassIsland 版本
+      description: 你当前使用的 ClassIsland 版本号
+      placeholder: 例如 2.1.0.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 简明扼要地描述你遇到的 Bug
+      placeholder: 例如：课间倒计时不显示下节课名称
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 如何稳定复现这个问题？
+      placeholder: |
+        1. 打开设置页
+        2. 进入「课表」Tab
+        3. 设置课间模板为默认
+        4. 课间时观察组件显示
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 你期望看到什么结果？
+      placeholder: 例如：课间应显示「课间 还有5分 → 数学」
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际看到的结果是什么？
+      placeholder: 例如：只显示「课间 还有5分 →」
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图或录屏
+      description: 如有报错弹窗、界面异常等，请上传截图或录屏
+      placeholder: 可直接拖拽图片到此处
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志/报错信息
+      description: 如果有相关日志或异常堆栈，请贴上来
+      placeholder: 可从 ClassIsland 日志目录复制相关片段
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: 确认事项
+      options:
+        - label: 我已经确认该问题在最新版本仍然存在
+          required: false
+        - label: 我已经搜索过已有的 issue，没有重复
+          required: false
