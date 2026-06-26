@@ -100,21 +100,21 @@ public class PluginSettings
     public bool ClassScheduleEnabled { get; set; } = true;
     public bool ClassScheduleShowIcon { get; set; } = true;
     public bool ClassScheduleShowSubject { get; set; } = true;
-    // 无课程文案（旧属性，保留用于迁移）
-    public string NoClassMorningText { get; set; } = "上午好，暂无课程";
-    public string NoClassNoonText { get; set; } = "中午好，暂无课程";
-    public string NoClassAfternoonText { get; set; } = "下午好，暂无课程";
-    public string NoClassEveningText { get; set; } = "晚上好，暂无课程";
-    public List<NoClassTimeSlot> NoClassTimeSlots { get; set; } = new();
     public int PreClassMinutes { get; set; } = 5;
     public bool BreakWarningEnabled { get; set; } = true;
     public int BreakWarningMinutes { get; set; } = 3;
     public string BreakWarningColor { get; set; } = "#FFE53935";
-    public string ClassScheduleOnClassTemplate { get; set; } = "{icon}{subject} 还有{remaining}";
-    public string ClassScheduleBreakTemplate { get; set; } = "{icon}课间 还有{remaining} → {next}";
-    public string ClassSchedulePrepareTemplate { get; set; } = "{icon}准备上课 → {next}";
-    public string ClassScheduleAfterSchoolTemplate { get; set; } = "{icon}放学了";
-    public string ClassScheduleNoClassTemplate { get; set; } = "{text}";
+    public List<NoClassTimeSlot> NoClassTimeSlots { get; set; } = new();
+    public string NoClassMorningText { get; set; } = "上午好，暂无课程";
+    public string NoClassNoonText { get; set; } = "中午好，暂无课程";
+    public string NoClassAfternoonText { get; set; } = "下午好，暂无课程";
+    public string NoClassEveningText { get; set; } = "晚上好，暂无课程";
+    public string ClassScheduleTemplate { get; set; } = "{icon}{subject} 还有{countdown}";
+    public string ClassScheduleOnClassTemplate { get; set; } = "{icon}{subject} 还有{countdown}";
+    public string ClassScheduleBreakTemplate { get; set; } = "{icon}课间 {countdown} 下节{next}";
+    public string ClassSchedulePrepareTemplate { get; set; } = "{icon}准备上课 {next}";
+    public string ClassScheduleAfterSchoolTemplate { get; set; } = "{icon}放学啦";
+    public string ClassScheduleNoClassTemplate { get; set; } = "{icon}{text}";
 
     // 学习时长统计
     public bool StudyTimeEnabled { get; set; } = true;
@@ -130,16 +130,6 @@ public class CustomHoliday
     public bool RepeatYearly { get; set; } = false;
 }
 
-public class TimeSlotGreeting
-{
-    public int StartHour { get; set; }
-    public int StartMinute { get; set; }
-    public int EndHour { get; set; }
-    public int EndMinute { get; set; }
-    public string Text { get; set; } = "";
-    public string Tag { get; set; } = "";
-}
-
 public class NoClassTimeSlot
 {
     public string Name { get; set; } = "";
@@ -148,6 +138,16 @@ public class NoClassTimeSlot
     public int EndHour { get; set; }
     public int EndMinute { get; set; }
     public string Text { get; set; } = "";
+}
+
+public class TimeSlotGreeting
+{
+    public int StartHour { get; set; }
+    public int StartMinute { get; set; }
+    public int EndHour { get; set; }
+    public int EndMinute { get; set; }
+    public string Text { get; set; } = "";
+    public string Tag { get; set; } = "";
 }
 
 public class SpecialDateGreeting
