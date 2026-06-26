@@ -1,7 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -17,8 +17,8 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "D4E5F6A7-B8C9-0123-DEF0-1234567890AB",
     "课程表联动",
-    "fluent(\uE7BE)",
-    "读取ClassIsland课程表，显示当前课程/下节课信息或课间倒计时"
+    "\uE7BE",
+    "读取ClassIsland课程表，显示当前课程/下节课信息或课间倒计时（测试版，不稳定）"
 )]
 public class ClassScheduleComponent : ComponentBase
 {
@@ -29,7 +29,7 @@ public class ClassScheduleComponent : ComponentBase
     public ClassScheduleComponent()
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9, Foreground = Brushes.Black };
+        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
         panel.Children.Add(_txt);
         Content = panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -46,14 +46,14 @@ public class ClassScheduleComponent : ComponentBase
 
     void Update()
     {
-        if (_svc == null) { _txt.Text = ""; ResetColor(); return; }
+        if (_svc == null || !_svc.Settings.ClassScheduleEnabled) { _txt.Text = ""; return; }
         try
         {
             var lessonsService = GetLessonsService();
-            if (lessonsService == null) { _txt.Text = ""; ResetColor(); return; }
+            if (lessonsService == null) { _txt.Text = ""; return; }
 
             var currentStateObj = GetPropertyValue(lessonsService, "CurrentState");
-            if (currentStateObj == null) { _txt.Text = ""; ResetColor(); return; }
+            if (currentStateObj == null) { _txt.Text = ""; return; }
 
             int state = (int)currentStateObj;
             // TimeState: 0=None, 1=OnClass, 2=PrepareOnClass, 3=Breaking, 4=AfterSchool
@@ -65,146 +65,64 @@ public class ClassScheduleComponent : ComponentBase
             var isClassPlanLoaded = GetPropertyValue(lessonsService, "IsClassPlanLoaded");
             var isClassPlanEnabled = GetPropertyValue(lessonsService, "IsClassPlanEnabled");
 
-            if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = ""; ResetColor(); return; }
-            if (isClassPlanLoaded is bool loaded && !loaded) { _txt.Text = GetNoClassText(); ResetColor(); return; }
+            if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = ""; return; }
+            if (isClassPlanLoaded is bool loaded && !loaded) { _txt.Text = ""; return; }
 
-            ResetColor();
-            string result = "";
+            // 统一变量：尝试多种可能的倒计时属性名
+            var leftTimeOnClass = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
+            var leftTimeBreaking = onBreakingTimeLeftTime as TimeSpan? ?? TimeSpan.Zero;
+            var subjectName = GetSubjectName(currentSubject);
+            var nextName = GetNextSubjectName(lessonsService, currentSubject, nextSubject);
 
+            string stateText, countdownText, iconText;
             switch (state)
             {
                 case 1: // OnClass
-                    {
-                        var subjectName = GetSubjectName(currentSubject);
-                        var leftTime = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
-                        var icon = _svc.Settings.ClassScheduleShowIcon ? GetSubjectIcon(subjectName) + " " : "";
-                        var subjectDisplay = _svc.Settings.ClassScheduleShowSubject ? subjectName : "";
-                        result = ApplyTemplate(_svc.Settings.ClassScheduleOnClassTemplate, new Dictionary<string, string>
-                        {
-                            ["icon"] = icon,
-                            ["subject"] = subjectDisplay,
-                            ["remaining"] = FormatTime(leftTime)
-                        });
-                    }
+                    stateText = "上课中";
+                    iconText = _svc.Settings.ClassScheduleShowIcon ? "📖" : "";
+                    countdownText = leftTimeOnClass.TotalSeconds > 0 ? FormatTime(leftTimeOnClass) : "";
                     break;
                 case 3: // Breaking
-                    {
-                        var nextName = GetNextSubjectName(lessonsService, nextSubject);
-                        // 课间状态优先使用 OnBreakingTimeLeftTime，没有则回退到 OnClassLeftTime
-                        var breakLeft = onBreakingTimeLeftTime as TimeSpan? ?? TimeSpan.Zero;
-                        if (breakLeft.TotalSeconds <= 0)
-                            breakLeft = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
-                        var leftTime = breakLeft;
-                        var icon = _svc.Settings.ClassScheduleShowIcon ? "☕ " : "";
-                        var template = leftTime.TotalMinutes <= _svc.Settings.PreClassMinutes && !string.IsNullOrEmpty(nextName) && nextName != "未安排"
-                            ? _svc.Settings.ClassSchedulePrepareTemplate
-                            : _svc.Settings.ClassScheduleBreakTemplate;
-                        result = ApplyTemplate(template, new Dictionary<string, string>
-                        {
-                            ["icon"] = icon,
-                            ["remaining"] = FormatTime(leftTime),
-                            ["next"] = nextName
-                        });
-
-                        // 课间时长警示
-                        if (_svc.Settings.BreakWarningEnabled && leftTime.TotalMinutes <= _svc.Settings.BreakWarningMinutes && leftTime.TotalSeconds > 0)
-                            _txt.Foreground = new SolidColorBrush(Color.Parse(_svc.Settings.BreakWarningColor));
-                    }
+                    stateText = "课间";
+                    iconText = _svc.Settings.ClassScheduleShowIcon ? "☕" : "";
+                    // 优先使用课间剩余时间，没有则使用距离下节课的时间
+                    var breakLeft = leftTimeBreaking.TotalSeconds > 0 ? leftTimeBreaking : leftTimeOnClass;
+                    countdownText = breakLeft.TotalSeconds > 0 ? FormatTime(breakLeft) : "";
                     break;
                 case 4: // AfterSchool
-                    {
-                        var icon = _svc.Settings.ClassScheduleShowIcon ? "🏠 " : "";
-                        result = ApplyTemplate(_svc.Settings.ClassScheduleAfterSchoolTemplate, new Dictionary<string, string>
-                        {
-                            ["icon"] = icon
-                        });
-                    }
+                    stateText = "放学";
+                    iconText = _svc.Settings.ClassScheduleShowIcon ? "🏠" : "";
+                    countdownText = "";
                     break;
                 case 2: // PrepareOnClass
-                    {
-                        var nextName = GetNextSubjectName(lessonsService, nextSubject);
-                        var icon = _svc.Settings.ClassScheduleShowIcon ? "🔔 " : "";
-                        result = ApplyTemplate(_svc.Settings.ClassSchedulePrepareTemplate, new Dictionary<string, string>
-                        {
-                            ["icon"] = icon,
-                            ["next"] = nextName
-                        });
-                    }
+                    stateText = "准备上课";
+                    iconText = _svc.Settings.ClassScheduleShowIcon ? "🔔" : "";
+                    countdownText = leftTimeOnClass.TotalSeconds > 0 ? FormatTime(leftTimeOnClass) : "";
                     break;
                 default: // None
-                    {
-                        var nextName = GetNextSubjectName(lessonsService, nextSubject);
-                        if (!string.IsNullOrEmpty(nextName) && nextName != "未安排")
-                        {
-                            var icon = _svc.Settings.ClassScheduleShowIcon ? "📅 " : "";
-                            result = $"{icon}下节: {nextName}";
-                        }
-                        else
-                        {
-                            result = ApplyTemplate(_svc.Settings.ClassScheduleNoClassTemplate, new Dictionary<string, string>
-                            {
-                                ["icon"] = "",
-                                ["text"] = GetNoClassText()
-                            });
-                        }
-                    }
+                    stateText = "暂无课程";
+                    iconText = _svc.Settings.ClassScheduleShowIcon ? "📅" : "";
+                    countdownText = leftTimeOnClass.TotalSeconds > 0 ? FormatTime(leftTimeOnClass) : "";
                     break;
             }
+
+            var template = _svc.Settings.ClassScheduleTemplate;
+            if (string.IsNullOrWhiteSpace(template))
+                template = "{icon}{subject} 还有{countdown}";
+
+            var result = template
+                .Replace("{icon}", string.IsNullOrEmpty(iconText) ? "" : $"{iconText} ")
+                .Replace("{subject}", subjectName)
+                .Replace("{next}", nextName)
+                .Replace("{countdown}", countdownText)
+                .Replace("{state}", stateText);
+
+            // 清理多余空格
+            result = System.Text.RegularExpressions.Regex.Replace(result, @"\s+", " ").Trim();
 
             _txt.Text = result;
         }
-        catch { _txt.Text = ""; ResetColor(); }
-    }
-
-    void ResetColor() => _txt.Foreground = Brushes.Black;
-
-    string GetNoClassText()
-    {
-        if (_svc == null) return "";
-        var now = DateTime.Now;
-        var minutes = now.Hour * 60 + now.Minute;
-        foreach (var slot in _svc.Settings.NoClassTimeSlots.OrderBy(x => x.StartHour * 60 + x.StartMinute))
-        {
-            var start = slot.StartHour * 60 + slot.StartMinute;
-            var end = slot.EndHour * 60 + slot.EndMinute;
-            if (start <= end)
-            {
-                if (minutes >= start && minutes < end) return slot.Text;
-            }
-            else
-            {
-                // 跨天时段（如 18:00 ~ 05:00）
-                if (minutes >= start || minutes < end) return slot.Text;
-            }
-        }
-        return "";
-    }
-
-    string GetSubjectIcon(string subjectName)
-    {
-        var s = subjectName.ToLower();
-        if (s.Contains("语文")) return "📖";
-        if (s.Contains("数学")) return "📐";
-        if (s.Contains("英语")) return "🔤";
-        if (s.Contains("物理")) return "⚛️";
-        if (s.Contains("化学")) return "🧪";
-        if (s.Contains("生物")) return "🧬";
-        if (s.Contains("历史")) return "🏛️";
-        if (s.Contains("地理")) return "🌍";
-        if (s.Contains("政治")) return "🏛️";
-        if (s.Contains("体育")) return "🏃";
-        if (s.Contains("音乐")) return "🎵";
-        if (s.Contains("美术")) return "🎨";
-        if (s.Contains("信息") || s.Contains("电脑") || s.Contains("计算机")) return "💻";
-        return "📖";
-    }
-
-    string ApplyTemplate(string template, Dictionary<string, string> values)
-    {
-        if (string.IsNullOrEmpty(template)) return "";
-        foreach (var kv in values)
-            template = template.Replace($"{{{kv.Key}}}", kv.Value ?? "");
-        return template.Trim();
+        catch { _txt.Text = ""; }
     }
 
     string GetSubjectName(object? subject)
@@ -218,25 +136,70 @@ public class ClassScheduleComponent : ComponentBase
         catch { return ""; }
     }
 
-    /// <summary>
-    /// 尝试多种来源获取下节课名称：NextSubject、NextTimeLayoutItem.Subject、CurrentTimeLayoutItem.Subject。
-    /// </summary>
-    string GetNextSubjectName(object? lessonsService, object? nextSubject)
+    string GetNextSubjectName(object? lessonsService, object? currentSubject, object? nextSubject)
     {
-        var name = GetSubjectName(nextSubject);
-        if (!string.IsNullOrEmpty(name)) return name;
-
-        try
+        // 1. 直接尝试 NextSubject.Name
+        if (nextSubject != null)
         {
-            var nextItem = GetPropertyValue(lessonsService, "NextTimeLayoutItem")
-                ?? GetPropertyValue(lessonsService, "CurrentTimeLayoutItem");
-            if (nextItem != null)
+            var name = GetSubjectName(nextSubject);
+            if (!string.IsNullOrEmpty(name)) return name;
+        }
+
+        // 2. 尝试 NextTimeLayoutItem.Subject.Name
+        var nextItem = GetPropertyValue(lessonsService!, "NextTimeLayoutItem");
+        if (nextItem != null)
+        {
+            var subj = GetPropertyValue(nextItem, "Subject");
+            if (subj != null)
             {
-                name = GetSubjectName(GetPropertyValue(nextItem, "Subject"));
+                var name = GetSubjectName(subj);
                 if (!string.IsNullOrEmpty(name)) return name;
             }
+            // 有些版本 NextTimeLayoutItem 本身就是 Subject
+            var name2 = GetSubjectName(nextItem);
+            if (!string.IsNullOrEmpty(name2)) return name2;
         }
-        catch { }
+
+        // 3. 尝试 CurrentTimeLayoutItem 的下一个项目
+        var currentItem = GetPropertyValue(lessonsService!, "CurrentTimeLayoutItem");
+        if (currentItem != null)
+        {
+            var timeLayout = GetPropertyValue(lessonsService!, "CurrentTimeLayout")
+                          ?? GetPropertyValue(lessonsService!, "TimeLayout");
+            if (timeLayout != null)
+            {
+                var itemsProp = timeLayout.GetType().GetProperty("Items", BindingFlags.Public | BindingFlags.Instance)
+                              ?? timeLayout.GetType().GetProperty("LayoutItems", BindingFlags.Public | BindingFlags.Instance);
+                if (itemsProp?.GetValue(timeLayout) is System.Collections.IEnumerable items)
+                {
+                    object? found = null;
+                    foreach (var item in items)
+                    {
+                        if (found == null && item?.ToString() == currentItem?.ToString())
+                        {
+                            found = item;
+                            continue;
+                        }
+                        if (found != null)
+                        {
+                            var subj = GetPropertyValue(item, "Subject");
+                            if (subj != null)
+                            {
+                                var name = GetSubjectName(subj);
+                                if (!string.IsNullOrEmpty(name)) return name;
+                            }
+                            var name3 = GetSubjectName(item);
+                            if (!string.IsNullOrEmpty(name3)) return name3;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. 兜底：当前科目不为空时直接用它作为 next（至少不空）
+        var currentName = GetSubjectName(currentSubject);
+        if (!string.IsNullOrEmpty(currentName)) return currentName;
 
         return "";
     }
