@@ -20,7 +20,7 @@ using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.SettingsPages;
 
-[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE364", "\uE364")]
+[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE3A2", "\uE3A2")]
 public class UnifiedSettingsPage : SettingsPageBase
 {
     private readonly HolidayService _svc;
@@ -83,7 +83,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         // 顶部导航栏左侧显示设置页图标
         var navIconBlock = new TextBlock
         {
-            Text = "\uE364",
+            Text = "\uE3A2",
             FontFamily = new FontFamily("Segoe MDL2 Assets"),
             FontSize = 22,
             VerticalAlignment = VerticalAlignment.Center,

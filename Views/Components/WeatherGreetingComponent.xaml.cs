@@ -17,7 +17,7 @@ namespace HolidayCountdown.Views.Components;
 
 [ComponentInfo(
     "B2C3D4E5-F6A7-8901-BCDE-F23456789012",
-    "天气问候",
+    "天气问候[测试版]",
     "fluent(\uE753)",
     "根据ClassIsland天气温度显示穿衣提醒，支持预警提示"
 )]

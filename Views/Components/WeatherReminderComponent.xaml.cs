@@ -16,7 +16,7 @@ namespace HolidayCountdown.Views.Components;
 
 [ComponentInfo(
     "D4E5F6A7-B8C9-0123-DEF1-2345678901AB",
-    "天气变化提醒",
+    "天气变化提醒[测试版]",
     "fluent(\uE753)",
     "根据未来数日天气生成降温、升温、降水、日落、雷电等提醒"
 )]
