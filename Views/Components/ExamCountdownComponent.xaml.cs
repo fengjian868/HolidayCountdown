@@ -57,12 +57,6 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
         Dispatcher.UIThread.Post(Update);
     }
 
-    protected override void OnSettingsChanged()
-    {
-        base.OnSettingsChanged();
-        Dispatcher.UIThread.Post(Update);
-    }
-
     void Update()
     {
         if (Settings == null) return;

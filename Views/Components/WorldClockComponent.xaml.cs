@@ -40,12 +40,6 @@ public class WorldClockComponent : ComponentBase<WorldClockSettings>
         Dispatcher.UIThread.Post(Update);
     }
 
-    protected override void OnSettingsChanged()
-    {
-        base.OnSettingsChanged();
-        Dispatcher.UIThread.Post(Update);
-    }
-
     void Update()
     {
         _root.Children.Clear();
