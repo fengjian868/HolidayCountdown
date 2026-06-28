@@ -56,10 +56,10 @@ public class ExamCountdownSettingsControl : ComponentBase<ExamCountdownSettings>
         };
         panel.Children.Add(CreateRow("自定义日期", "覆盖内置日期，格式 MM-dd（可选）", customDateBox));
 
-        var customTextBox = new TextBox { Text = Settings?.CustomText ?? "{exam}还有{days}天", Width = 220 };
+        var customTextBox = new TextBox { Text = Settings?.CustomText ?? "距离{exam}还有{days}天", Width = 220 };
         customTextBox.TextChanged += (s, ev) =>
         {
-            if (Settings != null) Settings.CustomText = customTextBox.Text ?? "{exam}还有{days}天";
+            if (Settings != null) Settings.CustomText = customTextBox.Text ?? "距离{exam}还有{days}天";
         };
         panel.Children.Add(CreateRow("显示文案", "变量：{exam} {days} {date}", customTextBox));
 
@@ -83,6 +83,20 @@ public class ExamCountdownSettingsControl : ComponentBase<ExamCountdownSettings>
             if (Settings != null) Settings.TextColor = textColorPicker.Color.ToString();
         };
         panel.Children.Add(CreateRow("文字颜色", null, textColorPicker));
+
+        var showDotToggle = new ToggleSwitch { IsChecked = Settings?.ShowDot ?? true, OnContent = "", OffContent = "" };
+        showDotToggle.IsCheckedChanged += (s, ev) =>
+        {
+            if (Settings != null) Settings.ShowDot = showDotToggle.IsChecked == true;
+        };
+        panel.Children.Add(CreateRow("显示状态点", "在文案左侧显示小圆点", showDotToggle));
+
+        var dotColorPicker = new ColorPicker { Width = 40, Height = 28, Color = TryParseColor(Settings?.DotColor ?? "#FFFF5252") };
+        dotColorPicker.ColorChanged += (s, ev) =>
+        {
+            if (Settings != null) Settings.DotColor = dotColorPicker.Color.ToString();
+        };
+        panel.Children.Add(CreateRow("状态点颜色", null, dotColorPicker));
 
         var bgColorPicker = new ColorPicker { Width = 40, Height = 28, Color = TryParseColor(Settings?.BackgroundColor ?? "#202196F3") };
         bgColorPicker.ColorChanged += (s, ev) =>

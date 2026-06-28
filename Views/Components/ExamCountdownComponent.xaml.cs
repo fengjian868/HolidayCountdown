@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -23,10 +24,19 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
 {
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
+    private Ellipse _dot = null!;
     private Border? _bg;
 
     public ExamCountdownComponent()
     {
+        _dot = new Ellipse
+        {
+            Width = 6,
+            Height = 6,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 6, 0)
+        };
+
         _txt = new TextBlock
         {
             VerticalAlignment = VerticalAlignment.Center,
@@ -35,11 +45,19 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
             FontWeight = FontWeight.SemiBold
         };
 
+        var inner = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Children = { _dot, _txt }
+        };
+
         _bg = new Border
         {
-            CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(8, 3),
-            Child = _txt
+            CornerRadius = new CornerRadius(999),
+            Padding = new Thickness(10, 4),
+            Child = inner
         };
 
         Content = new StackPanel
@@ -83,6 +101,10 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
 
             if (Color.TryParse(Settings.TextColor, out var fg))
                 _txt.Foreground = new SolidColorBrush(fg);
+
+            _dot.IsVisible = Settings.ShowDot;
+            if (Settings.ShowDot && Color.TryParse(Settings.DotColor, out var dotColor))
+                _dot.Fill = new SolidColorBrush(dotColor);
 
             if (Settings.ShowBackground && _bg != null)
             {

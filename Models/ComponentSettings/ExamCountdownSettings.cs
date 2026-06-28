@@ -23,6 +23,16 @@ public class ExamCountdownSettings
     public string TextColor { get; set; } = "#FF2196F3";
 
     /// <summary>
+    /// 左侧状态点颜色
+    /// </summary>
+    public string DotColor { get; set; } = "#FFFF5252";
+
+    /// <summary>
+    /// 是否显示左侧状态点
+    /// </summary>
+    public bool ShowDot { get; set; } = true;
+
+    /// <summary>
     /// 是否显示背景色块
     /// </summary>
     public bool ShowBackground { get; set; } = true;
@@ -40,7 +50,7 @@ public class ExamCountdownSettings
     /// <summary>
     /// 自定义显示文案
     /// </summary>
-    public string CustomText { get; set; } = "{exam}还有{days}天";
+    public string CustomText { get; set; } = "距离{exam}还有{days}天";
 
     /// <summary>
     /// 考试当天显示文案
