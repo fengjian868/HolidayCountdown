@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
@@ -113,6 +114,17 @@ public class GreetingComponent : ComponentBase
                 }
             }
 
+            // 3. 课程联动问候语（结合临时课程显示对应时段问候）
+            if (_svc.Settings.ClassGreetingEnabled)
+            {
+                var classGreeting = GetClassGreeting();
+                if (!string.IsNullOrEmpty(classGreeting))
+                {
+                    _txt.Text = classGreeting;
+                    return;
+                }
+            }
+
             // 5. 时段问候语：按开始时间排序，支持跨天，取第一个匹配
             foreach (var slot in _svc.Settings.TimeSlotGreetings.OrderBy(x => x.StartHour * 60 + x.StartMinute))
             {
@@ -179,5 +191,124 @@ public class GreetingComponent : ComponentBase
         if (end <= start) // 跨天，例如 18:00 ~ 05:00
             return now >= start || now < end;
         return now >= start && now < end;
+    }
+
+    /// <summary>
+    /// 根据课程表状态生成联动问候语，支持临时课程。
+    /// </summary>
+    string? GetClassGreeting()
+    {
+        try
+        {
+            var lessonsService = GetLessonsService();
+            if (lessonsService == null) return null;
+
+            var isClassPlanEnabled = GetPropertyValue(lessonsService, "IsClassPlanEnabled") as bool?;
+            var isClassPlanLoaded = GetPropertyValue(lessonsService, "IsClassPlanLoaded") as bool?;
+            if (isClassPlanEnabled == false || isClassPlanLoaded == false) return null;
+
+            var currentStateObj = GetPropertyValue(lessonsService, "CurrentState");
+            if (currentStateObj == null) return null;
+            int state = (int)currentStateObj;
+
+            var currentSubject = GetPropertyValue(lessonsService, "CurrentSubject");
+            var nextSubject = GetPropertyValue(lessonsService, "NextSubject");
+            var subjectName = GetSubjectName(currentSubject);
+            var nextName = GetNextSubjectName(lessonsService, currentSubject, nextSubject);
+
+            var template = state switch
+            {
+                1 => _svc!.Settings.ClassGreetingOnClassTemplate,
+                3 => _svc!.Settings.ClassGreetingBreakTemplate,
+                2 => _svc!.Settings.ClassGreetingPrepareTemplate,
+                4 => _svc!.Settings.ClassGreetingAfterSchoolTemplate,
+                _ => _svc!.Settings.ClassGreetingNoClassTemplate
+            };
+
+            if (string.IsNullOrWhiteSpace(template)) return null;
+
+            return template
+                .Replace("{subject}", subjectName)
+                .Replace("{next}", nextName)
+                .Replace("{state}", state switch { 1 => "上课中", 2 => "准备上课", 3 => "课间", 4 => "放学", _ => "无课程" })
+                .Trim();
+        }
+        catch { return null; }
+    }
+
+    object? GetLessonsService()
+    {
+        try
+        {
+            var appHostType = Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Shared")
+                ?? Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Core")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .FirstOrDefault(t => t.Name == "IAppHost");
+
+            if (appHostType == null) return null;
+
+            var tryGetService = appHostType.GetMethod("TryGetService", BindingFlags.Public | BindingFlags.Static);
+            if (tryGetService == null || !tryGetService.IsGenericMethodDefinition) return null;
+
+            var lessonsServiceType = Type.GetType("ClassIsland.Core.Abstractions.Services.ILessonsService, ClassIsland.Core")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .FirstOrDefault(t => t.Name == "ILessonsService" || t.Name == "LessonsService");
+
+            if (lessonsServiceType == null) return null;
+
+            var genericMethod = tryGetService.MakeGenericMethod(lessonsServiceType);
+            return genericMethod.Invoke(null, null);
+        }
+        catch { return null; }
+    }
+
+    object? GetPropertyValue(object obj, string propName)
+    {
+        try
+        {
+            var prop = obj.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
+            return prop?.GetValue(obj);
+        }
+        catch { return null; }
+    }
+
+    string GetSubjectName(object? subject)
+    {
+        if (subject == null) return "";
+        try
+        {
+            var nameProp = subject.GetType().GetProperty("Name", BindingFlags.Public | BindingFlags.Instance);
+            return nameProp?.GetValue(subject)?.ToString() ?? "";
+        }
+        catch { return ""; }
+    }
+
+    string GetNextSubjectName(object lessonsService, object? currentSubject, object? nextSubject)
+    {
+        if (nextSubject != null)
+        {
+            var name = GetSubjectName(nextSubject);
+            if (!string.IsNullOrEmpty(name)) return name;
+        }
+
+        var nextItem = GetPropertyValue(lessonsService, "NextTimeLayoutItem");
+        if (nextItem != null)
+        {
+            var subj = GetPropertyValue(nextItem, "Subject");
+            if (subj != null)
+            {
+                var name = GetSubjectName(subj);
+                if (!string.IsNullOrEmpty(name)) return name;
+            }
+            var name2 = GetSubjectName(nextItem);
+            if (!string.IsNullOrEmpty(name2)) return name2;
+        }
+
+        var currentName = GetSubjectName(currentSubject);
+        if (!string.IsNullOrEmpty(currentName)) return currentName;
+
+        return "";
     }
 }

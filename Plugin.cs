@@ -21,6 +21,12 @@ public class Plugin : PluginBase
         services.AddComponent<Views.Components.WeatherGreetingComponent>();
         services.AddComponent<Views.Components.SmartWeatherComponent>();
         services.AddComponent<Views.Components.ClassScheduleComponent>();
+        services.AddComponent<Views.Components.ExamCountdownComponent, Views.ComponentSettings.ExamCountdownSettingsControl>();
+        services.AddComponent<Views.Components.WorldClockComponent, Views.ComponentSettings.WorldClockSettingsControl>();
+        services.AddComponent<Views.Components.WeatherReminderComponent>();
+
+        services.AddAction<Automation.Actions.OpenUsbDriveAction>();
+        services.AddAction<Automation.Actions.RefreshWeatherAction>();
 
         services.AddSettingsPage<Views.SettingsPages.UnifiedSettingsPage>();
     }

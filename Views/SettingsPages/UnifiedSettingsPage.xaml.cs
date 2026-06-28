@@ -424,10 +424,34 @@ public class UnifiedSettingsPage : SettingsPageBase
             Text(_svc.Settings.AfterSchoolEndText, 200, v => { _svc.Settings.AfterSchoolEndText = v; AutoSave(); })));
         s.Children.Add(Expander("放学", "放学提醒设置", schoolPanel));
 
+        s.Children.Add(Expander("课程联动", "根据课程表/临时课程显示问候语", BuildClassGreetingPanel()));
         s.Children.Add(Expander("时段文案", "自定义多个时间段的问候语", BuildTimeSlotPanel()));
         s.Children.Add(Expander("特殊日期", "设置特定星期几的问候语", BuildSpecialDatePanel()));
 
         return s;
+    }
+
+    StackPanel BuildClassGreetingPanel()
+    {
+        var panel = new StackPanel { Spacing = 0 };
+        panel.Children.Add(SettingItem("启用课程联动问候语", "根据ClassIsland课程表（含临时课程）显示对应问候",
+            Toggle(_svc.Settings.ClassGreetingEnabled, v => { _svc.Settings.ClassGreetingEnabled = v; AutoSave(); })));
+        panel.Children.Add(Separator());
+        panel.Children.Add(SettingItem("上课模板", "{subject}=学科名 {state}=状态",
+            Text(_svc.Settings.ClassGreetingOnClassTemplate, 260, v => { _svc.Settings.ClassGreetingOnClassTemplate = v; AutoSave(); })));
+        panel.Children.Add(Separator());
+        panel.Children.Add(SettingItem("课间模板", "{next}=下节课名 {state}=状态",
+            Text(_svc.Settings.ClassGreetingBreakTemplate, 260, v => { _svc.Settings.ClassGreetingBreakTemplate = v; AutoSave(); })));
+        panel.Children.Add(Separator());
+        panel.Children.Add(SettingItem("准备上课模板", "{next}=下节课名 {state}=状态",
+            Text(_svc.Settings.ClassGreetingPrepareTemplate, 260, v => { _svc.Settings.ClassGreetingPrepareTemplate = v; AutoSave(); })));
+        panel.Children.Add(Separator());
+        panel.Children.Add(SettingItem("放学模板", "{state}=状态",
+            Text(_svc.Settings.ClassGreetingAfterSchoolTemplate, 260, v => { _svc.Settings.ClassGreetingAfterSchoolTemplate = v; AutoSave(); })));
+        panel.Children.Add(Separator());
+        panel.Children.Add(SettingItem("无课程模板", "{state}=状态",
+            Text(_svc.Settings.ClassGreetingNoClassTemplate, 260, v => { _svc.Settings.ClassGreetingNoClassTemplate = v; AutoSave(); })));
+        return panel;
     }
 
     StackPanel BuildTimeSlotPanel()
@@ -461,10 +485,8 @@ public class UnifiedSettingsPage : SettingsPageBase
                 refreshBtn.Click += (a, e) =>
                 {
                     var tag = string.IsNullOrEmpty(slot.Tag) ? GetTimeSlotTag(slot.StartHour) : slot.Tag;
-                    var seed = DateTime.Now.Year * 10000 + DateTime.Now.Month * 100 + DateTime.Now.Day + DateTime.Now.Hour * 100 + DateTime.Now.Minute + new Random().Next(10000);
-                    var rng = new Random(seed);
-                    if (LocalGreetingDB.TimeSlotGreetings.TryGetValue(tag, out var list) && list.Count > 0)
-                        slot.Text = list[rng.Next(list.Count)];
+                    var text = LocalGreetingDB.GetRandom(tag, LocalGreetingDB.TimeSlotGreetings);
+                    if (!string.IsNullOrEmpty(text)) slot.Text = text;
                     AutoSave();
                     RefreshList();
                 };
@@ -505,12 +527,13 @@ public class UnifiedSettingsPage : SettingsPageBase
         panel.Children.Add(addBtn);
 
         var refreshAllBtn = new Button { Content = "🔄 一键刷新全部文案", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 0, 16, 8) };
-        refreshAllBtn.Click += (a, e) =>
+        refreshAllBtn.Click += async (a, e) =>
         {
             _svc.RefreshAllGreetings();
             refreshAllBtn.Content = "✅ 已刷新";
-            Dispatcher.UIThread.Post(() => refreshAllBtn.Content = "🔄 一键刷新全部文案", DispatcherPriority.Background);
             RefreshList();
+            await Task.Delay(1500);
+            refreshAllBtn.Content = "🔄 一键刷新全部文案";
         };
         panel.Children.Add(refreshAllBtn);
 
@@ -564,10 +587,8 @@ public class UnifiedSettingsPage : SettingsPageBase
                 refreshBtn.Click += (a, e) =>
                 {
                     var tag = string.IsNullOrEmpty(item.Tag) ? (item.DayOfWeek == 6 || item.DayOfWeek == 7 ? "周末" : $"周{new[] { "一", "二", "三", "四", "五", "六", "日" }[item.DayOfWeek - 1]}") : item.Tag;
-                    var seed = DateTime.Now.Year * 10000 + DateTime.Now.Month * 100 + DateTime.Now.Day + DateTime.Now.Hour * 100 + DateTime.Now.Minute + new Random().Next(10000);
-                    var rng = new Random(seed);
-                    if (LocalGreetingDB.WeeklyReminders.TryGetValue(tag, out var list) && list.Count > 0)
-                        item.Text = list[rng.Next(list.Count)];
+                    var text = LocalGreetingDB.GetRandom(tag, LocalGreetingDB.WeeklyReminders);
+                    if (!string.IsNullOrEmpty(text)) item.Text = text;
                     AutoSave();
                     RefreshList();
                 };
@@ -876,7 +897,8 @@ public class UnifiedSettingsPage : SettingsPageBase
                 refreshBtn.Click += (a, e) =>
                 {
                     var tag = string.IsNullOrEmpty(item.Tag) ? "舒适" : item.Tag;
-                    item.Text = LocalGreetingDB.GetRandom(tag, new Dictionary<string, List<string>> { [tag] = new() { item.Text } });
+                    var text = LocalGreetingDB.GetRandom(tag, LocalGreetingDB.WeatherGreetings);
+                    if (!string.IsNullOrEmpty(text)) item.Text = text;
                     AutoSave();
                     RefreshList();
                 };
@@ -934,6 +956,15 @@ public class UnifiedSettingsPage : SettingsPageBase
             RefreshList();
         };
         btnRow.Children.Add(resetBtn);
+
+        var refreshAllTempBtn = new Button { Content = "🔄 刷新全部温度提醒", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
+        refreshAllTempBtn.Click += (a, e) =>
+        {
+            _svc.RefreshAllTempGreetings();
+            RefreshList();
+        };
+        btnRow.Children.Add(refreshAllTempBtn);
+
         panel.Children.Add(btnRow);
 
         return panel;
@@ -973,7 +1004,8 @@ public class UnifiedSettingsPage : SettingsPageBase
                 refreshBtn.Click += (a, e) =>
                 {
                     var tag = string.IsNullOrEmpty(kv.Tag) ? "默认" : kv.Tag;
-                    kv.Text = LocalGreetingDB.GetRandom(tag, new Dictionary<string, List<string>> { [tag] = new() { kv.Text } });
+                    var text = LocalGreetingDB.GetRandom(tag, LocalGreetingDB.WeatherGreetings);
+                    if (!string.IsNullOrEmpty(text)) kv.Text = text;
                     AutoSave();
                     RefreshList();
                 };
@@ -1003,14 +1035,24 @@ public class UnifiedSettingsPage : SettingsPageBase
         RefreshList();
         panel.Children.Add(listPanel);
 
-        var addBtn = new Button { Content = "+ 添加天气问候", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 4, 16, 8) };
+        var btnRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(16, 4, 16, 8) };
+        var addBtn = new Button { Content = "+ 添加天气问候", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
         addBtn.Click += (a, e) =>
         {
             _svc.Settings.WeatherGreetingItems.Add(new Models.WeatherGreetingItem { Keyword = "新天气", Text = "" });
             AutoSave();
             RefreshList();
         };
-        panel.Children.Add(addBtn);
+        btnRow.Children.Add(addBtn);
+
+        var refreshAllWeatherBtn = new Button { Content = "🔄 刷新全部天气问候", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
+        refreshAllWeatherBtn.Click += (a, e) =>
+        {
+            _svc.RefreshAllWeatherGreetings();
+            RefreshList();
+        };
+        btnRow.Children.Add(refreshAllWeatherBtn);
+        panel.Children.Add(btnRow);
 
         panel.Children.Add(Info("说明：当天气文本包含对应关键词时，显示该文案。{weather} 会被替换为实际天气名称。"));
 

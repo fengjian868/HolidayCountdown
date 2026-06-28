@@ -90,11 +90,15 @@ public class SmartWeatherComponent : ComponentBase
         vars.B = icon;
         vars.BColor = iconColor;
 
-        // C: 预警信息
+        // C: 预警信息（支持同一条标题中包含多个类型，如“雷雨大风”）
         vars.C = data.Warnings.Length > 0
             ? string.Join(" ", data.Warnings.Select(GetWarningBadgeText))
             : "";
-        vars.CWarnings = data.Warnings.Select(ParseWarning).Where(w => w != null).Cast<WarningInfo>().ToList();
+        vars.CWarnings = data.Warnings
+            .SelectMany(ParseWarnings)
+            .GroupBy(w => w.Type)
+            .Select(g => g.First())
+            .ToList();
 
         // D: 穿衣/出行提醒
         vars.D = GetReminder(data);
@@ -468,21 +472,20 @@ public class SmartWeatherComponent : ComponentBase
 
     #region Warning Parsing
 
-    WarningInfo? ParseWarning(string title)
+    IEnumerable<WarningInfo> ParseWarnings(string title)
     {
-        var type = GetWarningType(title);
-        if (string.IsNullOrEmpty(type)) return null;
-        var level = GetWarningLevel(title);
-        var icon = GetWarningIcon(type);
-        return new WarningInfo(type, level, icon);
+        foreach (var type in GetWarningTypes(title))
+        {
+            var level = GetWarningLevel(title);
+            var icon = GetWarningIcon(type);
+            yield return new WarningInfo(type, level, icon);
+        }
     }
 
-    string GetWarningType(string title)
+    List<string> GetWarningTypes(string title)
     {
-        var types = new[] { "道路结冰", "高温", "暴雨", "大风", "雷电", "冰雹", "暴雪", "寒潮", "大雾", "沙尘", "台风", "霜冻", "干旱", "霾" };
-        foreach (var t in types)
-            if (title.Contains(t)) return t;
-        return "";
+        var types = new[] { "道路结冰", "高温", "暴雨", "雷暴", "雷雨", "大风", "雷电", "冰雹", "暴雪", "寒潮", "大雾", "沙尘", "台风", "霜冻", "干旱", "霾" };
+        return types.Where(t => title.Contains(t)).ToList();
     }
 
     string GetWarningLevel(string title)
@@ -501,7 +504,7 @@ public class SmartWeatherComponent : ComponentBase
             "高温" => "\uD83C\uDF21️",
             "暴雨" => "\uD83C\uDF27️",
             "大风" => "\uD83D\uDCA8",
-            "雷电" => "\u26A1",
+            "雷电" or "雷雨" or "雷暴" => "\u26A1",
             "冰雹" => "\uD83C\uDF28️",
             "暴雪" => "\uD83C\uDF28️",
             "寒潮" => "\uD83E\uDDE3",
@@ -518,8 +521,9 @@ public class SmartWeatherComponent : ComponentBase
 
     string GetWarningBadgeText(string title)
     {
-        var info = ParseWarning(title);
-        return info == null ? "" : $"{info.Icon} {info.Type} {info.LevelText}";
+        var infos = ParseWarnings(title).ToList();
+        if (infos.Count == 0) return "";
+        return string.Join(" ", infos.Select(i => $"{i.Icon} {i.Type} {i.LevelText}"));
     }
 
     (IBrush bg, IBrush fg) GetWarningColors(string level)

@@ -172,17 +172,16 @@ public class WeatherGreetingComponent : ComponentBase
     }
 
     /// <summary>
-    /// 根据所有预警类型合并返回一条简短防护提醒
+    /// 根据所有预警类型合并返回一条简短防护提醒（支持同一条标题含多个类型）
     /// </summary>
     string GetWarningText(string[] warnings)
     {
         if (warnings.Length == 0) return "";
         var types = new List<string>();
         foreach (var w in warnings)
-        {
-            var type = GetWarningType(w);
-            if (!string.IsNullOrEmpty(type) && !types.Contains(type)) types.Add(type);
-        }
+            foreach (var type in GetWarningTypes(w))
+                if (!string.IsNullOrEmpty(type) && !types.Contains(type))
+                    types.Add(type);
         if (types.Count == 0) return "";
         if (types.Count == 1) return GetShortTip(types[0]);
         // 多个预警合并为一条简短提醒
@@ -191,23 +190,10 @@ public class WeatherGreetingComponent : ComponentBase
         return $"⚠️{typeStr}预警，{string.Join("，", actions)}";
     }
 
-    string GetWarningType(string w)
+    List<string> GetWarningTypes(string w)
     {
-        if (w.Contains("高温")) return "高温";
-        if (w.Contains("暴雨")) return "暴雨";
-        if (w.Contains("大风")) return "大风";
-        if (w.Contains("雷电")) return "雷电";
-        if (w.Contains("冰雹")) return "冰雹";
-        if (w.Contains("暴雪")) return "暴雪";
-        if (w.Contains("寒潮")) return "寒潮";
-        if (w.Contains("大雾")) return "大雾";
-        if (w.Contains("沙尘")) return "沙尘";
-        if (w.Contains("台风")) return "台风";
-        if (w.Contains("霜冻")) return "霜冻";
-        if (w.Contains("道路结冰")) return "道路结冰";
-        if (w.Contains("干旱")) return "干旱";
-        if (w.Contains("霾")) return "霾";
-        return "";
+        var types = new[] { "道路结冰", "高温", "暴雨", "雷暴", "雷雨", "大风", "雷电", "冰雹", "暴雪", "寒潮", "大雾", "沙尘", "台风", "霜冻", "干旱", "霾" };
+        return types.Where(t => w.Contains(t)).ToList();
     }
 
     string GetShortTip(string type)
@@ -217,7 +203,7 @@ public class WeatherGreetingComponent : ComponentBase
             "高温" => "高温预警，注意防暑 \uD83C\uDF21️",
             "暴雨" => "暴雨预警，记得带伞 \uD83C\uDF27️",
             "大风" => "大风预警，注意防风 \uD83D\uDCA8",
-            "雷电" => "雷电预警，待在室内 \u26A1",
+            "雷电" or "雷雨" or "雷暴" => "雷电预警，待在室内 \u26A1",
             "冰雹" => "冰雹预警，避免外出 \uD83C\uDF28️",
             "暴雪" => "暴雪预警，注意防滑 \uD83C\uDF28️",
             "寒潮" => "寒潮预警，注意保暖 \uD83E\uDDE3",
@@ -239,7 +225,7 @@ public class WeatherGreetingComponent : ComponentBase
             "高温" => "注意防暑",
             "暴雨" => "记得带伞",
             "大风" => "注意防风",
-            "雷电" => "待在室内",
+            "雷电" or "雷雨" or "雷暴" => "待在室内",
             "冰雹" => "避免外出",
             "暴雪" => "注意防滑",
             "寒潮" => "注意保暖",

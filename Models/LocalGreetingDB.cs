@@ -543,6 +543,83 @@ public static class LocalGreetingDB
     }
 
     /// <summary>
+    /// 根据标签从本地数据库获取随机问候语，数据库不存在时返回空
+    /// </summary>
+    public static string GetRandomOrEmpty(string tag, Dictionary<string, List<string>> db)
+    {
+        return GetRandom(tag, db);
+    }
+
+    /// <summary>
+    /// 天气关键词问候语备用库，供一键刷新使用
+    /// </summary>
+    public static readonly Dictionary<string, List<string>> WeatherGreetings = new()
+    {
+        ["雨天"] = new()
+        {
+            "记得带伞 ☔",
+            "雨天路滑，注意安全 🌧️",
+            "出门别忘伞 🌂",
+            "雨水绵绵，保持好心情 💧",
+            "雨声伴奏，学习更专注 🎵"
+        },
+        ["寒冷"] = new()
+        {
+            "注意保暖 ❄️",
+            "多穿点，别感冒了 🧣",
+            "寒冷天气，喝杯热水 ☕",
+            "手套围巾安排上 🧤",
+            "天冷加衣，健康第一 🧥"
+        },
+        ["高温"] = new()
+        {
+            "注意防暑 ☀️",
+            "多喝水，别中暑 💧",
+            "高温来袭，尽量减少外出 🌡️",
+            "记得涂防晒 🧴",
+            "热浪滚滚，保持清凉 🍃"
+        },
+        ["舒适"] = new()
+        {
+            "天气不错，适合学习 📖",
+            "舒适宜人，效率满满 ✨",
+            "好天气，好心情 🌈",
+            "温度刚刚好 🌤️",
+            "适合出去走走 🚶"
+        },
+        ["恶劣天气"] = new()
+        {
+            "恶劣天气，减少外出 ⛈️",
+            "注意安全，关好门窗 🏠",
+            "极端天气，谨慎出行 ⚠️",
+            "关注预警，做好防护 🛡️",
+            "安全第一，别大意 ❗"
+        },
+        ["大风"] = new()
+        {
+            "风大，远离广告牌 🍃",
+            "注意防风，关好窗户 🪟",
+            "大风天气，注意安全 💨",
+            "出门护好发型 😄",
+            "别在高楼下久站 🏢"
+        },
+        ["雷电"] = new()
+        {
+            "雷电交加，注意安全 ⛈️",
+            "雷雨天气，待在室内 ⚡",
+            "别在大树下躲雨 🌳",
+            "拔掉电器插头 🔌",
+            "雷声隆隆，注意安全 📢"
+        },
+        ["默认"] = new()
+        {
+            "{weather}",
+            "今天天气{weather}",
+            "当前天气{weather}，注意出行"
+        }
+    };
+
+    /// <summary>
     /// 温度区间默认问候语
     /// </summary>
     public static readonly List<TempGreeting> DefaultTempGreetings = new()

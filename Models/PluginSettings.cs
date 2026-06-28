@@ -114,6 +114,14 @@ public class PluginSettings
     public string ClassScheduleAfterSchoolTemplate { get; set; } = "{icon}放学啦";
     public string ClassScheduleNoClassTemplate { get; set; } = "{icon}{text}";
 
+    // 课程联动问候语
+    public bool ClassGreetingEnabled { get; set; } = false;
+    public string ClassGreetingOnClassTemplate { get; set; } = "正在上{subject}，加油 📖";
+    public string ClassGreetingBreakTemplate { get; set; } = "课间休息，下节{next} ☕";
+    public string ClassGreetingPrepareTemplate { get; set; } = "准备上{next}，拿好课本 🔔";
+    public string ClassGreetingAfterSchoolTemplate { get; set; } = "放学啦，今天辛苦了 🏠";
+    public string ClassGreetingNoClassTemplate { get; set; } = "暂无课程，好好休息 📅";
+
 }
 
 public class CustomHoliday

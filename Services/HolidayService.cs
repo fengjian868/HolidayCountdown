@@ -536,7 +536,7 @@ public class HolidayService
     }
 
     /// <summary>
-    /// 一键刷新全部文案问候语
+    /// 一键刷新全部文案问候语（手动触发，真正随机）
     /// </summary>
     public void RefreshAllGreetings()
     {
@@ -548,7 +548,7 @@ public class HolidayService
         {
             if (!string.IsNullOrEmpty(slot.Tag))
             {
-                var tagText = LocalGreetingDB.GetDaily(slot.Tag, LocalGreetingDB.TimeSlotGreetings);
+                var tagText = LocalGreetingDB.GetRandom(slot.Tag, LocalGreetingDB.TimeSlotGreetings);
                 if (!string.IsNullOrEmpty(tagText)) slot.Text = tagText;
             }
         }
@@ -558,11 +558,40 @@ public class HolidayService
         {
             if (!string.IsNullOrEmpty(special.Tag))
             {
-                var tagText = LocalGreetingDB.GetDaily(special.Tag, LocalGreetingDB.WeeklyReminders);
+                var tagText = LocalGreetingDB.GetRandom(special.Tag, LocalGreetingDB.WeeklyReminders);
                 if (!string.IsNullOrEmpty(tagText)) special.Text = tagText;
             }
         }
 
+        SaveSettings();
+    }
+
+    /// <summary>
+    /// 一键刷新全部天气关键词问候语
+    /// </summary>
+    public void RefreshAllWeatherGreetings()
+    {
+        foreach (var item in Settings.WeatherGreetingItems)
+        {
+            if (item.Keyword == "默认") continue;
+            var tag = string.IsNullOrEmpty(item.Tag) ? "默认" : item.Tag;
+            var text = LocalGreetingDB.GetRandom(tag, LocalGreetingDB.WeatherGreetings);
+            if (!string.IsNullOrEmpty(text)) item.Text = text;
+        }
+        SaveSettings();
+    }
+
+    /// <summary>
+    /// 一键刷新全部温度区间问候语
+    /// </summary>
+    public void RefreshAllTempGreetings()
+    {
+        foreach (var item in Settings.TempGreetings)
+        {
+            var tag = string.IsNullOrEmpty(item.Tag) ? "舒适" : item.Tag;
+            var text = LocalGreetingDB.GetRandom(tag, LocalGreetingDB.WeatherGreetings);
+            if (!string.IsNullOrEmpty(text)) item.Text = text;
+        }
         SaveSettings();
     }
 }
