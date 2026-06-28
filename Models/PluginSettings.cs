@@ -96,6 +96,16 @@ public class PluginSettings
         new WeatherGreetingItem { Keyword = "默认", Text = "{weather}", Tag = "默认" }
     };
 
+    // 智能天气
+    public string SmartWeatherTemplate { get; set; } = "{A} {B} {C} {D}";
+    public bool SmartWeatherShowA { get; set; } = true;
+    public bool SmartWeatherShowB { get; set; } = true;
+    public bool SmartWeatherShowC { get; set; } = true;
+    public bool SmartWeatherShowD { get; set; } = true;
+    public bool SmartWeatherShowE { get; set; } = false;
+    public bool SmartWeatherWarningOverride { get; set; } = true;
+    public bool SmartWeatherTempColorEnabled { get; set; } = true;
+
     // 课程表联动
     public bool ClassScheduleEnabled { get; set; } = true;
     public bool ClassScheduleShowIcon { get; set; } = true;

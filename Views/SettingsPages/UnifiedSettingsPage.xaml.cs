@@ -871,6 +871,34 @@ public class UnifiedSettingsPage : SettingsPageBase
         layoutPanel.Children.Add(Info("可用变量: {greeting} 问候语 | {temp} 温度 | {weather} 天气 | {warning} 预警 | {icon} 天气图标"));
         s.Children.Add(Expander("排版", "自定义天气问候的显示格式", layoutPanel));
 
+        var smartPanel = new StackPanel { Spacing = 0 };
+        smartPanel.Children.Add(SettingItem("模板", null,
+            Text(_svc.Settings.SmartWeatherTemplate ?? "{A} {B} {C} {D}", 280, v => { _svc.Settings.SmartWeatherTemplate = v; AutoSave(); })));
+        smartPanel.Children.Add(Separator());
+        smartPanel.Children.Add(SettingItem("显示温度 {A}", null,
+            Toggle(_svc.Settings.SmartWeatherShowA, v => { _svc.Settings.SmartWeatherShowA = v; AutoSave(); })));
+        smartPanel.Children.Add(Separator());
+        smartPanel.Children.Add(SettingItem("显示天气图标 {B}", null,
+            Toggle(_svc.Settings.SmartWeatherShowB, v => { _svc.Settings.SmartWeatherShowB = v; AutoSave(); })));
+        smartPanel.Children.Add(Separator());
+        smartPanel.Children.Add(SettingItem("显示预警 {C}", null,
+            Toggle(_svc.Settings.SmartWeatherShowC, v => { _svc.Settings.SmartWeatherShowC = v; AutoSave(); })));
+        smartPanel.Children.Add(Separator());
+        smartPanel.Children.Add(SettingItem("显示穿衣提醒 {D}", null,
+            Toggle(_svc.Settings.SmartWeatherShowD, v => { _svc.Settings.SmartWeatherShowD = v; AutoSave(); })));
+        smartPanel.Children.Add(Separator());
+        smartPanel.Children.Add(SettingItem("显示更新状态 {E}", null,
+            Toggle(_svc.Settings.SmartWeatherShowE, v => { _svc.Settings.SmartWeatherShowE = v; AutoSave(); })));
+        smartPanel.Children.Add(Separator());
+        smartPanel.Children.Add(SettingItem("预警置顶", "有预警时优先完整显示预警信息",
+            Toggle(_svc.Settings.SmartWeatherWarningOverride, v => { _svc.Settings.SmartWeatherWarningOverride = v; AutoSave(); })));
+        smartPanel.Children.Add(Separator());
+        smartPanel.Children.Add(SettingItem("温度按冷暖变色", "根据温度自动调整温度文本颜色",
+            Toggle(_svc.Settings.SmartWeatherTempColorEnabled, v => { _svc.Settings.SmartWeatherTempColorEnabled = v; AutoSave(); })));
+        smartPanel.Children.Add(Separator());
+        smartPanel.Children.Add(Info("可用变量: {A} 温度 | {B} 彩色天气图标 | {C} 预警徽章 | {D} 穿衣提醒 | {E} 更新状态"));
+        s.Children.Add(Expander("智能天气", "新版彩色天气组件，含预警与 A/B/C 模板变量", smartPanel));
+
         s.Children.Add(Expander("温度提醒", "自定义各温度区间的穿衣提醒文案", BuildTempPanel()));
         s.Children.Add(Expander("天气关键词", "根据天气关键词匹配显示文案", BuildWeatherGreetingPanel()));
 

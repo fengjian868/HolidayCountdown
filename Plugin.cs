@@ -18,6 +18,7 @@ public class Plugin : PluginBase
         services.AddComponent<Views.Components.CustomHolidayComponent>();
         services.AddComponent<Views.Components.VacationCountdownComponent>();
         services.AddComponent<Views.Components.WeatherGreetingComponent>();
+        services.AddComponent<Views.Components.SmartWeatherComponent>();
         services.AddComponent<Views.Components.ClassScheduleComponent>();
         services.AddComponent<Views.Components.StudyTimeComponent>();
 
