@@ -4,8 +4,6 @@ on:
   push:
     branches: [main, master, trae/solo-agent-Nhi4Zr]
     tags: ['v*']
-  pull_request:
-    branches: [main, master]
   workflow_dispatch:
 
 jobs:
