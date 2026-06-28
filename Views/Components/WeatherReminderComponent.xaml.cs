@@ -267,8 +267,9 @@ public class WeatherReminderComponent : ComponentBase
         catch { return null; }
     }
 
-    object? GetPropertyValue(object obj, string propName)
+    object? GetPropertyValue(object? obj, string propName)
     {
+        if (obj == null) return null;
         try
         {
             var prop = obj.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
