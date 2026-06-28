@@ -66,7 +66,6 @@ public class PluginSettings
     public bool WeatherGreetingEnabled { get; set; } = true;
     public bool WeatherWarningOverride { get; set; } = true;
     public string? WeatherTemplate { get; set; } = "{icon}{temp} {greeting}";
-    public bool WeatherShowIcon { get; set; } = true;
     public bool WeatherShowTemp { get; set; } = true;
     public List<TempGreeting> TempGreetings { get; set; } = new();
     public List<WeatherGreetingItem> WeatherGreetingItems { get; set; } = new()
@@ -97,7 +96,7 @@ public class PluginSettings
     };
 
     // 智能天气
-    public string SmartWeatherTemplate { get; set; } = "{A} {B} {C} {D}";
+    public string SmartWeatherTemplate { get; set; } = "{B} {A} {C} {D}";
     public bool SmartWeatherShowA { get; set; } = true;
     public bool SmartWeatherShowB { get; set; } = true;
     public bool SmartWeatherShowC { get; set; } = true;
@@ -148,11 +147,15 @@ public class PluginSettings
     public bool ExamCountdownShowRing { get; set; } = true;
     public string ExamCountdownRingStartDate { get; set; } = "08-01";
     public bool ExamCountdownShowBackground { get; set; } = true;
-    public string ExamCountdownBackgroundColor { get; set; } = "#202196F3";
+    public string ExamCountdownBackgroundColor { get; set; } = "#502196F3";
+    public int ExamCountdownFontSize { get; set; } = 0;
     public string? ExamCountdownCustomDate { get; set; }
     public string ExamCountdownCustomText { get; set; } = "距离{exam}还有{days}天";
     public string ExamCountdownTodayText { get; set; } = "今天就是{exam}，加油！";
     public bool ExamCountdownRepeatYearly { get; set; } = true;
+
+    // 天气问候
+    public bool WeatherShowIcon { get; set; } = true;
 
     // 世界时钟
     public bool WorldClockShowSeconds { get; set; } = false;

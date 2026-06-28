@@ -26,7 +26,6 @@ public class ExamCountdownComponent : ComponentBase
     private TextBlock _txt = null!;
     private Arc _ringTrack = null!;
     private Arc _ringProgress = null!;
-    private Border? _bg;
     private HolidayService _svc = new();
 
     public ExamCountdownComponent()
@@ -65,27 +64,13 @@ public class ExamCountdownComponent : ComponentBase
             FontWeight = FontWeight.SemiBold
         };
 
-        var inner = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Children = { ringGrid, _txt }
-        };
-
-        _bg = new Border
-        {
-            CornerRadius = new CornerRadius(999),
-            Padding = new Thickness(10, 4),
-            Child = inner
-        };
-
+        // 直接圆环 + 文字，无背景块
         Content = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Children = { _bg }
+            Children = { ringGrid, _txt }
         };
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
@@ -116,6 +101,10 @@ public class ExamCountdownComponent : ComponentBase
             text = Regex.Replace(text, @"\s+", " ").Trim();
 
             _txt.Text = text;
+            var fontSize = _svc.Settings.ExamCountdownFontSize > 0
+                ? _svc.Settings.ExamCountdownFontSize
+                : (int)GetClassIslandFontSize();
+            _txt.FontSize = fontSize;
 
             if (Color.TryParse(_svc.Settings.ExamCountdownTextColor, out var fg))
                 _txt.Foreground = new SolidColorBrush(fg);
@@ -131,17 +120,6 @@ public class ExamCountdownComponent : ComponentBase
                 _ringProgress.SweepAngle = Math.Max(0, Math.Min(360, progress * 360));
             }
 
-            if (_svc.Settings.ExamCountdownShowBackground && _bg != null)
-            {
-                _bg.Background = Color.TryParse(_svc.Settings.ExamCountdownBackgroundColor, out var bg)
-                    ? new SolidColorBrush(bg)
-                    : new SolidColorBrush(Color.Parse("#202196F3"));
-                _bg.BorderThickness = new Thickness(0);
-            }
-            else if (_bg != null)
-            {
-                _bg.Background = Brushes.Transparent;
-            }
         }
         catch
         {
@@ -199,5 +177,61 @@ public class ExamCountdownComponent : ComponentBase
         }
         try { return new DateTime(year, month, day); }
         catch { return new DateTime(year, 8, 1); }
+    }
+
+    double GetClassIslandFontSize()
+    {
+        try
+        {
+            var settings = GetSettingsServiceSettings();
+            if (settings == null) return 14;
+            var value = GetPropertyValue(settings, "MainWindowBodyFontSize");
+            if (value is double d) return d;
+            if (value is float f) return f;
+            if (value != null && double.TryParse(value.ToString(), out var parsed)) return parsed;
+        }
+        catch { }
+        return 14;
+    }
+
+    object? GetSettingsServiceSettings()
+    {
+        try
+        {
+            var appHostType = Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Shared")
+                ?? Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Core")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .FirstOrDefault(t => t.Name == "IAppHost");
+
+            if (appHostType == null) return null;
+
+            var tryGetService = appHostType.GetMethod("TryGetService", BindingFlags.Public | BindingFlags.Static);
+            if (tryGetService == null || !tryGetService.IsGenericMethodDefinition) return null;
+
+            var settingsServiceType = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => a.GetTypes())
+                .FirstOrDefault(t => t.Name == "SettingsService");
+
+            if (settingsServiceType == null) return null;
+
+            var genericMethod = tryGetService.MakeGenericMethod(settingsServiceType);
+            var settingsService = genericMethod.Invoke(null, null);
+            if (settingsService == null) return null;
+
+            var settingsProp = settingsServiceType.GetProperty("Settings", BindingFlags.Public | BindingFlags.Instance);
+            return settingsProp?.GetValue(settingsService);
+        }
+        catch { return null; }
+    }
+
+    object? GetPropertyValue(object obj, string propName)
+    {
+        try
+        {
+            var prop = obj.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
+            return prop?.GetValue(obj);
+        }
+        catch { return null; }
     }
 }

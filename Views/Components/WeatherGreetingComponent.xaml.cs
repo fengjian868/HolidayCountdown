@@ -78,13 +78,13 @@ public class WeatherGreetingComponent : ComponentBase
         }
 
         var template = _svc.Settings.WeatherTemplate ?? "{greeting}";
-        var icon = GetWeatherIcon(actualWeatherText);
+        var icon = _svc.Settings.WeatherShowIcon ? GetWeatherIcon(actualWeatherText) : "";
         var stale = GetStaleWarning(updateTime);
 
         var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["greeting"] = greeting,
-            ["temp"] = temp.HasValue ? $"{temp.Value}°C" : "",
+            ["temp"] = (_svc.Settings.WeatherShowTemp && temp.HasValue) ? $"{temp.Value}°C" : "",
             ["weather"] = actualWeatherText,
             ["warning"] = warning,
             ["icon"] = icon

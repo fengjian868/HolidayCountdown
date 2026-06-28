@@ -370,15 +370,12 @@ public class UnifiedSettingsPage : SettingsPageBase
         stylePanel.Children.Add(SettingItem("圆环开始日期", "默认 08-01，格式 MM-dd",
             Text(_svc.Settings.ExamCountdownRingStartDate, 90, v => { _svc.Settings.ExamCountdownRingStartDate = v; AutoSave(); })));
         stylePanel.Children.Add(Separator());
-        stylePanel.Children.Add(SettingItem("显示背景", "为倒计时显示背景色块",
-            Toggle(_svc.Settings.ExamCountdownShowBackground, v => { _svc.Settings.ExamCountdownShowBackground = v; AutoSave(); })));
-        stylePanel.Children.Add(Separator());
-        stylePanel.Children.Add(SettingItem("背景颜色", null,
-            ColorPicker(_svc.Settings.ExamCountdownBackgroundColor, c => { _svc.Settings.ExamCountdownBackgroundColor = c; AutoSave(); })));
-        stylePanel.Children.Add(Separator());
         stylePanel.Children.Add(SettingItem("文字颜色", null,
             ColorPicker(_svc.Settings.ExamCountdownTextColor, c => { _svc.Settings.ExamCountdownTextColor = c; AutoSave(); })));
-        s.Children.Add(Expander("样式", "圆环、颜色与背景", stylePanel));
+        stylePanel.Children.Add(Separator());
+        stylePanel.Children.Add(SettingItem("字体大小", "0 表示跟随 ClassIsland 主体字体大小",
+            Number(_svc.Settings.ExamCountdownFontSize, 0, 72, v => { _svc.Settings.ExamCountdownFontSize = v; AutoSave(); })));
+        s.Children.Add(Expander("样式", "圆环、颜色与字体", stylePanel));
 
         var textPanel = new StackPanel { Spacing = 0 };
         textPanel.Children.Add(SettingItem("倒计时文案", "变量：{exam} {days} {date}",
@@ -945,7 +942,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("🌤️ 天气问候设置"));
 
         var layoutPanel = new StackPanel { Spacing = 0 };
-        var presets = new[] { "仅问候", "图标+问候", "温度+问候", "完整信息" };
+        var presets = new[] { "仅问候", "图标+问候", "温度+问候", "图标+温度", "完整信息" };
         var presetCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
         foreach (var p in presets) presetCombo.Items.Add(p);
 
@@ -955,7 +952,8 @@ public class UnifiedSettingsPage : SettingsPageBase
             "{greeting}" => 0,
             "{icon} {greeting}" => 1,
             "{temp} {greeting}" => 2,
-            "{icon} {temp} {greeting} {warning}" => 3,
+            "{icon}{temp}" => 3,
+            "{icon} {temp} {greeting} {warning}" => 4,
             _ => -1
         };
         presetCombo.SelectionChanged += (a, b) =>
@@ -965,7 +963,8 @@ public class UnifiedSettingsPage : SettingsPageBase
                 0 => "{greeting}",
                 1 => "{icon} {greeting}",
                 2 => "{temp} {greeting}",
-                3 => "{icon} {temp} {greeting} {warning}",
+                3 => "{icon}{temp}",
+                4 => "{icon} {temp} {greeting} {warning}",
                 _ => _svc.Settings.WeatherTemplate ?? "{greeting}"
             };
             AutoSave();

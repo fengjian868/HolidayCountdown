@@ -19,7 +19,7 @@ namespace HolidayCountdown.Views.Components;
     "D4E5F6A7-B8C9-0123-DEF0-1234567890AB",
     "课程表联动",
     "\uE7BE",
-    "读取ClassIsland课程表，显示当前课程/下节课信息或课间倒计时（测试版，不稳定）"
+    "读取ClassIsland课程表，显示当前课程/下节课信息或课间倒计时"
 )]
 public class ClassScheduleComponent : ComponentBase
 {
@@ -50,24 +50,44 @@ public class ClassScheduleComponent : ComponentBase
         if (_svc == null || !_svc.Settings.ClassScheduleEnabled) { _txt.Text = ""; return; }
         try
         {
-            var lessonsService = GetLessonsService();
-            if (lessonsService == null) { _txt.Text = ""; return; }
+            // 优先从 MainViewModel 读取 UI 相关属性，其次 LessonsService
+            var dataSource = GetMainViewModel() ?? GetLessonsService();
+            if (dataSource == null)
+            {
+                _txt.Text = GetFallbackNoClassText();
+                return;
+            }
 
-            var currentStateObj = GetPropertyValue(lessonsService, "CurrentState");
-            if (currentStateObj == null) { _txt.Text = ""; return; }
+            var currentStateObj = GetPropertyValue(dataSource, "CurrentState");
+            if (currentStateObj == null)
+            {
+                _txt.Text = GetFallbackNoClassText();
+                return;
+            }
 
-            int state = (int)currentStateObj;
+            int state = currentStateObj is int i ? i : (int)currentStateObj;
             // TimeState: 0=None, 1=OnClass, 2=PrepareOnClass, 3=Breaking, 4=AfterSchool
 
-            var currentSubject = GetPropertyValue(lessonsService, "CurrentSubject");
-            var nextSubject = GetPropertyValue(lessonsService, "NextSubject");
-            var onClassLeftTime = GetPropertyValue(lessonsService, "OnClassLeftTime");
-            var onBreakingTimeLeftTime = GetPropertyValue(lessonsService, "OnBreakingTimeLeftTime");
-            var isClassPlanLoaded = GetPropertyValue(lessonsService, "IsClassPlanLoaded");
-            var isClassPlanEnabled = GetPropertyValue(lessonsService, "IsClassPlanEnabled");
+            var currentSubject = GetPropertyValue(dataSource, "CurrentSubject");
+            var nextSubject = GetPropertyValue(dataSource, "NextSubject");
+            var onClassLeftTime = GetPropertyValue(dataSource, "OnClassLeftTime");
+            var onBreakingTimeLeftTime = GetPropertyValue(dataSource, "OnBreakingTimeLeftTime");
+            var isClassPlanLoaded = GetPropertyValue(dataSource, "IsClassPlanLoaded");
+            var isClassPlanEnabled = GetPropertyValue(dataSource, "IsClassPlanEnabled");
 
-            if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = ""; return; }
-            // 即使课表还没加载，也按无课程状态显示提示，而不是空白
+            // 若数据源本身没有这些属性，尝试从 LessonsService 再读一次
+            var lessons = GetLessonsService();
+            if (lessons != null && !ReferenceEquals(dataSource, lessons))
+            {
+                if (currentSubject == null) currentSubject = GetPropertyValue(lessons, "CurrentSubject");
+                if (nextSubject == null) nextSubject = GetPropertyValue(lessons, "NextSubject");
+                if (onClassLeftTime == null) onClassLeftTime = GetPropertyValue(lessons, "OnClassLeftTime");
+                if (onBreakingTimeLeftTime == null) onBreakingTimeLeftTime = GetPropertyValue(lessons, "OnBreakingTimeLeftTime");
+                if (isClassPlanLoaded == null) isClassPlanLoaded = GetPropertyValue(lessons, "IsClassPlanLoaded");
+                if (isClassPlanEnabled == null) isClassPlanEnabled = GetPropertyValue(lessons, "IsClassPlanEnabled");
+            }
+
+            if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = GetFallbackNoClassText(); return; }
             if (isClassPlanLoaded is bool loaded && !loaded)
             {
                 _txt.Text = GetFallbackNoClassText();
@@ -77,7 +97,7 @@ public class ClassScheduleComponent : ComponentBase
             var leftTimeOnClass = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
             var leftTimeBreaking = onBreakingTimeLeftTime as TimeSpan? ?? TimeSpan.Zero;
             var subjectName = _svc.Settings.ClassScheduleShowSubject ? GetSubjectName(currentSubject) : "";
-            var nextName = GetNextSubjectName(lessonsService!, currentSubject, nextSubject);
+            var nextName = GetNextSubjectName(dataSource!, currentSubject, nextSubject);
 
             string template;
             string stateText;
@@ -151,7 +171,7 @@ public class ClassScheduleComponent : ComponentBase
                 ? new SolidColorBrush(warnColor)
                 : null;
         }
-        catch { _txt.Text = ""; }
+        catch { _txt.Text = GetFallbackNoClassText(); }
     }
 
     string GetNoClassText()
@@ -194,7 +214,7 @@ public class ClassScheduleComponent : ComponentBase
         catch { return ""; }
     }
 
-    string GetNextSubjectName(object lessonsService, object? currentSubject, object? nextSubject)
+    string GetNextSubjectName(object dataSource, object? currentSubject, object? nextSubject)
     {
         // 1. 直接尝试 NextSubject.Name
         if (nextSubject != null)
@@ -204,7 +224,7 @@ public class ClassScheduleComponent : ComponentBase
         }
 
         // 2. 尝试 NextTimeLayoutItem.Subject.Name
-        var nextItem = GetPropertyValue(lessonsService, "NextTimeLayoutItem");
+        var nextItem = GetPropertyValue(dataSource, "NextTimeLayoutItem");
         if (nextItem != null)
         {
             var subj = GetPropertyValue(nextItem, "Subject");
@@ -219,11 +239,11 @@ public class ClassScheduleComponent : ComponentBase
         }
 
         // 3. 尝试 CurrentTimeLayoutItem 的下一个项目
-        var currentItem = GetPropertyValue(lessonsService, "CurrentTimeLayoutItem");
+        var currentItem = GetPropertyValue(dataSource, "CurrentTimeLayoutItem");
         if (currentItem != null)
         {
-            var timeLayout = GetPropertyValue(lessonsService, "CurrentTimeLayout")
-                          ?? GetPropertyValue(lessonsService, "TimeLayout");
+            var timeLayout = GetPropertyValue(dataSource, "CurrentTimeLayout")
+                          ?? GetPropertyValue(dataSource, "TimeLayout");
             if (timeLayout != null)
             {
                 var itemsProp = timeLayout.GetType().GetProperty("Items", BindingFlags.Public | BindingFlags.Instance)
@@ -275,6 +295,61 @@ public class ClassScheduleComponent : ComponentBase
     {
         try
         {
+            // 1. 尝试接口 ILessonsService
+            var type = FindType("ClassIsland.Core.Abstractions.Services.ILessonsService", "ClassIsland.Core")
+                    ?? FindTypeByName("ILessonsService");
+            var svc = type != null ? ResolveService(type) : null;
+            if (svc != null) return svc;
+
+            // 2. 尝试具体类 LessonsService
+            type = FindTypeByName("LessonsService");
+            svc = type != null ? ResolveService(type) : null;
+            if (svc != null) return svc;
+        }
+        catch { }
+        return null;
+    }
+
+    object? GetMainViewModel()
+    {
+        try
+        {
+            var type = FindType("ClassIsland.ViewModels.MainViewModel", "ClassIsland")
+                    ?? FindTypeByName("MainViewModel");
+            if (type == null) return null;
+            return ResolveService(type);
+        }
+        catch { }
+        return null;
+    }
+
+    Type? FindType(string fullName, string assemblyName)
+    {
+        try
+        {
+            return Type.GetType($"{fullName}, {assemblyName}")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .FirstOrDefault(t => t.FullName == fullName);
+        }
+        catch { return null; }
+    }
+
+    Type? FindTypeByName(string name)
+    {
+        try
+        {
+            return AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => a.GetTypes())
+                .FirstOrDefault(t => t.Name == name);
+        }
+        catch { return null; }
+    }
+
+    object? ResolveService(Type serviceType)
+    {
+        try
+        {
             var appHostType = Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Shared")
                 ?? Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Core")
                 ?? AppDomain.CurrentDomain.GetAssemblies()
@@ -283,19 +358,29 @@ public class ClassScheduleComponent : ComponentBase
 
             if (appHostType == null) return null;
 
-            var tryGetService = appHostType.GetMethod("TryGetService", BindingFlags.Public | BindingFlags.Static);
-            if (tryGetService == null || !tryGetService.IsGenericMethodDefinition) return null;
+            // 1. 尝试 IAppHost.TryGetService<T>()
+            var tryGetService = appHostType.GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .FirstOrDefault(m => m.Name == "TryGetService" && m.IsGenericMethodDefinition);
+            if (tryGetService != null)
+            {
+                var genericMethod = tryGetService.MakeGenericMethod(serviceType);
+                var result = genericMethod.Invoke(null, null);
+                if (result != null) return result;
+            }
 
-            // Try ILessonsService first, then LessonsService
-            var lessonsServiceType = Type.GetType("ClassIsland.Core.Abstractions.Services.ILessonsService, ClassIsland.Core")
-                ?? AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => a.GetTypes())
-                    .FirstOrDefault(t => t.Name == "ILessonsService" || t.Name == "LessonsService");
+            // 2. 回退到 IAppHost.Host.Services.GetService(type)
+            var hostProp = appHostType.GetProperty("Host", BindingFlags.Public | BindingFlags.Static);
+            var host = hostProp?.GetValue(null);
+            if (host == null) return null;
 
-            if (lessonsServiceType == null) return null;
+            var servicesProp = host.GetType().GetProperty("Services", BindingFlags.Public | BindingFlags.Instance);
+            var services = servicesProp?.GetValue(host);
+            if (services == null) return null;
 
-            var genericMethod = tryGetService.MakeGenericMethod(lessonsServiceType);
-            return genericMethod.Invoke(null, null);
+            var getService = services.GetType().GetMethod("GetService", new[] { typeof(Type) })
+                ?? services.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                    .FirstOrDefault(m => m.Name == "GetService" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == typeof(Type));
+            return getService?.Invoke(services, new object[] { serviceType });
         }
         catch { return null; }
     }
