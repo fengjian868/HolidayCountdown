@@ -122,7 +122,7 @@ public class WeatherGreetingComponent : ComponentBase
 
     List<(string Text, bool IsIcon)> ParseTemplate(string template, Dictionary<string, string> values)
     {
-        var list = new List<(string, bool)>();
+        var list = new List<(string Text, bool IsIcon)>();
         int i = 0;
         while (i < template.Length)
         {
@@ -151,7 +151,7 @@ public class WeatherGreetingComponent : ComponentBase
             i = close + 1;
         }
         // 合并相邻同类型片段，避免多余空白块造成布局问题
-        var merged = new List<(string, bool)>();
+        var merged = new List<(string Text, bool IsIcon)>();
         foreach (var item in list)
         {
             if (string.IsNullOrEmpty(item.Text)) continue;
