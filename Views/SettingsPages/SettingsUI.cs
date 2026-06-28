@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 
 namespace HolidayCountdown.Views.SettingsPages;
@@ -21,15 +22,28 @@ public static class SettingsUI
     public static readonly Avalonia.Media.Color SeparatorColor = Avalonia.Media.Color.Parse("#15FFFFFF");
 
     /// <summary>
+    /// 将文本前景色绑定到主题资源，自动适配明暗主题
+    /// </summary>
+    static void BindThemeForeground(TextBlock textBlock)
+    {
+        textBlock[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+    }
+
+    /// <summary>
     /// 页面标题
     /// </summary>
-    public static TextBlock PageHeader(string text) => new()
+    public static TextBlock PageHeader(string text)
     {
-        Text = text,
-        FontSize = 24,
-        FontWeight = FontWeight.Bold,
-        Margin = new Thickness(0, 0, 0, 16)
-    };
+        var tb = new TextBlock
+        {
+            Text = text,
+            FontSize = 24,
+            FontWeight = FontWeight.Bold,
+            Margin = new Thickness(0, 0, 0, 16)
+        };
+        BindThemeForeground(tb);
+        return tb;
+    }
 
     /// <summary>
     /// 设置卡片容器（圆角背景）
@@ -65,22 +79,26 @@ public static class SettingsUI
 
         // 左侧：标题+描述
         var leftPanel = new StackPanel { Spacing = 2 };
-        leftPanel.Children.Add(new TextBlock
+        var titleBlock = new TextBlock
         {
             Text = title,
             FontWeight = FontWeight.SemiBold,
             FontSize = 14,
             VerticalAlignment = VerticalAlignment.Center
-        });
+        };
+        BindThemeForeground(titleBlock);
+        leftPanel.Children.Add(titleBlock);
         if (!string.IsNullOrEmpty(description))
         {
-            leftPanel.Children.Add(new TextBlock
+            var descBlock = new TextBlock
             {
                 Text = description,
                 FontSize = 12,
                 Opacity = 0.6,
                 TextWrapping = TextWrapping.Wrap
-            });
+            };
+            BindThemeForeground(descBlock);
+            leftPanel.Children.Add(descBlock);
         }
         Grid.SetColumn(leftPanel, 0);
 
@@ -163,23 +181,27 @@ public static class SettingsUI
         grid.Margin = new Thickness(16, 10, 16, 10);
 
         var left = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        left.Children.Add(new TextBlock
+        var titleBlock = new TextBlock
         {
             Text = title,
             FontWeight = FontWeight.SemiBold,
             FontSize = 13,
             VerticalAlignment = VerticalAlignment.Center
-        });
+        };
+        BindThemeForeground(titleBlock);
+        left.Children.Add(titleBlock);
         if (!string.IsNullOrEmpty(description))
         {
-            left.Children.Add(new TextBlock
+            var descBlock = new TextBlock
             {
                 Text = description,
                 FontSize = 11,
                 Opacity = 0.5,
                 TextWrapping = TextWrapping.Wrap,
                 MaxWidth = 280
-            });
+            };
+            BindThemeForeground(descBlock);
+            left.Children.Add(descBlock);
         }
         Grid.SetColumn(left, 0);
 
@@ -207,27 +229,32 @@ public static class SettingsUI
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center
         };
+        BindThemeForeground(iconBlock);
         Grid.SetColumn(iconBlock, 0);
 
         // 标题+描述
         var left = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        left.Children.Add(new TextBlock
+        var titleBlock2 = new TextBlock
         {
             Text = title,
             FontWeight = FontWeight.SemiBold,
             FontSize = 13,
             VerticalAlignment = VerticalAlignment.Center
-        });
+        };
+        BindThemeForeground(titleBlock2);
+        left.Children.Add(titleBlock2);
         if (!string.IsNullOrEmpty(description))
         {
-            left.Children.Add(new TextBlock
+            var descBlock2 = new TextBlock
             {
                 Text = description,
                 FontSize = 11,
                 Opacity = 0.5,
                 TextWrapping = TextWrapping.Wrap,
                 MaxWidth = 260
-            });
+            };
+            BindThemeForeground(descBlock2);
+            left.Children.Add(descBlock2);
         }
         Grid.SetColumn(left, 1);
 
@@ -375,14 +402,19 @@ public static class SettingsUI
     /// <summary>
     /// 信息提示文本
     /// </summary>
-    public static TextBlock Info(string text) => new()
+    public static TextBlock Info(string text)
     {
-        Text = text,
-        Opacity = 0.5,
-        FontSize = 11,
-        TextWrapping = TextWrapping.Wrap,
-        Margin = new Thickness(16, 8, 16, 8)
-    };
+        var tb = new TextBlock
+        {
+            Text = text,
+            Opacity = 0.5,
+            FontSize = 11,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(16, 8, 16, 8)
+        };
+        BindThemeForeground(tb);
+        return tb;
+    }
 
     static Avalonia.Media.Color TryParseColor(string hex)
     {

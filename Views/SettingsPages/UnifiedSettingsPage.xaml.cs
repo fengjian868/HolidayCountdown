@@ -9,6 +9,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Attributes;
@@ -29,6 +30,14 @@ public class UnifiedSettingsPage : SettingsPageBase
 
     private readonly (string Icon, string Label, Func<Control> Build)[] _tabs;
     private int _currentIndex = -1;
+
+    /// <summary>
+    /// 将文本前景色绑定到主题资源，自动适配明暗主题
+    /// </summary>
+    static void BindThemeForeground(TextBlock textBlock)
+    {
+        textBlock[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+    }
 
     public UnifiedSettingsPage()
     {
@@ -69,27 +78,33 @@ public class UnifiedSettingsPage : SettingsPageBase
         };
 
         // 顶部导航栏左侧显示设置页图标
-        tabBar.Children.Add(new TextBlock
+        var navIconBlock = new TextBlock
         {
             Text = "\uE364",
             FontFamily = new FontFamily("Segoe MDL2 Assets"),
             FontSize = 22,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 10, 0)
-        });
+        };
+        BindThemeForeground(navIconBlock);
+        tabBar.Children.Add(navIconBlock);
 
         for (int i = 0; i < _tabs.Length; i++)
         {
             var idx = i;
             var tab = _tabs[i];
+            var tabIconBlock = new TextBlock { Text = tab.Icon, FontSize = 14, VerticalAlignment = VerticalAlignment.Center };
+            BindThemeForeground(tabIconBlock);
+            var tabLabelBlock = new TextBlock { Text = tab.Label, FontSize = 13, VerticalAlignment = VerticalAlignment.Center };
+            BindThemeForeground(tabLabelBlock);
             var content = new StackPanel
             {
                 Orientation = Orientation.Horizontal,
                 Spacing = 4,
                 Children =
                 {
-                    new TextBlock { Text = tab.Icon, FontSize = 14, VerticalAlignment = VerticalAlignment.Center },
-                    new TextBlock { Text = tab.Label, FontSize = 13, VerticalAlignment = VerticalAlignment.Center }
+                    tabIconBlock,
+                    tabLabelBlock
                 }
             };
             var btn = new Border
@@ -191,13 +206,21 @@ public class UnifiedSettingsPage : SettingsPageBase
                 var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
                 delBtn.Click += (a, e) => { _svc.Settings.NoClassTimeSlots.Remove(slot); AutoSave(); RefreshNoClassList(); };
 
-                row.Children.Add(new TextBlock { Text = "名称", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var nameLabelBlock = new TextBlock { Text = "名称", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(nameLabelBlock);
+                row.Children.Add(nameLabelBlock);
                 row.Children.Add(nameBox);
-                row.Children.Add(new TextBlock { Text = "从", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var fromBlock = new TextBlock { Text = "从", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(fromBlock);
+                row.Children.Add(fromBlock);
                 row.Children.Add(startBox);
-                row.Children.Add(new TextBlock { Text = "到", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var toBlock = new TextBlock { Text = "到", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(toBlock);
+                row.Children.Add(toBlock);
                 row.Children.Add(endBox);
-                row.Children.Add(new TextBlock { Text = "文案", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var textLabelBlock = new TextBlock { Text = "文案", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(textLabelBlock);
+                row.Children.Add(textLabelBlock);
                 row.Children.Add(textBox);
                 row.Children.Add(delBtn);
                 noClassListPanel.Children.Add(row);
@@ -390,6 +413,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             Toggle(_svc.Settings.AutoRefreshGreetings, v => { _svc.Settings.AutoRefreshGreetings = v; AutoSave(); })));
         togglePanel.Children.Add(Separator());
         var todayStatus = new TextBlock { Text = $"今天：{(_svc.IsTodayWorkday() ? "调休上班" : "正常")} / {(_svc.IsTodaySolarTerm() ? $"24节气-{_svc.GetTodaySolarTermName()}" : "非节气")}", Opacity = 0.7, FontSize = 12 };
+        BindThemeForeground(todayStatus);
         togglePanel.Children.Add(SettingItem("今日状态", null, todayStatus));
         s.Children.Add(Expander("开关", "问候语基础设置", togglePanel));
 
@@ -401,7 +425,9 @@ public class UnifiedSettingsPage : SettingsPageBase
                 {
                     if (int.TryParse(v, out var hval)) { _svc.Settings.SchoolEndHour = Math.Max(0, Math.Min(23, hval)); AutoSave(); }
                 }));
-                h.Children.Add(new TextBlock { Text = ":", VerticalAlignment = VerticalAlignment.Center });
+                var colonBlock = new TextBlock { Text = ":", VerticalAlignment = VerticalAlignment.Center };
+                BindThemeForeground(colonBlock);
+                h.Children.Add(colonBlock);
                 h.Children.Add(Text(_svc.Settings.SchoolEndMinute.ToString("D2"), 40, v =>
                 {
                     if (int.TryParse(v, out var mval)) { _svc.Settings.SchoolEndMinute = Math.Max(0, Math.Min(59, mval)); AutoSave(); }
@@ -465,11 +491,17 @@ public class UnifiedSettingsPage : SettingsPageBase
                 var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
                 delBtn.Click += (a, e) => { _svc.Settings.TimeSlotGreetings.Remove(slot); AutoSave(); RefreshList(); };
 
-                row.Children.Add(new TextBlock { Text = "从", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var fromBlock = new TextBlock { Text = "从", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(fromBlock);
+                row.Children.Add(fromBlock);
                 row.Children.Add(startBox);
-                row.Children.Add(new TextBlock { Text = "到", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var toBlock = new TextBlock { Text = "到", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(toBlock);
+                row.Children.Add(toBlock);
                 row.Children.Add(endBox);
-                row.Children.Add(new TextBlock { Text = "标签", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var tagLabelBlock = new TextBlock { Text = "标签", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(tagLabelBlock);
+                row.Children.Add(tagLabelBlock);
                 row.Children.Add(tagCombo);
                 row.Children.Add(textBox);
                 row.Children.Add(refreshBtn);
@@ -581,9 +613,13 @@ public class UnifiedSettingsPage : SettingsPageBase
                 });
                 var textBox = Text(item.Text, 160, v => { item.Text = v; AutoSave(); });
 
-                timeRow.Children.Add(new TextBlock { Text = "从", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var fromBlock = new TextBlock { Text = "从", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(fromBlock);
+                timeRow.Children.Add(fromBlock);
                 timeRow.Children.Add(startBox);
-                timeRow.Children.Add(new TextBlock { Text = "到", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var toBlock = new TextBlock { Text = "到", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(toBlock);
+                timeRow.Children.Add(toBlock);
                 timeRow.Children.Add(endBox);
                 timeRow.Children.Add(textBox);
                 row.Children.Add(timeRow);
@@ -738,6 +774,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         Grid.SetColumn(n, 0);
 
         var dateText = new TextBlock { Text = $"{h.Date.Month}月{h.Date.Day}日", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+        BindThemeForeground(dateText);
         Grid.SetColumn(dateText, 1);
 
         var d = new DatePicker { SelectedDate = h.Date, Margin = new Thickness(0, 0, 8, 0), Width = 120 };
@@ -889,12 +926,20 @@ public class UnifiedSettingsPage : SettingsPageBase
                 var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
                 delBtn.Click += (a, e) => { _svc.Settings.TempGreetings.Remove(item); _svc.AlignTempGreetings(); AutoSave(); RefreshList(); };
 
-                row.Children.Add(new TextBlock { Text = "≥", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var geBlock = new TextBlock { Text = "≥", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(geBlock);
+                row.Children.Add(geBlock);
                 row.Children.Add(minBox);
-                row.Children.Add(new TextBlock { Text = "°C", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
-                row.Children.Add(new TextBlock { Text = "~", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var c1Block = new TextBlock { Text = "°C", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(c1Block);
+                row.Children.Add(c1Block);
+                var tildeBlock = new TextBlock { Text = "~", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(tildeBlock);
+                row.Children.Add(tildeBlock);
                 row.Children.Add(maxBox);
-                row.Children.Add(new TextBlock { Text = "°C", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var c2Block = new TextBlock { Text = "°C", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(c2Block);
+                row.Children.Add(c2Block);
                 row.Children.Add(tagCombo);
                 row.Children.Add(textBox);
                 row.Children.Add(refreshBtn);
@@ -978,11 +1023,17 @@ public class UnifiedSettingsPage : SettingsPageBase
                 var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")), IsVisible = kv.Keyword != "默认" };
                 delBtn.Click += (a, e) => { _svc.Settings.WeatherGreetingItems.Remove(kv); AutoSave(); RefreshList(); };
 
-                row.Children.Add(new TextBlock { Text = "关键词", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var kwBlock = new TextBlock { Text = "关键词", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(kwBlock);
+                row.Children.Add(kwBlock);
                 row.Children.Add(keyBox);
-                row.Children.Add(new TextBlock { Text = "标签", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var tagBlock = new TextBlock { Text = "标签", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(tagBlock);
+                row.Children.Add(tagBlock);
                 row.Children.Add(tagCombo);
-                row.Children.Add(new TextBlock { Text = "文案", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 });
+                var textBlock = new TextBlock { Text = "文案", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(textBlock);
+                row.Children.Add(textBlock);
                 row.Children.Add(textBox);
                 row.Children.Add(refreshBtn);
                 row.Children.Add(delBtn);
@@ -1022,9 +1073,15 @@ public class UnifiedSettingsPage : SettingsPageBase
             FontWeight = FontWeight.Bold,
             Foreground = new SolidColorBrush(Color.Parse("#FF2196F3"))
         });
-        infoPanel.Children.Add(new TextBlock { Text = "版本: v1.3.0.0", FontSize = 14, Opacity = 0.7 });
-        infoPanel.Children.Add(new TextBlock { Text = "作者: fengjian868", FontSize = 14, Opacity = 0.7 });
-        infoPanel.Children.Add(new TextBlock { Text = "GitHub: https://github.com/fengjian868/HolidayCountdown", FontSize = 12, Opacity = 0.5 });
+        var versionBlock = new TextBlock { Text = "版本: v1.3.0.0", FontSize = 14, Opacity = 0.7 };
+        BindThemeForeground(versionBlock);
+        infoPanel.Children.Add(versionBlock);
+        var authorBlock = new TextBlock { Text = "作者: fengjian868", FontSize = 14, Opacity = 0.7 };
+        BindThemeForeground(authorBlock);
+        infoPanel.Children.Add(authorBlock);
+        var githubBlock = new TextBlock { Text = "GitHub: https://github.com/fengjian868/HolidayCountdown", FontSize = 12, Opacity = 0.5 };
+        BindThemeForeground(githubBlock);
+        infoPanel.Children.Add(githubBlock);
         var repoBtn = new Button
         {
             Content = "打开插件仓库",
@@ -1041,42 +1098,69 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Card(infoPanel));
 
         var changelogPanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
-        changelogPanel.Children.Add(new TextBlock { Text = "v1.3.0.0 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：无课程文案时段自定义 - 按时段自由添加/修改/删除无课程文案", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 新增：组件与设置页图标统一为 Fluent 风格", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 优化：组件字体统一改为黑色", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 优化：设置页 Tab 按钮背景样式与选中高亮", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 删除：移除\"隐藏实验性功能\"开关", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 修复：天气问候语不显示问题", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 修复：组件图标显示异常问题", FontSize = 12, Opacity = 0.8 });
-        changelogPanel.Children.Add(new TextBlock { Text = "- 修改：学习时长统计合并为三选一模式（关闭/总运行时长/仅上课时间）", FontSize = 12, Opacity = 0.8 });
+        var changelogTitle = new TextBlock { Text = "v1.3.0.0 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
+        BindThemeForeground(changelogTitle);
+        changelogPanel.Children.Add(changelogTitle);
+        var changelogItems = new[]
+        {
+            "- 新增：无课程文案时段自定义 - 按时段自由添加/修改/删除无课程文案",
+            "- 新增：组件与设置页图标统一为 Fluent 风格",
+            "- 优化：组件字体统一改为黑色",
+            "- 优化：设置页 Tab 按钮背景样式与选中高亮",
+            "- 删除：移除\"隐藏实验性功能\"开关",
+            "- 修复：天气问候语不显示问题",
+            "- 修复：组件图标显示异常问题",
+            "- 修改：学习时长统计合并为三选一模式（关闭/总运行时长/仅上课时间）"
+        };
+        foreach (var item in changelogItems)
+        {
+            var itemBlock = new TextBlock { Text = item, FontSize = 12, Opacity = 0.8 };
+            BindThemeForeground(itemBlock);
+            changelogPanel.Children.Add(itemBlock);
+        }
         s.Children.Add(Expander("更新日志", "v1.3.0.0 更新内容", changelogPanel, expanded: true));
 
         var featurePanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
-        featurePanel.Children.Add(new TextBlock { Text = "- 节假日倒计时（调休提醒、进度环、放假天数）", FontSize = 12, Opacity = 0.8 });
-        featurePanel.Children.Add(new TextBlock { Text = "- 24节气倒计时（网络自动刷新）", FontSize = 12, Opacity = 0.8 });
-        featurePanel.Children.Add(new TextBlock { Text = "- 农历日期显示（自定义模板）", FontSize = 12, Opacity = 0.8 });
-        featurePanel.Children.Add(new TextBlock { Text = "- 自定义节日倒计时", FontSize = 12, Opacity = 0.8 });
-        featurePanel.Children.Add(new TextBlock { Text = "- 寒暑假倒计时（周+天）", FontSize = 12, Opacity = 0.8 });
-        featurePanel.Children.Add(new TextBlock { Text = "- 时段问候语（早中晚+放学+晚修）", FontSize = 12, Opacity = 0.8 });
-        featurePanel.Children.Add(new TextBlock { Text = "- 天气问候（根据温度提醒穿衣）", FontSize = 12, Opacity = 0.8 });
-        featurePanel.Children.Add(new TextBlock { Text = "- 课程表联动（当前课程/课间倒计时）", FontSize = 12, Opacity = 0.8 });
-        featurePanel.Children.Add(new TextBlock { Text = "- 学习时长统计（今日学习时长）", FontSize = 12, Opacity = 0.8 });
+        var featureItems = new[]
+        {
+            "- 节假日倒计时（调休提醒、进度环、放假天数）",
+            "- 24节气倒计时（网络自动刷新）",
+            "- 农历日期显示（自定义模板）",
+            "- 自定义节日倒计时",
+            "- 寒暑假倒计时（周+天）",
+            "- 时段问候语（早中晚+放学+晚修）",
+            "- 天气问候（根据温度提醒穿衣）",
+            "- 课程表联动（当前课程/课间倒计时）",
+            "- 学习时长统计（今日学习时长）"
+        };
+        foreach (var item in featureItems)
+        {
+            var itemBlock = new TextBlock { Text = item, FontSize = 12, Opacity = 0.8 };
+            BindThemeForeground(itemBlock);
+            featurePanel.Children.Add(itemBlock);
+        }
         s.Children.Add(Expander("功能模块", "插件支持的所有功能", featurePanel, expanded: true));
 
-        s.Children.Add(new TextBlock { Text = "Made with love for ClassIsland", FontSize = 12, Opacity = 0.5, Margin = new Thickness(0, 8, 0, 0) });
+        var footerBlock = new TextBlock { Text = "Made with love for ClassIsland", FontSize = 12, Opacity = 0.5, Margin = new Thickness(0, 8, 0, 0) };
+        BindThemeForeground(footerBlock);
+        s.Children.Add(footerBlock);
         return s;
     }
 
     // ===== UI Helpers =====
 
-    static TextBlock PageHeader(string text) => new TextBlock
+    static TextBlock PageHeader(string text)
     {
-        Text = text,
-        FontSize = 22,
-        FontWeight = FontWeight.Bold,
-        Margin = new Thickness(16, 16, 16, 12)
-    };
+        var tb = new TextBlock
+        {
+            Text = text,
+            FontSize = 22,
+            FontWeight = FontWeight.Bold,
+            Margin = new Thickness(16, 16, 16, 12)
+        };
+        BindThemeForeground(tb);
+        return tb;
+    }
 
     static Border Card(Control content) => new Border
     {
@@ -1090,9 +1174,15 @@ public class UnifiedSettingsPage : SettingsPageBase
     static Expander Expander(string header, string? desc, Control content, bool expanded = false)
     {
         var headerPanel = new StackPanel { Spacing = 2 };
-        headerPanel.Children.Add(new TextBlock { Text = header, FontSize = 15, FontWeight = FontWeight.SemiBold });
+        var headerBlock = new TextBlock { Text = header, FontSize = 15, FontWeight = FontWeight.SemiBold };
+        BindThemeForeground(headerBlock);
+        headerPanel.Children.Add(headerBlock);
         if (!string.IsNullOrEmpty(desc))
-            headerPanel.Children.Add(new TextBlock { Text = desc, FontSize = 11, Opacity = 0.6 });
+        {
+            var descBlock = new TextBlock { Text = desc, FontSize = 11, Opacity = 0.6 };
+            BindThemeForeground(descBlock);
+            headerPanel.Children.Add(descBlock);
+        }
 
         var expander = new Expander
         {
@@ -1109,9 +1199,15 @@ public class UnifiedSettingsPage : SettingsPageBase
     {
         var g = new Grid { ColumnDefinitions = new ColumnDefinitions("* Auto"), Margin = new Thickness(16, 10, 16, 10) };
         var left = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        left.Children.Add(new TextBlock { Text = title, FontSize = 14, VerticalAlignment = VerticalAlignment.Center });
+        var titleBlock = new TextBlock { Text = title, FontSize = 14, VerticalAlignment = VerticalAlignment.Center };
+        BindThemeForeground(titleBlock);
+        left.Children.Add(titleBlock);
         if (!string.IsNullOrEmpty(desc))
-            left.Children.Add(new TextBlock { Text = desc, FontSize = 11, Opacity = 0.6, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        {
+            var descBlock = new TextBlock { Text = desc, FontSize = 11, Opacity = 0.6, TextWrapping = Avalonia.Media.TextWrapping.Wrap };
+            BindThemeForeground(descBlock);
+            left.Children.Add(descBlock);
+        }
         Grid.SetColumn(left, 0);
         Grid.SetColumn(control, 1);
         control.VerticalAlignment = VerticalAlignment.Center;
@@ -1192,14 +1288,19 @@ public class UnifiedSettingsPage : SettingsPageBase
         return c;
     }
 
-    static TextBlock Info(string text) => new TextBlock
+    static TextBlock Info(string text)
     {
-        Text = text,
-        FontSize = 11,
-        Opacity = 0.6,
-        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-        Margin = new Thickness(16, 4, 16, 8)
-    };
+        var tb = new TextBlock
+        {
+            Text = text,
+            FontSize = 11,
+            Opacity = 0.6,
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Margin = new Thickness(16, 4, 16, 8)
+        };
+        BindThemeForeground(tb);
+        return tb;
+    }
 }
 
 public static class PanelExt
