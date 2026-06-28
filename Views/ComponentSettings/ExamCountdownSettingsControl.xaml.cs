@@ -84,19 +84,26 @@ public class ExamCountdownSettingsControl : ComponentBase<ExamCountdownSettings>
         };
         panel.Children.Add(CreateRow("文字颜色", null, textColorPicker));
 
-        var showDotToggle = new ToggleSwitch { IsChecked = Settings?.ShowDot ?? true, OnContent = "", OffContent = "" };
-        showDotToggle.IsCheckedChanged += (s, ev) =>
+        var showRingToggle = new ToggleSwitch { IsChecked = Settings?.ShowRing ?? true, OnContent = "", OffContent = "" };
+        showRingToggle.IsCheckedChanged += (s, ev) =>
         {
-            if (Settings != null) Settings.ShowDot = showDotToggle.IsChecked == true;
+            if (Settings != null) Settings.ShowRing = showRingToggle.IsChecked == true;
         };
-        panel.Children.Add(CreateRow("显示状态点", "在文案左侧显示小圆点", showDotToggle));
+        panel.Children.Add(CreateRow("显示倒计时圆环", "在文案左侧显示进度圆环", showRingToggle));
 
-        var dotColorPicker = new ColorPicker { Width = 40, Height = 28, Color = TryParseColor(Settings?.DotColor ?? "#FFFF5252") };
-        dotColorPicker.ColorChanged += (s, ev) =>
+        var ringColorPicker = new ColorPicker { Width = 40, Height = 28, Color = TryParseColor(Settings?.RingColor ?? "#FFFF5252") };
+        ringColorPicker.ColorChanged += (s, ev) =>
         {
-            if (Settings != null) Settings.DotColor = dotColorPicker.Color.ToString();
+            if (Settings != null) Settings.RingColor = ringColorPicker.Color.ToString();
         };
-        panel.Children.Add(CreateRow("状态点颜色", null, dotColorPicker));
+        panel.Children.Add(CreateRow("圆环颜色", null, ringColorPicker));
+
+        var ringStartBox = new TextBox { Text = Settings?.RingStartDate ?? "08-01", Width = 90, Watermark = "MM-dd" };
+        ringStartBox.TextChanged += (s, ev) =>
+        {
+            if (Settings != null) Settings.RingStartDate = ringStartBox.Text ?? "08-01";
+        };
+        panel.Children.Add(CreateRow("圆环开始日期", "默认 08-01，格式 MM-dd", ringStartBox));
 
         var bgColorPicker = new ColorPicker { Width = 40, Height = 28, Color = TryParseColor(Settings?.BackgroundColor ?? "#202196F3") };
         bgColorPicker.ColorChanged += (s, ev) =>

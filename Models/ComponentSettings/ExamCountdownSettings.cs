@@ -23,14 +23,19 @@ public class ExamCountdownSettings
     public string TextColor { get; set; } = "#FF2196F3";
 
     /// <summary>
-    /// 左侧状态点颜色
+    /// 倒计时圆环颜色
     /// </summary>
-    public string DotColor { get; set; } = "#FFFF5252";
+    public string RingColor { get; set; } = "#FFFF5252";
 
     /// <summary>
-    /// 是否显示左侧状态点
+    /// 是否显示倒计时圆环
     /// </summary>
-    public bool ShowDot { get; set; } = true;
+    public bool ShowRing { get; set; } = true;
+
+    /// <summary>
+    /// 圆环开始日期（MM-dd），默认8月1日
+    /// </summary>
+    public string RingStartDate { get; set; } = "08-01";
 
     /// <summary>
     /// 是否显示背景色块

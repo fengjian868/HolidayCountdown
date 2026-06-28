@@ -24,18 +24,37 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
 {
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
-    private Ellipse _dot = null!;
+    private Arc _ringTrack = null!;
+    private Arc _ringProgress = null!;
     private Border? _bg;
 
     public ExamCountdownComponent()
     {
-        _dot = new Ellipse
+        _ringTrack = new Arc
         {
-            Width = 6,
-            Height = 6,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 0, 6, 0)
+            Width = 12,
+            Height = 12,
+            StartAngle = 0,
+            SweepAngle = 360,
+            StrokeThickness = 2,
+            StrokeLineCap = PenLineCap.Round,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
         };
+        _ringProgress = new Arc
+        {
+            Width = 12,
+            Height = 12,
+            StartAngle = -90,
+            StrokeThickness = 2,
+            StrokeLineCap = PenLineCap.Round,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        var ringGrid = new Grid { Width = 12, Height = 12, Margin = new Thickness(0, 0, 6, 0) };
+        ringGrid.Children.Add(_ringTrack);
+        ringGrid.Children.Add(_ringProgress);
 
         _txt = new TextBlock
         {
@@ -50,7 +69,7 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
             Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Children = { _dot, _txt }
+            Children = { ringGrid, _txt }
         };
 
         _bg = new Border
@@ -102,9 +121,16 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
             if (Color.TryParse(Settings.TextColor, out var fg))
                 _txt.Foreground = new SolidColorBrush(fg);
 
-            _dot.IsVisible = Settings.ShowDot;
-            if (Settings.ShowDot && Color.TryParse(Settings.DotColor, out var dotColor))
-                _dot.Fill = new SolidColorBrush(dotColor);
+            var ringVisible = Settings.ShowRing;
+            _ringTrack.IsVisible = ringVisible;
+            _ringProgress.IsVisible = ringVisible;
+            if (ringVisible && Color.TryParse(Settings.RingColor, out var ringColor))
+            {
+                _ringTrack.Stroke = new SolidColorBrush(ringColor) { Opacity = 0.25 };
+                _ringProgress.Stroke = new SolidColorBrush(ringColor);
+                var progress = ComputeRingProgress(examDate);
+                _ringProgress.SweepAngle = Math.Max(0, Math.Min(360, progress * 360));
+            }
 
             if (Settings.ShowBackground && _bg != null)
             {
@@ -145,5 +171,33 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
         }
 
         return (examName, current);
+    }
+
+    double ComputeRingProgress(DateTime examDate)
+    {
+        var now = DateTime.Now;
+        var start = ParseRingStartDate(examDate.Year);
+        if (start > examDate) start = start.AddYears(-1);
+        if (now <= start) return 0;
+        var total = (examDate - start).TotalDays;
+        var passed = (now - start).TotalDays;
+        if (total <= 0) return 1;
+        return Math.Min(1, passed / total);
+    }
+
+    DateTime ParseRingStartDate(int year)
+    {
+        var input = Settings?.RingStartDate ?? "08-01";
+        var parts = input.Split('-', '/', '.');
+        int month = 8, day = 1;
+        if (parts.Length >= 2 &&
+            int.TryParse(parts[0], out var m) &&
+            int.TryParse(parts[1], out var d))
+        {
+            month = m;
+            day = d;
+        }
+        try { return new DateTime(year, month, day); }
+        catch { return new DateTime(year, 8, 1); }
     }
 }
