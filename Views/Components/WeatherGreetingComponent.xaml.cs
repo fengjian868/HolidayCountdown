@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
@@ -23,15 +24,20 @@ namespace HolidayCountdown.Views.Components;
 public class WeatherGreetingComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
-    private TextBlock _txt = null!;
+    private StackPanel _panel = null!;
     private HolidayService? _svc;
     private string _lastWeatherKey = "";
 
     public WeatherGreetingComponent()
     {
-        var panel = new Grid { ColumnDefinitions = new ColumnDefinitions("*"), VerticalAlignment = VerticalAlignment.Center };
-        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9, Foreground = Brushes.Black };
-        Grid.SetColumn(_txt, 0); panel.Children.Add(_txt); Content = panel;
+        _panel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Spacing = 2
+        };
+        Content = _panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) }; _timer.Tick += (s, e) => Update(); _timer.Start();
         Dispatcher.UIThread.Post(() => { _svc = new HolidayService(); HolidayService.SettingsChanged += OnSettingsChanged; Update(); });
     }
@@ -44,7 +50,7 @@ public class WeatherGreetingComponent : ComponentBase
 
     void Update()
     {
-        if (_svc == null) { _txt.Text = ""; return; }
+        if (_svc == null) { _panel.Children.Clear(); return; }
 
         var (temp, weatherCode, weatherText, warnings, updateTime) = GetWeatherData();
 
@@ -71,23 +77,105 @@ public class WeatherGreetingComponent : ComponentBase
             warning = "";
         }
 
-        // 按模板排版
         var template = _svc.Settings.WeatherTemplate ?? "{greeting}";
         var icon = GetWeatherIcon(actualWeatherText);
-        var result = template
-            .Replace("{greeting}", greeting)
-            .Replace("{temp}", temp.HasValue ? $"{temp.Value}°C" : "")
-            .Replace("{weather}", actualWeatherText)
-            .Replace("{warning}", warning)
-            .Replace("{icon}", icon);
-        result = Regex.Replace(result, @"\s+", " ").Trim();
-
-        // 天气数据过旧时给出提示
         var stale = GetStaleWarning(updateTime);
-        if (!string.IsNullOrEmpty(stale))
-            result = string.IsNullOrEmpty(result) ? stale : $"{result} {stale}";
 
-        _txt.Text = result;
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["greeting"] = greeting,
+            ["temp"] = temp.HasValue ? $"{temp.Value}°C" : "",
+            ["weather"] = actualWeatherText,
+            ["warning"] = warning,
+            ["icon"] = icon
+        };
+
+        _panel.Children.Clear();
+        var baseFontSize = GetClassIslandFontSize();
+        var blocks = ParseTemplate(template, values);
+        foreach (var block in blocks)
+        {
+            var tb = new TextBlock
+            {
+                Text = block.Text,
+                VerticalAlignment = VerticalAlignment.Center,
+                FontSize = block.IsIcon ? baseFontSize + 2 : baseFontSize,
+                Opacity = block.IsIcon ? 1.0 : 0.95
+            };
+            tb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+            _panel.Children.Add(tb);
+        }
+
+        if (!string.IsNullOrEmpty(stale))
+        {
+            var staleBlock = new TextBlock
+            {
+                Text = stale,
+                VerticalAlignment = VerticalAlignment.Center,
+                FontSize = baseFontSize - 2,
+                Opacity = 0.6
+            };
+            staleBlock[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+            _panel.Children.Add(staleBlock);
+        }
+    }
+
+    List<(string Text, bool IsIcon)> ParseTemplate(string template, Dictionary<string, string> values)
+    {
+        var list = new List<(string, bool)>();
+        int i = 0;
+        while (i < template.Length)
+        {
+            int open = template.IndexOf('{', i);
+            if (open < 0)
+            {
+                var tail = template[i..];
+                if (!string.IsNullOrEmpty(tail)) list.Add((tail, false));
+                break;
+            }
+            if (open > i)
+            {
+                var literal = template[i..open];
+                if (!string.IsNullOrEmpty(literal)) list.Add((literal, false));
+            }
+            int close = template.IndexOf('}', open);
+            if (close < 0)
+            {
+                var tail = template[open..];
+                if (!string.IsNullOrEmpty(tail)) list.Add((tail, false));
+                break;
+            }
+            var key = template[(open + 1)..close];
+            var value = values.TryGetValue(key, out var v) ? v : "";
+            list.Add((value, key.Equals("icon", StringComparison.OrdinalIgnoreCase)));
+            i = close + 1;
+        }
+        // 合并相邻同类型片段，避免多余空白块造成布局问题
+        var merged = new List<(string, bool)>();
+        foreach (var item in list)
+        {
+            if (string.IsNullOrEmpty(item.Text)) continue;
+            if (merged.Count > 0 && merged[^1].IsIcon == item.IsIcon)
+                merged[^1] = (merged[^1].Text + item.Text, item.IsIcon);
+            else
+                merged.Add(item);
+        }
+        return merged;
+    }
+
+    double GetClassIslandFontSize()
+    {
+        try
+        {
+            var settings = GetSettingsServiceSettings();
+            if (settings == null) return 14;
+            var value = GetPropertyValue(settings, "MainWindowBodyFontSize");
+            if (value is double d) return d;
+            if (value is float f) return f;
+            if (value != null && double.TryParse(value.ToString(), out var parsed)) return parsed;
+        }
+        catch { }
+        return 14;
     }
 
     /// <summary>

@@ -54,7 +54,7 @@ public class PluginSettings
     // 天气问候
     public bool WeatherGreetingEnabled { get; set; } = true;
     public bool WeatherWarningOverride { get; set; } = true;
-    public string? WeatherTemplate { get; set; } = "{greeting}";
+    public string? WeatherTemplate { get; set; } = "{icon}{temp} {greeting}";
     public bool WeatherShowIcon { get; set; } = true;
     public bool WeatherShowTemp { get; set; } = true;
     public List<TempGreeting> TempGreetings { get; set; } = new();
