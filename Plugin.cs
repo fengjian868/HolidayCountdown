@@ -27,6 +27,7 @@ public class Plugin : PluginBase
 
         services.AddAction<Automation.Actions.OpenUsbDriveAction>();
         services.AddAction<Automation.Actions.RefreshWeatherAction>();
+        services.AddAction<Automation.Actions.RefreshWeatherTextAction>();
 
         services.AddSettingsPage<Views.SettingsPages.UnifiedSettingsPage>();
     }
