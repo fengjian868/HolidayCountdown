@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using ClassIsland.Core.Abstractions.Controls;
 using HolidayCountdown.Models.ComponentSettings;
 

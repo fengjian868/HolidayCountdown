@@ -48,7 +48,7 @@ public class WorldClockComponent : ComponentBase<WorldClockSettings>
         var cities = Settings.Cities.Take(5).ToList();
         if (cities.Count == 0) cities.Add(new WorldClockCity { Name = "北京", TimeZoneId = "China Standard Time" });
 
-        var fg = Color.TryParse(Settings.TextColor, out var c) ? new SolidColorBrush(c) : Brushes.White;
+        IBrush fg = Color.TryParse(Settings.TextColor, out var c) ? new SolidColorBrush(c) : Brushes.White;
 
         foreach (var city in cities)
         {

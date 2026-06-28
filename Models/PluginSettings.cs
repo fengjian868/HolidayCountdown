@@ -22,6 +22,7 @@ public class PluginSettings
     public bool ShowYearRatio { get; set; } = true;
     public Dictionary<string, string> HolidayColors { get; set; } = new();
     public List<string> DisabledHolidays { get; set; } = new();
+    public List<CustomHoliday> CustomHolidays { get; set; } = new();
 
     // 问候语
     public bool ShowGreeting { get; set; } = true;
