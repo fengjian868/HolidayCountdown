@@ -176,6 +176,9 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("\uE7BE 课程表联动设置"));
 
         var schedulePanel = new StackPanel { Spacing = 0 };
+        schedulePanel.Children.Add(SettingItem("启用课程表联动", "关闭后组件不显示任何内容",
+            Toggle(_svc.Settings.ClassScheduleEnabled, v => { _svc.Settings.ClassScheduleEnabled = v; AutoSave(); })));
+        schedulePanel.Children.Add(Separator());
         schedulePanel.Children.Add(SettingItem("显示图标", "在课程表信息前显示学科图标",
             Toggle(_svc.Settings.ClassScheduleShowIcon, v => { _svc.Settings.ClassScheduleShowIcon = v; AutoSave(); })));
         schedulePanel.Children.Add(Separator());

@@ -67,7 +67,12 @@ public class ClassScheduleComponent : ComponentBase
             var isClassPlanEnabled = GetPropertyValue(lessonsService, "IsClassPlanEnabled");
 
             if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = ""; return; }
-            if (isClassPlanLoaded is bool loaded && !loaded) { _txt.Text = ""; return; }
+            // 即使课表还没加载，也按无课程状态显示提示，而不是空白
+            if (isClassPlanLoaded is bool loaded && !loaded)
+            {
+                _txt.Text = GetFallbackNoClassText();
+                return;
+            }
 
             var leftTimeOnClass = onClassLeftTime as TimeSpan? ?? TimeSpan.Zero;
             var leftTimeBreaking = onBreakingTimeLeftTime as TimeSpan? ?? TimeSpan.Zero;
@@ -169,7 +174,13 @@ public class ClassScheduleComponent : ComponentBase
                 if (cur >= start || cur < end) return slot.Text;
             }
         }
-        return "";
+        return GetFallbackNoClassText();
+    }
+
+    string GetFallbackNoClassText()
+    {
+        var icon = _svc?.Settings.ClassScheduleShowIcon ?? true ? "📅 " : "";
+        return $"{icon}暂无课程";
     }
 
     string GetSubjectName(object? subject)

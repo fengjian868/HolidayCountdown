@@ -55,15 +55,6 @@ public class LunarDateSettingsControl : ComponentBase<LunarDateSettings>
 
     static Control CreateRow(string title, string desc, Control control)
     {
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("* Auto") };
-        var left = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        left.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, FontSize = 13 });
-        left.Children.Add(new TextBlock { Text = desc, FontSize = 11, Opacity = 0.5, TextWrapping = TextWrapping.Wrap, MaxWidth = 260 });
-        Grid.SetColumn(left, 0);
-        control.VerticalAlignment = VerticalAlignment.Center;
-        Grid.SetColumn(control, 1);
-        grid.Children.Add(left);
-        grid.Children.Add(control);
-        return grid;
+        return ComponentSettingRow.Create(title, desc, control);
     }
 }

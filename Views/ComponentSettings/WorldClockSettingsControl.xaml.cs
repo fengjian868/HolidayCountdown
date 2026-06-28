@@ -105,17 +105,7 @@ public class WorldClockSettingsControl : ComponentBase<WorldClockSettings>
 
     static Control CreateRow(string title, string? desc, Control control)
     {
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("* Auto") };
-        var left = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
-        left.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.SemiBold, FontSize = 13 });
-        if (!string.IsNullOrEmpty(desc))
-            left.Children.Add(new TextBlock { Text = desc, FontSize = 11, Opacity = 0.5 });
-        Grid.SetColumn(left, 0);
-        control.VerticalAlignment = VerticalAlignment.Center;
-        Grid.SetColumn(control, 1);
-        grid.Children.Add(left);
-        grid.Children.Add(control);
-        return grid;
+        return ComponentSettingRow.Create(title, desc, control);
     }
 
     static Color TryParseColor(string hex)
