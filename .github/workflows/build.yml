@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, trae/solo-agent-Nhi4Zr]
     tags: ['v*']
   pull_request:
     branches: [main, master]
@@ -82,6 +82,8 @@ jobs:
           echo "### Download" >> $env:GITHUB_STEP_SUMMARY
           echo "" >> $env:GITHUB_STEP_SUMMARY
           echo "- [Download Artifact](https://github.com/$repo/actions/runs/$runId)" >> $env:GITHUB_STEP_SUMMARY
-          echo "- [Nightly.link Download]($nightlyLink) (GhProxy Fastly Mirror / GhProxy Mirror)" >> $env:GITHUB_STEP_SUMMARY
+          echo "- [Nightly.link Download]($nightlyLink)" >> $env:GITHUB_STEP_SUMMARY
+          echo "- [GhProxy Fastly Mirror]($ghproxyLink)" >> $env:GITHUB_STEP_SUMMARY
+          echo "- [GhProxy Mirror]($mirrorLink)" >> $env:GITHUB_STEP_SUMMARY
           echo "" >> $env:GITHUB_STEP_SUMMARY
           echo "_Job summary generated at run-time_" >> $env:GITHUB_STEP_SUMMARY
