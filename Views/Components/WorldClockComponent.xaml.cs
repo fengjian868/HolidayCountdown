@@ -7,20 +7,22 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
 using ClassIsland.Core.Attributes;
-using HolidayCountdown.Models.ComponentSettings;
+using HolidayCountdown.Models;
+using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.Components;
 
 [ComponentInfo(
-    "C3D4E5F6-A7B8-9012-CDEF-345678901234",
+    "E7F8A9B0-C1D2-3456-7890-ABCDEF123456",
     "世界时钟",
     "fluent(\uE823)",
     "显示多个国家/城市的时间，默认北京时间，最多5个城市"
 )]
-public class WorldClockComponent : ComponentBase<WorldClockSettings>
+public class WorldClockComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
     private StackPanel _root = null!;
+    private HolidayService _svc = new();
 
     public WorldClockComponent()
     {
@@ -43,19 +45,18 @@ public class WorldClockComponent : ComponentBase<WorldClockSettings>
     void Update()
     {
         _root.Children.Clear();
-        if (Settings == null) return;
 
-        var cities = Settings.Cities.Take(5).ToList();
+        var cities = _svc.Settings.WorldClockCities.Take(5).ToList();
         if (cities.Count == 0) cities.Add(new WorldClockCity { Name = "北京", TimeZoneId = "China Standard Time" });
 
-        IBrush fg = Color.TryParse(Settings.TextColor, out var c) ? new SolidColorBrush(c) : Brushes.White;
+        IBrush fg = Color.TryParse(_svc.Settings.WorldClockTextColor, out var c) ? new SolidColorBrush(c) : Brushes.White;
 
         foreach (var city in cities)
         {
             var time = GetCityTime(city.TimeZoneId);
-            var format = Settings.ShowSeconds ? "HH:mm:ss" : "HH:mm";
+            var format = _svc.Settings.WorldClockShowSeconds ? "HH:mm:ss" : "HH:mm";
             var timeText = time.ToString(format);
-            var dateText = Settings.ShowDate ? time.ToString("MM/dd") : "";
+            var dateText = _svc.Settings.WorldClockShowDate ? time.ToString("MM/dd") : "";
 
             var cityPanel = new StackPanel
             {

@@ -58,6 +58,8 @@ public class UnifiedSettingsPage : SettingsPageBase
             ("\uE753", "天气", BuildWeatherPanel),
             ("\uE7BE", "课表", BuildClassSchedulePanel),
             ("\uE9D1", "学习", BuildStudyTimePanel),
+            ("\uE921", "大考", BuildExamCountdownPanel),
+            ("\uE823", "时钟", BuildWorldClockPanel),
         };
         Content = Build();
     }
@@ -289,7 +291,27 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("\uE9D1 学习时长统计设置"));
 
         var studyPanel = new StackPanel { Spacing = 0 };
-        studyPanel.Children.Add(Info("学习时长统计的显示开关、图标、统计方式等已迁移到组件的「组件设置」中。"));
+        var modeCombo = new ComboBox { Width = 160, HorizontalAlignment = HorizontalAlignment.Right };
+        var modes = new[] { "关闭", "统计总运行时长", "仅统计上课时间" };
+        foreach (var m in modes) modeCombo.Items.Add(m);
+        modeCombo.SelectedIndex = !_svc.Settings.StudyTimeEnabled ? 0 : (_svc.Settings.StudyTimeCountClassTimeOnly ? 2 : 1);
+        modeCombo.SelectionChanged += (a, b) =>
+        {
+            switch (modeCombo.SelectedIndex)
+            {
+                case 0: _svc.Settings.StudyTimeEnabled = false; break;
+                case 1: _svc.Settings.StudyTimeEnabled = true; _svc.Settings.StudyTimeCountClassTimeOnly = false; break;
+                case 2: _svc.Settings.StudyTimeEnabled = true; _svc.Settings.StudyTimeCountClassTimeOnly = true; break;
+            }
+            AutoSave();
+        };
+        studyPanel.Children.Add(SettingItem("统计模式", "选择学习时长的统计方式", modeCombo));
+        studyPanel.Children.Add(Separator());
+        studyPanel.Children.Add(SettingItem("显示图标", "在组件中显示图标",
+            Toggle(_svc.Settings.StudyTimeShowIcon, v => { _svc.Settings.StudyTimeShowIcon = v; AutoSave(); })));
+        studyPanel.Children.Add(Separator());
+        studyPanel.Children.Add(SettingItem("每周重置", "按 ISO 周次统计本周学习时长",
+            Toggle(_svc.Settings.StudyTimeWeeklyReset, v => { _svc.Settings.StudyTimeWeeklyReset = v; AutoSave(); })));
         studyPanel.Children.Add(Separator());
         var resetStudyBtn = new Button { Content = "🔄 重置当前统计", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
         resetStudyBtn.Click += (a, e) =>
@@ -311,6 +333,123 @@ public class UnifiedSettingsPage : SettingsPageBase
         };
         studyPanel.Children.Add(SettingItem("重置今日时长", "将今日学习时长清零", resetStudyBtn));
         s.Children.Add(Expander("基础设置", "学习时长统计组件基础设置", studyPanel));
+
+        return s;
+    }
+
+    Control BuildExamCountdownPanel()
+    {
+        var s = new StackPanel { Spacing = 0 };
+        s.Children.Add(PageHeader("🎓 大考倒计时设置"));
+
+        var basicPanel = new StackPanel { Spacing = 0 };
+        var typeCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
+        typeCombo.Items.Add("高考");
+        typeCombo.Items.Add("中考");
+        typeCombo.SelectedIndex = _svc.Settings.ExamType == 1 ? 1 : 0;
+        typeCombo.SelectionChanged += (a, b) => { _svc.Settings.ExamType = typeCombo.SelectedIndex; AutoSave(); };
+        basicPanel.Children.Add(SettingItem("考试类型", "选择中考或高考", typeCombo));
+        basicPanel.Children.Add(Separator());
+        basicPanel.Children.Add(SettingItem("城市", "输入具体城市名，如 北京、上海、广州",
+            Text(_svc.Settings.ExamCity, 160, v => { _svc.Settings.ExamCity = v; AutoSave(); })));
+        basicPanel.Children.Add(Separator());
+        basicPanel.Children.Add(SettingItem("自定义日期", "留空则使用内置数据，格式 M-d",
+            Text(_svc.Settings.ExamCountdownCustomDate ?? "", 120, v => { _svc.Settings.ExamCountdownCustomDate = string.IsNullOrWhiteSpace(v) ? null : v; AutoSave(); })));
+        basicPanel.Children.Add(Separator());
+        basicPanel.Children.Add(SettingItem("每年重复", "考试过后自动显示下一年倒计时",
+            Toggle(_svc.Settings.ExamCountdownRepeatYearly, v => { _svc.Settings.ExamCountdownRepeatYearly = v; AutoSave(); })));
+        s.Children.Add(Expander("考试", "考试类型与城市", basicPanel));
+
+        var stylePanel = new StackPanel { Spacing = 0 };
+        stylePanel.Children.Add(SettingItem("显示圆环", "在文案左侧显示进度圆环",
+            Toggle(_svc.Settings.ExamCountdownShowRing, v => { _svc.Settings.ExamCountdownShowRing = v; AutoSave(); })));
+        stylePanel.Children.Add(Separator());
+        stylePanel.Children.Add(SettingItem("圆环颜色", null,
+            ColorPicker(_svc.Settings.ExamCountdownRingColor, c => { _svc.Settings.ExamCountdownRingColor = c; AutoSave(); })));
+        stylePanel.Children.Add(Separator());
+        stylePanel.Children.Add(SettingItem("圆环开始日期", "默认 08-01，格式 MM-dd",
+            Text(_svc.Settings.ExamCountdownRingStartDate, 90, v => { _svc.Settings.ExamCountdownRingStartDate = v; AutoSave(); })));
+        stylePanel.Children.Add(Separator());
+        stylePanel.Children.Add(SettingItem("显示背景", "为倒计时显示背景色块",
+            Toggle(_svc.Settings.ExamCountdownShowBackground, v => { _svc.Settings.ExamCountdownShowBackground = v; AutoSave(); })));
+        stylePanel.Children.Add(Separator());
+        stylePanel.Children.Add(SettingItem("背景颜色", null,
+            ColorPicker(_svc.Settings.ExamCountdownBackgroundColor, c => { _svc.Settings.ExamCountdownBackgroundColor = c; AutoSave(); })));
+        stylePanel.Children.Add(Separator());
+        stylePanel.Children.Add(SettingItem("文字颜色", null,
+            ColorPicker(_svc.Settings.ExamCountdownTextColor, c => { _svc.Settings.ExamCountdownTextColor = c; AutoSave(); })));
+        s.Children.Add(Expander("样式", "圆环、颜色与背景", stylePanel));
+
+        var textPanel = new StackPanel { Spacing = 0 };
+        textPanel.Children.Add(SettingItem("倒计时文案", "变量：{exam} {days} {date}",
+            Text(_svc.Settings.ExamCountdownCustomText, 260, v => { _svc.Settings.ExamCountdownCustomText = v; AutoSave(); })));
+        textPanel.Children.Add(Separator());
+        textPanel.Children.Add(SettingItem("当天文案", "变量：{exam} {date}",
+            Text(_svc.Settings.ExamCountdownTodayText, 260, v => { _svc.Settings.ExamCountdownTodayText = v; AutoSave(); })));
+        s.Children.Add(Expander("文案", "自定义显示文字", textPanel));
+
+        return s;
+    }
+
+    Control BuildWorldClockPanel()
+    {
+        var s = new StackPanel { Spacing = 0 };
+        s.Children.Add(PageHeader("🌍 世界时钟设置"));
+
+        var displayPanel = new StackPanel { Spacing = 0 };
+        displayPanel.Children.Add(SettingItem("显示秒", "时间显示到秒",
+            Toggle(_svc.Settings.WorldClockShowSeconds, v => { _svc.Settings.WorldClockShowSeconds = v; AutoSave(); })));
+        displayPanel.Children.Add(Separator());
+        displayPanel.Children.Add(SettingItem("显示日期", "在每个城市下方显示日期",
+            Toggle(_svc.Settings.WorldClockShowDate, v => { _svc.Settings.WorldClockShowDate = v; AutoSave(); })));
+        displayPanel.Children.Add(Separator());
+        displayPanel.Children.Add(SettingItem("文字颜色", null,
+            ColorPicker(_svc.Settings.WorldClockTextColor, c => { _svc.Settings.WorldClockTextColor = c; AutoSave(); })));
+        s.Children.Add(Expander("显示", "世界时钟显示选项", displayPanel));
+
+        var listPanel = new StackPanel { Spacing = 0 };
+        var citiesPanel = new StackPanel { Spacing = 0 };
+
+        void RefreshCities()
+        {
+            citiesPanel.Children.Clear();
+            var cities = _svc.Settings.WorldClockCities.ToList();
+            for (int i = 0; i < cities.Count; i++)
+            {
+                var city = cities[i];
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(16, 8, 16, 8) };
+                var nameBox = Text(city.Name, 90, v => { city.Name = v; AutoSave(); });
+                var tzBox = Text(city.TimeZoneId, 180, v => { city.TimeZoneId = v; AutoSave(); });
+                var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
+                delBtn.Click += (a, e) => { _svc.Settings.WorldClockCities.Remove(city); AutoSave(); RefreshCities(); };
+
+                var nameLabel = new TextBlock { Text = "城市", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(nameLabel);
+                var tzLabel = new TextBlock { Text = "时区", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                BindThemeForeground(tzLabel);
+                row.Children.Add(nameLabel); row.Children.Add(nameBox);
+                row.Children.Add(tzLabel); row.Children.Add(tzBox); row.Children.Add(delBtn);
+                citiesPanel.Children.Add(row);
+                if (i < cities.Count - 1) citiesPanel.Children.Add(Separator());
+            }
+        }
+
+        RefreshCities();
+        listPanel.Children.Add(citiesPanel);
+
+        var addBtn = new Button { Content = "+ 添加城市", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 4, 16, 8) };
+        addBtn.Click += (a, e) =>
+        {
+            if (_svc.Settings.WorldClockCities.Count < 5)
+            {
+                _svc.Settings.WorldClockCities.Add(new WorldClockCity { Name = "新城市", TimeZoneId = "China Standard Time" });
+                AutoSave();
+                RefreshCities();
+            }
+        };
+        listPanel.Children.Add(addBtn);
+        listPanel.Children.Add(Info("最多 5 个城市，时区 ID 如：China Standard Time、Tokyo Standard Time、Pacific Standard Time"));
+        s.Children.Add(Expander("城市", "管理显示的城市与时区", listPanel));
 
         return s;
     }
@@ -656,7 +795,8 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("🌿 24节气设置"));
 
         var displayPanel = new StackPanel { Spacing = 0 };
-        displayPanel.Children.Add(Info("节气组件的「显示进度环」开关已迁移到组件的「组件设置」中。"));
+        displayPanel.Children.Add(SettingItem("显示进度环", "节气倒计时显示弧形进度",
+            Toggle(_svc.Settings.SolarTermShowProgressRing, v => { _svc.Settings.SolarTermShowProgressRing = v; AutoSave(); })));
         s.Children.Add(Expander("显示", "节气组件显示选项", displayPanel));
 
         var colorPanel = new StackPanel { Spacing = 0 };
@@ -680,7 +820,15 @@ public class UnifiedSettingsPage : SettingsPageBase
         var s = new StackPanel { Spacing = 0 };
         s.Children.Add(PageHeader("\uE8C0 农历日期设置"));
 
-        s.Children.Add(Info("农历组件的「自动刷新」和「显示模板」已迁移到组件的「组件设置」中。\n可用变量: {gzYear} 干支年 | {IMonthCn} 农历月 | {IDayCn} 农历日 | {Animal} 生肖 | {Term} 节气\n示例: 癸卯年 九月初八 兔"));
+        var displayPanel = new StackPanel { Spacing = 0 };
+        displayPanel.Children.Add(SettingItem("自动刷新", "每天自动重新计算农历",
+            Toggle(_svc.Settings.LunarAutoRefresh, v => { _svc.Settings.LunarAutoRefresh = v; AutoSave(); })));
+        displayPanel.Children.Add(Separator());
+        displayPanel.Children.Add(SettingItem("显示模板", "可用变量: {gzYear} 干支年 | {IMonthCn} 农历月 | {IDayCn} 农历日 | {Animal} 生肖 | {Term} 节气",
+            Text(_svc.Settings.LunarDateTemplate, 280, v => { _svc.Settings.LunarDateTemplate = v; AutoSave(); })));
+        s.Children.Add(Expander("显示", "农历组件显示选项", displayPanel));
+
+        s.Children.Add(Info("示例: 癸卯年 九月初八 兔"));
         return s;
     }
 
@@ -690,7 +838,14 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("🎂 自定义节日设置"));
 
         var displayPanel = new StackPanel { Spacing = 0 };
-        displayPanel.Children.Add(Info("自定义节日组件的「显示数量」「显示图标」「显示天数」已迁移到组件的「组件设置」中。"));
+        displayPanel.Children.Add(SettingItem("显示数量", "同时显示多少个自定义节日",
+            Number(_svc.Settings.CustomHolidayDisplayCount, 1, 10, v => { _svc.Settings.CustomHolidayDisplayCount = v; AutoSave(); })));
+        displayPanel.Children.Add(Separator());
+        displayPanel.Children.Add(SettingItem("显示图标", "在节日前显示图标",
+            Toggle(_svc.Settings.CustomHolidayShowIcon, v => { _svc.Settings.CustomHolidayShowIcon = v; AutoSave(); })));
+        displayPanel.Children.Add(Separator());
+        displayPanel.Children.Add(SettingItem("显示天数", "显示距离节日还有多少天",
+            Toggle(_svc.Settings.CustomHolidayShowDays, v => { _svc.Settings.CustomHolidayShowDays = v; AutoSave(); })));
         s.Children.Add(Expander("组件显示", "自定义节日组件显示选项", displayPanel));
 
         s.Children.Add(Expander("节日列表", "添加和管理你的自定义节日", BuildCustomHolidayList()));
@@ -759,6 +914,11 @@ public class UnifiedSettingsPage : SettingsPageBase
     {
         var s = new StackPanel { Spacing = 0 };
         s.Children.Add(PageHeader("🏖️ 寒暑假设置"));
+
+        var displayPanel = new StackPanel { Spacing = 0 };
+        displayPanel.Children.Add(SettingItem("启用寒暑假倒计时", "关闭后不显示任何内容",
+            Toggle(_svc.Settings.ShowVacationCountdown, v => { _svc.Settings.ShowVacationCountdown = v; AutoSave(); })));
+        s.Children.Add(Expander("开关", "寒暑假倒计时总开关", displayPanel));
 
         var summerPanel = new StackPanel { Spacing = 0 };
         summerPanel.Children.Add(SettingItem("开始日期", null,

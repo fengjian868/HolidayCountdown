@@ -9,7 +9,6 @@ using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
 using ClassIsland.Core.Attributes;
 using HolidayCountdown.Models;
-using HolidayCountdown.Models.ComponentSettings;
 using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.Components;
@@ -20,7 +19,7 @@ namespace HolidayCountdown.Views.Components;
     "fluent(\uE8C0)",
     "显示当前农历日期，支持自定义模板，有网络时自动刷新"
 )]
-public class LunarDateComponent : ComponentBase<LunarDateSettings>
+public class LunarDateComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
@@ -29,7 +28,7 @@ public class LunarDateComponent : ComponentBase<LunarDateSettings>
     public LunarDateComponent()
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.85, Foreground = Brushes.Black };
+        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.85 };
         panel.Children.Add(new TextBlock { Text = "\u2630", FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 });
         panel.Children.Add(_txt);
         Content = panel;
@@ -49,7 +48,7 @@ public class LunarDateComponent : ComponentBase<LunarDateSettings>
         try
         {
             // 使用 HolidayService 的月度缓存，每日自动刷新，避免每次联网
-            var info = await _svc.GetLunarAsync(Settings?.AutoRefresh ?? true);
+            var info = await _svc.GetLunarAsync();
             if (info != null) { UpdateText(Format(info)); return; }
         }
         catch { }
@@ -59,7 +58,7 @@ public class LunarDateComponent : ComponentBase<LunarDateSettings>
     string GetStr(JsonElement e, string p) => e.TryGetProperty(p, out var v) ? (v.GetString() ?? "") : "";
     string Format(LunarInfo i)
     {
-        var t = Settings?.Template ?? "{gzYear} {IMonthCn}{IDayCn} {Animal}";
+        var t = _svc?.Settings.LunarDateTemplate ?? "{gzYear} {IMonthCn}{IDayCn} {Animal}";
         var result = t.Replace("{gzYear}", i.gzYear).Replace("{IMonthCn}", i.IMonthCn).Replace("{IDayCn}", i.IDayCn).Replace("{Animal}", i.Animal).Replace("{Term}", string.IsNullOrEmpty(i.Term) ? "" : $" · {i.Term}").Replace("{lunarDate}", i.lunarDate);
         // 清理多余空格，让排版更紧凑
         while (result.Contains("  ")) result = result.Replace("  ", " ");

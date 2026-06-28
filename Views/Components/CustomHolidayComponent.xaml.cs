@@ -7,7 +7,6 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
 using ClassIsland.Core.Attributes;
-using HolidayCountdown.Models.ComponentSettings;
 using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.Components;
@@ -18,7 +17,7 @@ namespace HolidayCountdown.Views.Components;
     "fluent(\uE70F)",
     "只显示你添加的自定义节日倒计时"
 )]
-public class CustomHolidayComponent : ComponentBase<CustomHolidaySettings>
+public class CustomHolidayComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
     private StackPanel _main = null!;
@@ -49,9 +48,9 @@ public class CustomHolidayComponent : ComponentBase<CustomHolidaySettings>
             if (h.RepeatYearly && d.Year < now.Year) d = new DateTime(now.Year, h.Date.Month, h.Date.Day);
             if (h.RepeatYearly && h.Date.Month == 2 && h.Date.Day == 29 && !DateTime.IsLeapYear(now.Year)) d = new DateTime(now.Year, 2, 28);
             return new { h.Name, Date = d, h.RepeatYearly };
-        }).Where(h => h.Date.Date >= now.Date).OrderBy(h => h.Date).Take(Settings?.DisplayCount ?? 3).ToList();
+        }).Where(h => h.Date.Date >= now.Date).OrderBy(h => h.Date).Take(s.CustomHolidayDisplayCount).ToList();
 
-        if (list.Count == 0) { _main.Children.Add(new TextBlock { Text = "暂无自定义节日", Opacity = 0.5, HorizontalAlignment = HorizontalAlignment.Center, Foreground = Brushes.Black }); return; }
+        if (list.Count == 0) { _main.Children.Add(new TextBlock { Text = "暂无自定义节日", Opacity = 0.5, HorizontalAlignment = HorizontalAlignment.Center }); return; }
 
         // 所有节日横向排列
         var container = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
@@ -59,9 +58,9 @@ public class CustomHolidayComponent : ComponentBase<CustomHolidaySettings>
         {
             var days = (int)(h.Date.Date - now.Date).TotalDays;
             var item = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
-            if (Settings?.ShowIcon ?? true) item.Children.Add(new TextBlock { Text = "🎂", FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
+            if (s.CustomHolidayShowIcon) item.Children.Add(new TextBlock { Text = "🎂", FontSize = 13, VerticalAlignment = VerticalAlignment.Center });
             item.Children.Add(new TextBlock { Text = h.Name, FontWeight = FontWeight.SemiBold, Foreground = new SolidColorBrush(Color.Parse("#E91E63")), VerticalAlignment = VerticalAlignment.Center });
-            if (Settings?.ShowDays ?? true) item.Children.Add(new TextBlock { Text = days == 0 ? "就是今天！" : $"还有 {days} 天", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8, Foreground = Brushes.Black });
+            if (s.CustomHolidayShowDays) item.Children.Add(new TextBlock { Text = days == 0 ? "就是今天！" : $"还有 {days} 天", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8 });
             container.Children.Add(item);
         }
         _main.Children.Add(container);

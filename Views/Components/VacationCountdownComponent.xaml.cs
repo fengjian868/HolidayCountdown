@@ -7,7 +7,6 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
 using ClassIsland.Core.Attributes;
-using HolidayCountdown.Models.ComponentSettings;
 using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.Components;
@@ -18,7 +17,7 @@ namespace HolidayCountdown.Views.Components;
     "fluent(\uE8F3)",
     "显示距离寒暑假的剩余周数和天数"
 )]
-public class VacationCountdownComponent : ComponentBase<VacationSettings>
+public class VacationCountdownComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
     private StackPanel _main = null!;
@@ -41,7 +40,7 @@ public class VacationCountdownComponent : ComponentBase<VacationSettings>
     void Update()
     {
         _main.Children.Clear();
-        if (_svc == null || !(Settings?.ShowCountdown ?? true)) return;
+        if (_svc == null) return;
         var now = DateTime.Now; var s = _svc.Settings;
         var targets = new[] { ("暑假", s.SummerStart, s.SummerEnd), ("寒假", s.WinterStart, s.WinterEnd) };
         
@@ -70,7 +69,6 @@ public class VacationCountdownComponent : ComponentBase<VacationSettings>
                 {
                     Text = $"{nearest.Name}进行中",
                     HorizontalAlignment = HorizontalAlignment.Center,
-                    Foreground = Brushes.Black,
                     FontWeight = FontWeight.SemiBold,
                     Margin = new Thickness(0, 1, 0, 0)
                 });
@@ -78,7 +76,6 @@ public class VacationCountdownComponent : ComponentBase<VacationSettings>
                 {
                     Text = $"剩余 {weeks} 周 {days} 天",
                     HorizontalAlignment = HorizontalAlignment.Center,
-                    Foreground = Brushes.Black,
                     Margin = new Thickness(0, 0, 0, 1)
                 });
             }
@@ -88,14 +85,12 @@ public class VacationCountdownComponent : ComponentBase<VacationSettings>
                 row.Children.Add(new TextBlock
                 {
                     Text = $"距离{nearest.Name}还有",
-                    Foreground = Brushes.Black,
                     FontWeight = FontWeight.SemiBold,
                     VerticalAlignment = VerticalAlignment.Center
                 });
                 row.Children.Add(new TextBlock
                 {
                     Text = $"{weeks} 周 {days} 天",
-                    Foreground = Brushes.Black,
                     VerticalAlignment = VerticalAlignment.Center
                 });
                 _main.Children.Add(row);
@@ -103,7 +98,7 @@ public class VacationCountdownComponent : ComponentBase<VacationSettings>
         }
         else
         {
-            _main.Children.Add(new TextBlock { Text = "暂无寒暑假安排", HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.5, Foreground = Brushes.Black });
+            _main.Children.Add(new TextBlock { Text = "暂无寒暑假安排", HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.5 });
         }
     }
 }

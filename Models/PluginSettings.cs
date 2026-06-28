@@ -22,7 +22,6 @@ public class PluginSettings
     public bool ShowYearRatio { get; set; } = true;
     public Dictionary<string, string> HolidayColors { get; set; } = new();
     public List<string> DisabledHolidays { get; set; } = new();
-    public List<CustomHoliday> CustomHolidays { get; set; } = new();
 
     // 问候语
     public bool ShowGreeting { get; set; } = true;
@@ -41,15 +40,27 @@ public class PluginSettings
 
     // 农历
     public bool ShowLunarDate { get; set; } = true;
+    public string LunarDateTemplate { get; set; } = "{gzYear} {IMonthCn}{IDayCn} {Animal}";
+    public bool LunarAutoRefresh { get; set; } = true;
 
-    // 寒暑假日期（全局设置，不随组件实例变化）
+    // 自定义节日组件
+    public int CustomHolidayDisplayCount { get; set; } = 3;
+    public bool CustomHolidayShowIcon { get; set; } = true;
+    public bool CustomHolidayShowDays { get; set; } = true;
+    public List<CustomHoliday> CustomHolidays { get; set; } = new();
+
+    // 寒暑假
     public DateTime SummerStart { get; set; } = new DateTime(2025, 7, 1);
     public DateTime SummerEnd { get; set; } = new DateTime(2025, 8, 31);
     public DateTime WinterStart { get; set; } = new DateTime(2026, 1, 15);
     public DateTime WinterEnd { get; set; } = new DateTime(2026, 2, 13);
+    public bool ShowVacationCountdown { get; set; } = true;
 
     // 节气颜色
     public Dictionary<string, string> TermColors { get; set; } = new();
+
+    // 24节气
+    public bool SolarTermShowProgressRing { get; set; } = true;
 
     // 天气问候
     public bool WeatherGreetingEnabled { get; set; } = true;
@@ -123,6 +134,34 @@ public class PluginSettings
     public string ClassGreetingAfterSchoolTemplate { get; set; } = "放学啦，今天辛苦了 🏠";
     public string ClassGreetingNoClassTemplate { get; set; } = "暂无课程，好好休息 📅";
 
+    // 学习时长统计
+    public bool StudyTimeEnabled { get; set; } = true;
+    public bool StudyTimeShowIcon { get; set; } = true;
+    public bool StudyTimeCountClassTimeOnly { get; set; } = false;
+    public bool StudyTimeWeeklyReset { get; set; } = false;
+
+    // 大考倒计时
+    public int ExamType { get; set; } = 0; // 0 高考, 1 中考
+    public string ExamCity { get; set; } = "北京";
+    public string ExamCountdownTextColor { get; set; } = "#FF2196F3";
+    public string ExamCountdownRingColor { get; set; } = "#FFFF5252";
+    public bool ExamCountdownShowRing { get; set; } = true;
+    public string ExamCountdownRingStartDate { get; set; } = "08-01";
+    public bool ExamCountdownShowBackground { get; set; } = true;
+    public string ExamCountdownBackgroundColor { get; set; } = "#202196F3";
+    public string? ExamCountdownCustomDate { get; set; }
+    public string ExamCountdownCustomText { get; set; } = "距离{exam}还有{days}天";
+    public string ExamCountdownTodayText { get; set; } = "今天就是{exam}，加油！";
+    public bool ExamCountdownRepeatYearly { get; set; } = true;
+
+    // 世界时钟
+    public bool WorldClockShowSeconds { get; set; } = false;
+    public bool WorldClockShowDate { get; set; } = false;
+    public string WorldClockTextColor { get; set; } = "#FFFFFFFF";
+    public List<WorldClockCity> WorldClockCities { get; set; } = new()
+    {
+        new WorldClockCity { Name = "北京", TimeZoneId = "China Standard Time" }
+    };
 }
 
 public class CustomHoliday
@@ -170,4 +209,10 @@ public class WeatherGreetingItem
     public string Keyword { get; set; } = "";
     public string Text { get; set; } = "";
     public string Tag { get; set; } = "";
+}
+
+public class WorldClockCity
+{
+    public string Name { get; set; } = "";
+    public string TimeZoneId { get; set; } = "";
 }

@@ -10,7 +10,7 @@ using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
 using ClassIsland.Core.Attributes;
 using HolidayCountdown.Models;
-using HolidayCountdown.Models.ComponentSettings;
+using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.Components;
 
@@ -20,13 +20,14 @@ namespace HolidayCountdown.Views.Components;
     "fluent(\uE921)",
     "显示中考/高考倒计时，内置全国各地考试时间，每年自动刷新"
 )]
-public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
+public class ExamCountdownComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
     private Arc _ringTrack = null!;
     private Arc _ringProgress = null!;
     private Border? _bg;
+    private HolidayService _svc = new();
 
     public ExamCountdownComponent()
     {
@@ -96,8 +97,6 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
 
     void Update()
     {
-        if (Settings == null) return;
-
         try
         {
             var (examName, examDate) = GetNextExamDate();
@@ -106,9 +105,9 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
 
             string text;
             if (days <= 0)
-                text = Settings.TodayText;
+                text = _svc.Settings.ExamCountdownTodayText;
             else
-                text = Settings.CustomText;
+                text = _svc.Settings.ExamCountdownCustomText;
 
             text = text
                 .Replace("{exam}", examName)
@@ -118,13 +117,13 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
 
             _txt.Text = text;
 
-            if (Color.TryParse(Settings.TextColor, out var fg))
+            if (Color.TryParse(_svc.Settings.ExamCountdownTextColor, out var fg))
                 _txt.Foreground = new SolidColorBrush(fg);
 
-            var ringVisible = Settings.ShowRing;
+            var ringVisible = _svc.Settings.ExamCountdownShowRing;
             _ringTrack.IsVisible = ringVisible;
             _ringProgress.IsVisible = ringVisible;
-            if (ringVisible && Color.TryParse(Settings.RingColor, out var ringColor))
+            if (ringVisible && Color.TryParse(_svc.Settings.ExamCountdownRingColor, out var ringColor))
             {
                 _ringTrack.Stroke = new SolidColorBrush(ringColor) { Opacity = 0.25 };
                 _ringProgress.Stroke = new SolidColorBrush(ringColor);
@@ -132,9 +131,9 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
                 _ringProgress.SweepAngle = Math.Max(0, Math.Min(360, progress * 360));
             }
 
-            if (Settings.ShowBackground && _bg != null)
+            if (_svc.Settings.ExamCountdownShowBackground && _bg != null)
             {
-                _bg.Background = Color.TryParse(Settings.BackgroundColor, out var bg)
+                _bg.Background = Color.TryParse(_svc.Settings.ExamCountdownBackgroundColor, out var bg)
                     ? new SolidColorBrush(bg)
                     : new SolidColorBrush(Color.Parse("#202196F3"));
                 _bg.BorderThickness = new Thickness(0);
@@ -153,20 +152,21 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
     (string examName, DateTime examDate) GetNextExamDate()
     {
         var now = DateTime.Now;
-        var examName = Settings!.ExamType == 1 ? "中考" : "高考";
+        var examName = _svc.Settings.ExamType == 1 ? "中考" : "高考";
 
         DateTime GetDateForYear(int year)
         {
-            if (!string.IsNullOrWhiteSpace(Settings.CustomDate) &&
-                DateTime.TryParseExact(year + "-" + Settings.CustomDate, "yyyy-M-d", CultureInfo.InvariantCulture, DateTimeStyles.None, out var cd))
+            var custom = _svc.Settings.ExamCountdownCustomDate;
+            if (!string.IsNullOrWhiteSpace(custom) &&
+                DateTime.TryParseExact(year + "-" + custom, "yyyy-M-d", CultureInfo.InvariantCulture, DateTimeStyles.None, out var cd))
                 return cd;
-            return ExamDateData.GetExamDate(year, Settings.ExamType, Settings.City);
+            return ExamDateData.GetExamDate(year, _svc.Settings.ExamType, _svc.Settings.ExamCity);
         }
 
         var current = GetDateForYear(now.Year);
         if (current.Date < now.Date)
         {
-            if (Settings.RepeatYearly)
+            if (_svc.Settings.ExamCountdownRepeatYearly)
                 current = GetDateForYear(now.Year + 1);
         }
 
@@ -187,7 +187,7 @@ public class ExamCountdownComponent : ComponentBase<ExamCountdownSettings>
 
     DateTime ParseRingStartDate(int year)
     {
-        var input = Settings?.RingStartDate ?? "08-01";
+        var input = _svc.Settings.ExamCountdownRingStartDate ?? "08-01";
         var parts = input.Split('-', '/', '.');
         int month = 8, day = 1;
         if (parts.Length >= 2 &&

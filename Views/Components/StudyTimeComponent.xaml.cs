@@ -13,7 +13,6 @@ using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
 using ClassIsland.Core.Attributes;
 using HolidayCountdown.Models;
-using HolidayCountdown.Models.ComponentSettings;
 using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.Components;
@@ -24,7 +23,7 @@ namespace HolidayCountdown.Views.Components;
     "fluent(\uE9D1)",
     "记录ClassIsland运行时长，显示今日学习时长"
 )]
-public class StudyTimeComponent : ComponentBase<StudyTimeSettings>
+public class StudyTimeComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
@@ -41,7 +40,7 @@ public class StudyTimeComponent : ComponentBase<StudyTimeSettings>
     {
         // 多个组件实例共享同一会话计时，避免重复统计或统计丢失
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9, Foreground = Brushes.Black };
+        _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
         panel.Children.Add(_txt);
         Content = panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
@@ -58,7 +57,7 @@ public class StudyTimeComponent : ComponentBase<StudyTimeSettings>
 
     void Update()
     {
-        if (_svc == null || !(Settings?.Enabled ?? true)) { _txt.Text = ""; return; }
+        if (_svc == null || !_svc.Settings.StudyTimeEnabled) { _txt.Text = ""; return; }
 
         try
         {
@@ -67,7 +66,7 @@ public class StudyTimeComponent : ComponentBase<StudyTimeSettings>
             _lastUpdate = now;
 
             // 若只统计已上课时长，则仅在上课状态时累加
-            if (Settings?.CountClassTimeOnly ?? false)
+            if (_svc.Settings.StudyTimeCountClassTimeOnly)
             {
                 var state = GetCurrentState();
                 if (state != 1) elapsedMinutes = 0;
@@ -85,9 +84,9 @@ public class StudyTimeComponent : ComponentBase<StudyTimeSettings>
                 SaveStudyData(data);
 
                 var totalMinutes = data[key];
-                var icon = (Settings?.ShowIcon ?? true) ? "📚 " : "";
-                var timeScope = (Settings?.WeeklyReset ?? false) ? "本周" : "今日";
-                var action = (Settings?.CountClassTimeOnly ?? false) ? "已上课" : "已学习";
+                var icon = _svc.Settings.StudyTimeShowIcon ? "📚 " : "";
+                var timeScope = _svc.Settings.StudyTimeWeeklyReset ? "本周" : "今日";
+                var action = _svc.Settings.StudyTimeCountClassTimeOnly ? "已上课" : "已学习";
                 _txt.Text = $"{icon}{timeScope}{action} {FormatDuration(totalMinutes)}";
             }
         }
@@ -96,7 +95,7 @@ public class StudyTimeComponent : ComponentBase<StudyTimeSettings>
 
     string GetCurrentKey()
     {
-        if (Settings?.WeeklyReset == true)
+        if (_svc?.Settings.StudyTimeWeeklyReset == true)
         {
             var now = DateTime.Now;
             return $"{now.Year}-W{ISOWeek.GetWeekOfYear(now)}";
