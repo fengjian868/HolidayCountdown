@@ -285,27 +285,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("\uE9D1 学习时长统计设置"));
 
         var studyPanel = new StackPanel { Spacing = 0 };
-        var modeCombo = new ComboBox { Width = 160, HorizontalAlignment = HorizontalAlignment.Right };
-        var modes = new[] { "关闭", "统计总运行时长", "仅统计上课时间" };
-        foreach (var m in modes) modeCombo.Items.Add(m);
-        modeCombo.SelectedIndex = !_svc.Settings.StudyTimeEnabled ? 0 : (_svc.Settings.StudyTimeCountClassTimeOnly ? 2 : 1);
-        modeCombo.SelectionChanged += (a, b) =>
-        {
-            switch (modeCombo.SelectedIndex)
-            {
-                case 0: _svc.Settings.StudyTimeEnabled = false; break;
-                case 1: _svc.Settings.StudyTimeEnabled = true; _svc.Settings.StudyTimeCountClassTimeOnly = false; break;
-                case 2: _svc.Settings.StudyTimeEnabled = true; _svc.Settings.StudyTimeCountClassTimeOnly = true; break;
-            }
-            AutoSave();
-        };
-        studyPanel.Children.Add(SettingItem("学习时长统计", "关闭 / 统计 ClassIsland 总运行时长 / 仅累加上课状态时长", modeCombo));
-        studyPanel.Children.Add(Separator());
-        studyPanel.Children.Add(SettingItem("显示图标", "在学习时长前显示图标",
-            Toggle(_svc.Settings.StudyTimeShowIcon, v => { _svc.Settings.StudyTimeShowIcon = v; AutoSave(); })));
-        studyPanel.Children.Add(Separator());
-        studyPanel.Children.Add(SettingItem("每周重置", "开启后按自然周统计，否则按日统计",
-            Toggle(_svc.Settings.StudyTimeWeeklyReset, v => { _svc.Settings.StudyTimeWeeklyReset = v; AutoSave(); })));
+        studyPanel.Children.Add(Info("学习时长统计的显示开关、图标、统计方式等已迁移到组件的「组件设置」中。"));
         studyPanel.Children.Add(Separator());
         var resetStudyBtn = new Button { Content = "🔄 重置当前统计", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left };
         resetStudyBtn.Click += (a, e) =>
@@ -651,8 +631,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("🌿 24节气设置"));
 
         var displayPanel = new StackPanel { Spacing = 0 };
-        displayPanel.Children.Add(SettingItem("显示进度环", "弧形进度环显示节气进度",
-            Toggle(_svc.Settings.SolarTermShowProgressRing, v => { _svc.Settings.SolarTermShowProgressRing = v; AutoSave(); })));
+        displayPanel.Children.Add(Info("节气组件的「显示进度环」开关已迁移到组件的「组件设置」中。"));
         s.Children.Add(Expander("显示", "节气组件显示选项", displayPanel));
 
         var colorPanel = new StackPanel { Spacing = 0 };
@@ -676,46 +655,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var s = new StackPanel { Spacing = 0 };
         s.Children.Add(PageHeader("\uE8C0 农历日期设置"));
 
-        var displayPanel = new StackPanel { Spacing = 0 };
-        displayPanel.Children.Add(SettingItem("自动网络刷新", "有网络时自动获取最新农历",
-            Toggle(_svc.Settings.LunarAutoRefresh, v => { _svc.Settings.LunarAutoRefresh = v; AutoSave(); })));
-        s.Children.Add(Expander("显示", "农历组件基础设置", displayPanel));
-
-        var formatPanel = new StackPanel { Spacing = 0 };
-        var presets = new[]
-        {
-            ("完整", "{gzYear} {IMonthCn}{IDayCn} {Animal}"),
-            ("简洁", "{IMonthCn}{IDayCn}"),
-            ("含生肖", "{IMonthCn}{IDayCn} {Animal}"),
-            ("含节气", "{IMonthCn}{IDayCn} {Term}"),
-        };
-        var presetCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
-        foreach (var (name, _) in presets) presetCombo.Items.Add(name);
-
-        var currentTemplate = _svc.Settings.LunarDateTemplate ?? "{gzYear} {IMonthCn}{IDayCn} {Animal}";
-        int selectedIndex = 0;
-        for (int i = 0; i < presets.Length; i++)
-        {
-            if (presets[i].Item2 == currentTemplate) { selectedIndex = i; break; }
-        }
-        presetCombo.SelectedIndex = selectedIndex;
-        presetCombo.SelectionChanged += (a, b) =>
-        {
-            if (presetCombo.SelectedIndex >= 0 && presetCombo.SelectedIndex < presets.Length)
-                _svc.Settings.LunarDateTemplate = presets[presetCombo.SelectedIndex].Item2;
-            AutoSave();
-        };
-
-        formatPanel.Children.Add(SettingItem("选择格式", "快速选择预设模板", presetCombo));
-        formatPanel.Children.Add(Separator());
-
-        var templateBox = Text(_svc.Settings.LunarDateTemplate ?? "", 280, v => { _svc.Settings.LunarDateTemplate = v; AutoSave(); });
-        formatPanel.Children.Add(SettingItem("自定义模板", null, templateBox));
-        formatPanel.Children.Add(Separator());
-        formatPanel.Children.Add(Info("可用变量: {gzYear} 干支年 | {IMonthCn} 农历月 | {IDayCn} 农历日 | {Animal} 生肖 | {Term} 节气"));
-        s.Children.Add(Expander("显示格式", "农历日期显示模板", formatPanel));
-
-        s.Children.Add(Info("示例: 癸卯年 九月初八 兔"));
+        s.Children.Add(Info("农历组件的「自动刷新」和「显示模板」已迁移到组件的「组件设置」中。\n可用变量: {gzYear} 干支年 | {IMonthCn} 农历月 | {IDayCn} 农历日 | {Animal} 生肖 | {Term} 节气\n示例: 癸卯年 九月初八 兔"));
         return s;
     }
 
@@ -725,18 +665,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("🎂 自定义节日设置"));
 
         var displayPanel = new StackPanel { Spacing = 0 };
-        displayPanel.Children.Add(SettingItem("显示数量", "同时显示多少个自定义节日",
-            Combo(new[] { "1", "2", "3", "5" },
-                _svc.Settings.CustomHolidayDisplayCount == 1 ? 0 :
-                _svc.Settings.CustomHolidayDisplayCount == 2 ? 1 :
-                _svc.Settings.CustomHolidayDisplayCount == 3 ? 2 : 3,
-                v => { _svc.Settings.CustomHolidayDisplayCount = v == 0 ? 1 : v == 1 ? 2 : v == 2 ? 3 : 5; AutoSave(); })));
-        displayPanel.Children.Add(Separator());
-        displayPanel.Children.Add(SettingItem("显示图标", null,
-            Toggle(_svc.Settings.CustomHolidayShowIcon, v => { _svc.Settings.CustomHolidayShowIcon = v; AutoSave(); })));
-        displayPanel.Children.Add(Separator());
-        displayPanel.Children.Add(SettingItem("显示天数", null,
-            Toggle(_svc.Settings.CustomHolidayShowDays, v => { _svc.Settings.CustomHolidayShowDays = v; AutoSave(); })));
+        displayPanel.Children.Add(Info("自定义节日组件的「显示数量」「显示图标」「显示天数」已迁移到组件的「组件设置」中。"));
         s.Children.Add(Expander("组件显示", "自定义节日组件显示选项", displayPanel));
 
         s.Children.Add(Expander("节日列表", "添加和管理你的自定义节日", BuildCustomHolidayList()));

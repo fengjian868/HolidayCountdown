@@ -13,14 +13,14 @@ public class Plugin : PluginBase
     {
         services.AddComponent<Views.Components.HolidayCountdownComponent>();
         services.AddComponent<Views.Components.GreetingComponent>();
-        services.AddComponent<Views.Components.SolarTermComponent>();
-        services.AddComponent<Views.Components.LunarDateComponent>();
-        services.AddComponent<Views.Components.CustomHolidayComponent>();
-        services.AddComponent<Views.Components.VacationCountdownComponent>();
+        services.AddComponent<Views.Components.SolarTermComponent, Views.ComponentSettings.SolarTermSettingsControl>();
+        services.AddComponent<Views.Components.LunarDateComponent, Views.ComponentSettings.LunarDateSettingsControl>();
+        services.AddComponent<Views.Components.CustomHolidayComponent, Views.ComponentSettings.CustomHolidaySettingsControl>();
+        services.AddComponent<Views.Components.VacationCountdownComponent, Views.ComponentSettings.VacationSettingsControl>();
+        services.AddComponent<Views.Components.StudyTimeComponent, Views.ComponentSettings.StudyTimeSettingsControl>();
         services.AddComponent<Views.Components.WeatherGreetingComponent>();
         services.AddComponent<Views.Components.SmartWeatherComponent>();
         services.AddComponent<Views.Components.ClassScheduleComponent>();
-        services.AddComponent<Views.Components.StudyTimeComponent>();
 
         services.AddSettingsPage<Views.SettingsPages.UnifiedSettingsPage>();
     }

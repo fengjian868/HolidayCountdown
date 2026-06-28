@@ -40,27 +40,15 @@ public class PluginSettings
 
     // 农历
     public bool ShowLunarDate { get; set; } = true;
-    public string LunarDateTemplate { get; set; } = "{gzYear} {IMonthCn}{IDayCn} {Animal}";
-    public bool LunarAutoRefresh { get; set; } = true;
 
-    // 自定义节日组件
-    public int CustomHolidayDisplayCount { get; set; } = 3;
-    public bool CustomHolidayShowIcon { get; set; } = true;
-    public bool CustomHolidayShowDays { get; set; } = true;
-    public List<CustomHoliday> CustomHolidays { get; set; } = new();
-
-    // 寒暑假
+    // 寒暑假日期（全局设置，不随组件实例变化）
     public DateTime SummerStart { get; set; } = new DateTime(2025, 7, 1);
     public DateTime SummerEnd { get; set; } = new DateTime(2025, 8, 31);
     public DateTime WinterStart { get; set; } = new DateTime(2026, 1, 15);
     public DateTime WinterEnd { get; set; } = new DateTime(2026, 2, 13);
-    public bool ShowVacationCountdown { get; set; } = true;
 
     // 节气颜色
     public Dictionary<string, string> TermColors { get; set; } = new();
-
-    // 24节气
-    public bool SolarTermShowProgressRing { get; set; } = true;
 
     // 天气问候
     public bool WeatherGreetingEnabled { get; set; } = true;
@@ -126,11 +114,6 @@ public class PluginSettings
     public string ClassScheduleAfterSchoolTemplate { get; set; } = "{icon}放学啦";
     public string ClassScheduleNoClassTemplate { get; set; } = "{icon}{text}";
 
-    // 学习时长统计
-    public bool StudyTimeEnabled { get; set; } = true;
-    public bool StudyTimeShowIcon { get; set; } = true;
-    public bool StudyTimeCountClassTimeOnly { get; set; } = false;
-    public bool StudyTimeWeeklyReset { get; set; } = false;
 }
 
 public class CustomHoliday

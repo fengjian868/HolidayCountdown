@@ -7,6 +7,7 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
 using ClassIsland.Core.Attributes;
+using HolidayCountdown.Models.ComponentSettings;
 using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.Components;
@@ -17,7 +18,7 @@ namespace HolidayCountdown.Views.Components;
     "fluent(\uE8F3)",
     "显示距离寒暑假的剩余周数和天数"
 )]
-public class VacationCountdownComponent : ComponentBase
+public class VacationCountdownComponent : ComponentBase<VacationSettings>
 {
     private DispatcherTimer _timer = null!;
     private StackPanel _main = null!;
@@ -40,7 +41,7 @@ public class VacationCountdownComponent : ComponentBase
     void Update()
     {
         _main.Children.Clear();
-        if (_svc == null) return;
+        if (_svc == null || !(Settings?.ShowCountdown ?? true)) return;
         var now = DateTime.Now; var s = _svc.Settings;
         var targets = new[] { ("暑假", s.SummerStart, s.SummerEnd), ("寒假", s.WinterStart, s.WinterEnd) };
         

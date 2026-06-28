@@ -294,7 +294,7 @@ public class HolidayService
 
     // ===== 农历年度缓存 =====
 
-    public async Task<LunarInfo?> GetLunarAsync()
+    public async Task<LunarInfo?> GetLunarAsync(bool autoRefresh = true)
     {
         var today = DateTime.Now.Date;
         var monthKey = today.ToString("yyyy-MM");
@@ -307,7 +307,7 @@ public class HolidayService
             if (info != null) return info;
         }
 
-        if (!Settings.LunarAutoRefresh) return null;
+        if (!autoRefresh) return null;
 
         // 每日自动刷新一次当月数据
         await RefreshLunarMonthAsync(today.Year, today.Month);

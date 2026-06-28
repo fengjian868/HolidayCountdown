@@ -13,6 +13,7 @@ using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
 using ClassIsland.Core.Attributes;
 using HolidayCountdown.Models;
+using HolidayCountdown.Models.ComponentSettings;
 using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.Components;
@@ -23,7 +24,7 @@ namespace HolidayCountdown.Views.Components;
     "fluent(\uE9D1)",
     "记录ClassIsland运行时长，显示今日学习时长"
 )]
-public class StudyTimeComponent : ComponentBase
+public class StudyTimeComponent : ComponentBase<StudyTimeSettings>
 {
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
@@ -57,7 +58,7 @@ public class StudyTimeComponent : ComponentBase
 
     void Update()
     {
-        if (_svc == null || !_svc.Settings.StudyTimeEnabled) { _txt.Text = ""; return; }
+        if (_svc == null || !(Settings?.Enabled ?? true)) { _txt.Text = ""; return; }
 
         try
         {
@@ -66,7 +67,7 @@ public class StudyTimeComponent : ComponentBase
             _lastUpdate = now;
 
             // 若只统计已上课时长，则仅在上课状态时累加
-            if (_svc.Settings.StudyTimeCountClassTimeOnly)
+            if (Settings?.CountClassTimeOnly ?? false)
             {
                 var state = GetCurrentState();
                 if (state != 1) elapsedMinutes = 0;
@@ -84,9 +85,9 @@ public class StudyTimeComponent : ComponentBase
                 SaveStudyData(data);
 
                 var totalMinutes = data[key];
-                var icon = _svc.Settings.StudyTimeShowIcon ? "📚 " : "";
-                var timeScope = _svc.Settings.StudyTimeWeeklyReset ? "本周" : "今日";
-                var action = _svc.Settings.StudyTimeCountClassTimeOnly ? "已上课" : "已学习";
+                var icon = (Settings?.ShowIcon ?? true) ? "📚 " : "";
+                var timeScope = (Settings?.WeeklyReset ?? false) ? "本周" : "今日";
+                var action = (Settings?.CountClassTimeOnly ?? false) ? "已上课" : "已学习";
                 _txt.Text = $"{icon}{timeScope}{action} {FormatDuration(totalMinutes)}";
             }
         }
@@ -95,7 +96,7 @@ public class StudyTimeComponent : ComponentBase
 
     string GetCurrentKey()
     {
-        if (_svc?.Settings.StudyTimeWeeklyReset == true)
+        if (Settings?.WeeklyReset == true)
         {
             var now = DateTime.Now;
             return $"{now.Year}-W{ISOWeek.GetWeekOfYear(now)}";

@@ -14,6 +14,7 @@ using ClassIsland.Core.Abstractions.Controls;
 using Path = System.IO.Path;
 using ClassIsland.Core.Attributes;
 using HolidayCountdown.Models;
+using HolidayCountdown.Models.ComponentSettings;
 using HolidayCountdown.Services;
 
 namespace HolidayCountdown.Views.Components;
@@ -24,7 +25,7 @@ namespace HolidayCountdown.Views.Components;
     "fluent(\uE9CA)",
     "显示当前24节气倒计时"
 )]
-public class SolarTermComponent : ComponentBase
+public class SolarTermComponent : ComponentBase<SolarTermSettings>
 {
     private DispatcherTimer _timer = null!;
     private StackPanel _panel = null!;
@@ -250,7 +251,7 @@ public class SolarTermComponent : ComponentBase
 
             _panel.Children.Clear();
 
-            var showProgress = _svc.Settings.SolarTermShowProgressRing;
+            var showProgress = Settings?.ShowProgressRing ?? true;
 
             if (showProgress && days <= 15 && days >= 0)
             {
