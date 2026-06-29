@@ -173,9 +173,10 @@ public class ClassScheduleComponent : ComponentBase
             }
 
             if (string.IsNullOrWhiteSpace(template))
-                template = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject} 本节还剩{curRemain}";
+                template = "{curIcon}{curSubject} {curRemain} → {nextIcon}{nextSubject}";
 
             var result = template
+                // 新变量名
                 .Replace("{curIcon}", string.IsNullOrEmpty(curIcon) ? "" : $"{curIcon} ")
                 .Replace("{curSubject}", subjectName)
                 .Replace("{curRemain}", countdownText)
@@ -188,7 +189,12 @@ public class ClassScheduleComponent : ComponentBase
                 .Replace("{afterIcon}", string.IsNullOrEmpty(afterIcon) ? "" : $"{afterIcon} ")
                 .Replace("{noClassIcon}", string.IsNullOrEmpty(noClassIcon) ? "" : $"{noClassIcon} ")
                 .Replace("{text}", text)
-                .Replace("{state}", stateText);
+                .Replace("{state}", stateText)
+                // 旧变量名兼容
+                .Replace("{icon}", string.IsNullOrEmpty(curIcon) ? "" : $"{curIcon} ")
+                .Replace("{subject}", subjectName)
+                .Replace("{countdown}", countdownText)
+                .Replace("{next}", nextName);
 
             result = Regex.Replace(result, @"\s+", " ").Trim();
 

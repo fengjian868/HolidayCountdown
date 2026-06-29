@@ -51,10 +51,10 @@ public class PluginSettings
     public List<CustomHoliday> CustomHolidays { get; set; } = new();
 
     // 寒暑假
-    public DateTime SummerStart { get; set; } = new DateTime(2025, 7, 1);
-    public DateTime SummerEnd { get; set; } = new DateTime(2025, 8, 31);
-    public DateTime WinterStart { get; set; } = new DateTime(2026, 1, 15);
-    public DateTime WinterEnd { get; set; } = new DateTime(2026, 2, 13);
+    public DateTime SummerStart { get; set; } = new DateTime(2026, 7, 1);
+    public DateTime SummerEnd { get; set; } = new DateTime(2026, 8, 31);
+    public DateTime WinterStart { get; set; } = new DateTime(2027, 1, 15);
+    public DateTime WinterEnd { get; set; } = new DateTime(2027, 2, 13);
     public bool ShowVacationCountdown { get; set; } = true;
 
     // 节气颜色

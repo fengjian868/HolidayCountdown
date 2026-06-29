@@ -1107,7 +1107,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var templateBox = Text(_svc.Settings.SmartWeatherTemplate ?? "{B} {A} {C} {D}", 280, v => { _svc.Settings.SmartWeatherTemplate = v; AutoSave(); });
         var varHint = new TextBlock
         {
-            Text = "变量：{A}=温度 {B}=天气图标 {C}=预警徽章 {D}=穿衣/降雨提醒 {E}=更新状态",
+            Text = "变量：{A}=温度 {B}=天气图标 {C}=预警徽章 {D}=穿衣提醒 {E}=更新状态",
             FontSize = 11,
             Opacity = 0.6,
             TextWrapping = TextWrapping.Wrap,

@@ -18,14 +18,11 @@ public class WeatherReminderContext
     /// <summary>当前天气文本。</summary>
     public string? WeatherText { get; set; }
 
-    /// <summary>未来 24 小时预报集合（通常为完整 WeatherInfo 对象，由规则内部反射读取）。</summary>
-    public object? HourlyForecasts { get; set; }
-
-    /// <summary>未来 7 天预报集合（通常为完整 WeatherInfo 对象，由规则内部反射读取）。</summary>
-    public object? DailyForecasts { get; set; }
+    /// <summary>完整天气信息对象，供规则内部反射读取 ForecastHourly / ForecastDaily。</summary>
+    public object? WeatherInfo { get; set; }
 
     /// <summary>预警列表。</summary>
-    public object? Alerts { get; set; }
+    public IList? Alerts { get; set; }
 
     /// <summary>天气数据更新时间。</summary>
     public DateTime? UpdateTime { get; set; }

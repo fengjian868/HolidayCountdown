@@ -25,6 +25,7 @@ public class WeatherReminderEvaluator
     /// </summary>
     void RegisterRules()
     {
+        _rules.Add(new Rules.RainTimingRule());
         _rules.Add(new Rules.RainSoonRule());
         _rules.Add(new Rules.LightningNearbyRule());
         _rules.Add(new Rules.TempDropRule());

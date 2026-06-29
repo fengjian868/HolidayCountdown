@@ -157,10 +157,9 @@ public class WeatherReminderComponent : ComponentBase
                 ?? GetPropertyValue(current, "Text")?.ToString();
         }
 
-        // 规则内部会从 WeatherInfo 整体中读取 ForecastHourly / ForecastDaily，所以传整个 data
-        context.HourlyForecasts = data;
-        context.DailyForecasts = data;
-        context.Alerts = GetPropertyValue(data, "Alerts");
+        // 传完整 WeatherInfo 对象，规则内部通过反射读取 ForecastHourly / ForecastDaily
+        context.WeatherInfo = data;
+        context.Alerts = GetPropertyValue(data, "Alerts") as IList;
         context.UpdateTime = GetDateTimeProperty(data, "UpdateTime")
             ?? GetDateTimeProperty(data, "FetchTime")
             ?? GetDateTimeProperty(data, "LastUpdateTime")
