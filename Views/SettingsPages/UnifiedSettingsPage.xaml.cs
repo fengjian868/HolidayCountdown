@@ -1103,6 +1103,21 @@ public class UnifiedSettingsPage : SettingsPageBase
 
         var smartPanel = new StackPanel { Spacing = 0 };
 
+        // 和风天气 API Key
+        var apiKeyBox = Text(_svc.Settings.QWeatherApiKey ?? "", 280, v => { _svc.Settings.QWeatherApiKey = v; AutoSave(); });
+        var apiKeyHint = new TextBlock
+        {
+            Text = "在和风天气开发平台(dev.qweather.com)免费注册获取，选择Web API类型的Key。城市读取ClassIsland设置。",
+            FontSize = 11,
+            Opacity = 0.6,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 4, 0, 0)
+        };
+        BindThemeForeground(apiKeyHint);
+        var apiKeyPanel = new StackPanel { Spacing = 0, Children = { apiKeyBox, apiKeyHint } };
+        smartPanel.Children.Add(SettingItem("和风天气 API Key", "必填，用于1分钟刷新天气数据", apiKeyPanel));
+        smartPanel.Children.Add(Separator());
+
         // 模板 + 变量提示放在同一设置项内
         var templateBox = Text(_svc.Settings.SmartWeatherTemplate ?? "{B} {A} {C} {D}", 280, v => { _svc.Settings.SmartWeatherTemplate = v; AutoSave(); });
         var varHint = new TextBlock
@@ -1139,7 +1154,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         smartPanel.Children.Add(SettingItem("温度按冷暖变色", "根据温度自动调整温度文本颜色",
             Toggle(_svc.Settings.SmartWeatherTempColorEnabled, v => { _svc.Settings.SmartWeatherTempColorEnabled = v; AutoSave(); })));
 
-        s.Children.Add(Expander("智能天气", "新版彩色天气组件，含预警与 A/B/C 模板变量", smartPanel));
+        s.Children.Add(Expander("智能天气", "使用和风天气API，1分钟刷新，含预警与模板变量", smartPanel));
         return s;
     }
 

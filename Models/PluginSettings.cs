@@ -97,6 +97,7 @@ public class PluginSettings
     };
 
     // 智能天气
+    public string? QWeatherApiKey { get; set; }
     public string SmartWeatherTemplate { get; set; } = "{B} {A} {C} {D}";
     public bool SmartWeatherShowA { get; set; } = true;
     public bool SmartWeatherShowB { get; set; } = true;
