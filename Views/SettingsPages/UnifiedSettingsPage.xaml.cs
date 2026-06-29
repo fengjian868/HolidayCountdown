@@ -1589,7 +1589,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                             var notifService = genericMethod.Invoke(null, null);
                             if (notifService != null)
                             {
-                                var showMethod = notifService.GetType().GetMethod("ShowNotification", System.Reflection.BindingFlags.Public | System.Reflection.Instance);
+                                var showMethod = notifService.GetType().GetMethod("ShowNotification", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
                                 if (showMethod != null)
                                 {
                                     // 尝试调用重启提示
