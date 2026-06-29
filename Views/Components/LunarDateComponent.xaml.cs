@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
@@ -29,7 +30,10 @@ public class LunarDateComponent : ComponentBase
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.85 };
-        panel.Children.Add(new TextBlock { Text = "\u2630", FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 });
+        _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+        var iconBlock = new TextBlock { Text = "\u2630", FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 };
+        iconBlock[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+        panel.Children.Add(iconBlock);
         panel.Children.Add(_txt);
         Content = panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(30) }; _timer.Tick += (s, e) => _ = RefreshAsync(); _timer.Start();

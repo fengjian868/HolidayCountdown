@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
@@ -31,6 +32,8 @@ public class ClassScheduleComponent : ComponentBase
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
+        // 绑定主题前景色，确保在明暗主题下都可见
+        _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
         panel.Children.Add(_txt);
         Content = panel;
 
@@ -53,7 +56,7 @@ public class ClassScheduleComponent : ComponentBase
     void Update()
     {
         if (_svc == null) { _txt.Text = "加载中…"; return; }
-        if (!_svc.Settings.ClassScheduleEnabled) { _txt.Text = "课表联动已禁用"; _txt.Foreground = null; return; }
+        if (!_svc.Settings.ClassScheduleEnabled) { _txt.Text = "课表联动已禁用"; _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush"); return; }
 
         try
         {
@@ -62,7 +65,7 @@ public class ClassScheduleComponent : ComponentBase
             if (dataSource == null)
             {
                 _txt.Text = GetFallbackNoClassText();
-                _txt.Foreground = null;
+                _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
                 return;
             }
 
@@ -70,7 +73,7 @@ public class ClassScheduleComponent : ComponentBase
             if (currentStateObj == null)
             {
                 _txt.Text = GetFallbackNoClassText();
-                _txt.Foreground = null;
+                _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
                 return;
             }
 
@@ -103,11 +106,11 @@ public class ClassScheduleComponent : ComponentBase
                 if (isClassPlanEnabled == null) isClassPlanEnabled = GetPropertyValue(lessons, "IsClassPlanEnabled");
             }
 
-            if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = GetFallbackNoClassText(); _txt.Foreground = null; return; }
+            if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = GetFallbackNoClassText(); _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush"); return; }
             if (isClassPlanLoaded is bool loaded && !loaded)
             {
                 _txt.Text = GetFallbackNoClassText();
-                _txt.Foreground = null;
+                _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
                 return;
             }
 
@@ -202,14 +205,20 @@ public class ClassScheduleComponent : ComponentBase
                 result = GetFallbackNoClassText();
 
             _txt.Text = result;
-            _txt.Foreground = warning && Color.TryParse(_svc.Settings.BreakWarningColor, out var warnColor)
-                ? new SolidColorBrush(warnColor)
-                : null;
+            if (warning && Color.TryParse(_svc.Settings.BreakWarningColor, out var warnColor))
+            {
+                _txt.Foreground = new SolidColorBrush(warnColor);
+            }
+            else
+            {
+                // 恢复主题前景色绑定
+                _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+            }
         }
         catch
         {
             _txt.Text = GetFallbackNoClassText();
-            _txt.Foreground = null;
+            _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
         }
     }
 

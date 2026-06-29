@@ -6,6 +6,7 @@ using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
@@ -38,6 +39,7 @@ public class WeatherReminderComponent : ComponentBase
             TextWrapping = TextWrapping.NoWrap,
             Opacity = 0.9
         };
+        _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
         Content = new StackPanel
         {
             Orientation = Orientation.Horizontal,
