@@ -157,7 +157,7 @@ public class SmartWeatherComponent : ComponentBase
             var control = key switch
             {
                 "A" => Badge(vars.A, vars.AColor, null),
-                "B" => Badge(vars.B, vars.BColor, null),
+                "B" => Badge(vars.B, vars.BColor, null, isWeatherIcon: true),
                 "C" => WarningList(vars.CWarnings),
                 "D" => Badge(vars.D, null, null),
                 "E" => Badge(vars.E, null, Brushes.Gray),
@@ -173,16 +173,21 @@ public class SmartWeatherComponent : ComponentBase
     /// <summary>
     /// 普通文本徽章
     /// </summary>
-    Control Badge(string text, IBrush? foreground, IBrush? background)
+    Control Badge(string text, IBrush? foreground, IBrush? background, bool isWeatherIcon = false)
     {
         var baseFontSize = GetClassIslandFontSize();
         var tb = new TextBlock
         {
             Text = text,
             VerticalAlignment = VerticalAlignment.Center,
-            FontSize = baseFontSize
+            FontSize = isWeatherIcon ? baseFontSize + 2 : baseFontSize
         };
         if (foreground != null) tb.Foreground = foreground;
+        // 天气图标使用 Segoe UI Emoji，确保彩色 emoji 渲染
+        if (isWeatherIcon)
+        {
+            tb.FontFamily = new FontFamily("Segoe UI Emoji,Noto Color Emoji,Apple Color Emoji");
+        }
 
         if (background == null) return tb;
 

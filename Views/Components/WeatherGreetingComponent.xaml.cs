@@ -110,7 +110,14 @@ public class WeatherGreetingComponent : ComponentBase
                 FontSize = block.IsIcon ? baseFontSize + 2 : baseFontSize,
                 Opacity = block.IsIcon ? 1.0 : 0.95
             };
-            tb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+            if (block.IsIcon)
+            {
+                tb.FontFamily = new FontFamily("Segoe UI Emoji,Noto Color Emoji,Apple Color Emoji");
+            }
+            else
+            {
+                tb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+            }
             _panel.Children.Add(tb);
         }
 

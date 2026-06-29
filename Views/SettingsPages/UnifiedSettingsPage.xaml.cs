@@ -62,6 +62,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             ("\uE70F", "自定义", BuildCustomHolidayPanel),
             ("\uE8F3", "寒暑假", BuildVacationPanel),
             ("\uE753", "天气", BuildWeatherPanel),
+            ("\uE753", "智能", BuildSmartWeatherPanel),
             ("\uE7BE", "课表", BuildClassSchedulePanel),
             ("\uE9D1", "学习", BuildStudyTimePanel),
         };
@@ -424,47 +425,12 @@ public class UnifiedSettingsPage : SettingsPageBase
         basicPanel.Children.Add(SettingItem("考试类型", "选择中考或高考", typeCombo));
         basicPanel.Children.Add(Separator());
 
-        // 城市搜索选择框
-        var allCities = ExamDateData.SupportedCities.ToList();
-        var filteredCities = new ObservableCollection<string>(allCities);
-        var citySearchBox = new TextBox
-        {
-            Width = 160,
-            Watermark = "搜索城市...",
-            Text = _svc.Settings.ExamCity
-        };
-        var cityListBox = new ListBox
-        {
-            Width = 160,
-            MaxHeight = 150,
-            ItemsSource = filteredCities,
-            SelectedItem = _svc.Settings.ExamCity
-        };
-
-        citySearchBox.TextChanged += (a, b) =>
-        {
-            var searchText = citySearchBox.Text ?? "";
-            filteredCities.Clear();
-            foreach (var city in allCities.Where(c => c.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
-                filteredCities.Add(city);
-        };
-
-        cityListBox.SelectionChanged += (a, b) =>
-        {
-            if (cityListBox.SelectedItem is string selectedCity)
-            {
-                _svc.Settings.ExamCity = selectedCity;
-                citySearchBox.Text = selectedCity;
-                AutoSave();
-            }
-        };
-
-        var cityPanel = new StackPanel
-        {
-            Spacing = 4,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Children = { citySearchBox, cityListBox }
-        };
+        var cityPanel = SearchableCityPicker(
+            ExamDateData.SupportedCities.ToList(),
+            _svc.Settings.ExamCity,
+            "搜索城市...",
+            160,
+            selectedCity => { _svc.Settings.ExamCity = selectedCity; AutoSave(); });
         basicPanel.Children.Add(SettingItem("城市", "搜索并选择城市（如北京、上海、广州）", cityPanel));
         basicPanel.Children.Add(Separator());
         basicPanel.Children.Add(SettingItem("自定义日期", "留空则使用内置数据，格式 M-d",
@@ -481,8 +447,8 @@ public class UnifiedSettingsPage : SettingsPageBase
         stylePanel.Children.Add(SettingItem("圆环颜色", null,
             ColorPicker(_svc.Settings.ExamCountdownRingColor, c => { _svc.Settings.ExamCountdownRingColor = c; AutoSave(); })));
         stylePanel.Children.Add(Separator());
-        stylePanel.Children.Add(SettingItem("圆环开始日期", "默认 08-01，格式 MM-dd",
-            Text(_svc.Settings.ExamCountdownRingStartDate, 90, v => { _svc.Settings.ExamCountdownRingStartDate = v; AutoSave(); })));
+        stylePanel.Children.Add(SettingItem("圆环开始日期", "圆环进度从这一天开始计算，每年自动循环",
+            Date(_svc.Settings.ExamCountdownRingStartDate, d => { _svc.Settings.ExamCountdownRingStartDate = d; AutoSave(); })));
         stylePanel.Children.Add(Separator());
         stylePanel.Children.Add(SettingItem("文字颜色", null,
             ColorPicker(_svc.Settings.ExamCountdownTextColor, c => { _svc.Settings.ExamCountdownTextColor = c; AutoSave(); })));
@@ -530,43 +496,17 @@ public class UnifiedSettingsPage : SettingsPageBase
                 var city = cities[i];
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(16, 8, 16, 8) };
 
-                // 城市搜索选择
-                var allCities = WorldClockCityData.SupportedCities.ToList();
-                var filteredCities = new ObservableCollection<string>(allCities);
-                var citySearchBox = new TextBox
-                {
-                    Width = 90,
-                    Watermark = "搜索...",
-                    Text = city.Name
-                };
-                var cityListBox = new ListBox
-                {
-                    Width = 90,
-                    MaxHeight = 100,
-                    ItemsSource = filteredCities,
-                    SelectedItem = city.Name
-                };
-
-                citySearchBox.TextChanged += (a, b) =>
-                {
-                    var searchText = citySearchBox.Text ?? "";
-                    filteredCities.Clear();
-                    foreach (var c in allCities.Where(c => c.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
-                        filteredCities.Add(c);
-                };
-
-                cityListBox.SelectionChanged += (a, b) =>
-                {
-                    if (cityListBox.SelectedItem is string selectedCity)
+                var citySelectPanel = SearchableCityPicker(
+                    WorldClockCityData.SupportedCities.ToList(),
+                    city.Name,
+                    "搜索...",
+                    90,
+                    selectedCity =>
                     {
                         city.Name = selectedCity;
                         city.TimeZoneId = WorldClockCityData.GetTimeZoneId(selectedCity);
-                        citySearchBox.Text = selectedCity;
                         AutoSave();
-                    }
-                };
-
-                var citySelectPanel = new StackPanel { Spacing = 2, Children = { citySearchBox, cityListBox } };
+                    });
 
                 // 时区显示（只读，根据城市自动匹配）
                 var tzText = new TextBlock
@@ -1149,10 +1089,35 @@ public class UnifiedSettingsPage : SettingsPageBase
         layoutPanel.Children.Add(Info("可用变量: {greeting} 问候语 | {temp} 温度 | {weather} 天气 | {warning} 预警 | {icon} 天气图标"));
         s.Children.Add(Expander("排版", "自定义天气问候的显示格式", layoutPanel));
 
+        s.Children.Add(Expander("温度提醒", "自定义各温度区间的穿衣提醒文案", BuildTempPanel()));
+        s.Children.Add(Expander("天气关键词", "根据天气关键词匹配显示文案", BuildWeatherGreetingPanel()));
+
+        s.Children.Add(Info("天气数据来自ClassIsland内置天气服务，插件会自动读取当前天气并匹配对应的问候语。"));
+        return s;
+    }
+
+    Control BuildSmartWeatherPanel()
+    {
+        var s = new StackPanel { Spacing = 0 };
+        s.Children.Add(PageHeader("🌤️ 智能天气设置"));
+
         var smartPanel = new StackPanel { Spacing = 0 };
-        smartPanel.Children.Add(SettingItem("模板", null,
-            Text(_svc.Settings.SmartWeatherTemplate ?? "{A} {B} {C} {D}", 280, v => { _svc.Settings.SmartWeatherTemplate = v; AutoSave(); })));
+
+        // 模板 + 变量提示放在同一设置项内
+        var templateBox = Text(_svc.Settings.SmartWeatherTemplate ?? "{B}{A}{C}{D}", 280, v => { _svc.Settings.SmartWeatherTemplate = v; AutoSave(); });
+        var varHint = new TextBlock
+        {
+            Text = "变量：{A}=温度 {B}=天气图标 {C}=预警徽章 {D}=穿衣提醒 {E}=更新状态",
+            FontSize = 11,
+            Opacity = 0.6,
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 4, 0, 0)
+        };
+        BindThemeForeground(varHint);
+        var templatePanel = new StackPanel { Spacing = 0, Children = { templateBox, varHint } };
+        smartPanel.Children.Add(SettingItem("模板", null, templatePanel));
         smartPanel.Children.Add(Separator());
+
         smartPanel.Children.Add(SettingItem("显示温度 {A}", null,
             Toggle(_svc.Settings.SmartWeatherShowA, v => { _svc.Settings.SmartWeatherShowA = v; AutoSave(); })));
         smartPanel.Children.Add(Separator());
@@ -1173,14 +1138,8 @@ public class UnifiedSettingsPage : SettingsPageBase
         smartPanel.Children.Add(Separator());
         smartPanel.Children.Add(SettingItem("温度按冷暖变色", "根据温度自动调整温度文本颜色",
             Toggle(_svc.Settings.SmartWeatherTempColorEnabled, v => { _svc.Settings.SmartWeatherTempColorEnabled = v; AutoSave(); })));
-        smartPanel.Children.Add(Separator());
-        smartPanel.Children.Add(Info("可用变量: {A} 温度 | {B} 彩色天气图标 | {C} 预警徽章 | {D} 穿衣提醒 | {E} 更新状态"));
+
         s.Children.Add(Expander("智能天气", "新版彩色天气组件，含预警与 A/B/C 模板变量", smartPanel));
-
-        s.Children.Add(Expander("温度提醒", "自定义各温度区间的穿衣提醒文案", BuildTempPanel()));
-        s.Children.Add(Expander("天气关键词", "根据天气关键词匹配显示文案", BuildWeatherGreetingPanel()));
-
-        s.Children.Add(Info("天气数据来自ClassIsland内置天气服务，插件会自动读取当前天气并匹配对应的问候语。"));
         return s;
     }
 
@@ -1190,6 +1149,9 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("\uE7ED 天气变化提醒设置[测试版]"));
 
         var basicPanel = new StackPanel { Spacing = 0 };
+        basicPanel.Children.Add(SettingItem("启用天气变化提醒", "关闭后组件不显示任何内容",
+            Toggle(_svc.Settings.WeatherReminderEnabled, v => { _svc.Settings.WeatherReminderEnabled = v; AutoSave(); })));
+        basicPanel.Children.Add(Separator());
         var refreshOptions = new[] { "5分钟", "10分钟", "15分钟", "30分钟" };
         var refreshValues = new[] { 5, 10, 15, 30 };
         var refreshCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
@@ -1744,6 +1706,72 @@ public class UnifiedSettingsPage : SettingsPageBase
         var d = new DatePicker { SelectedDate = value };
         d.SelectedDateChanged += (s, e) => { if (d.SelectedDate.HasValue) onChanged(d.SelectedDate.Value.DateTime); };
         return d;
+    }
+
+    static Control SearchableCityPicker(IReadOnlyList<string> allItems, string selectedItem, string watermark, int width, Action<string> onSelected)
+    {
+        var filtered = new ObservableCollection<string>(allItems);
+        var textBox = new TextBox { Text = selectedItem, Width = width, Watermark = watermark };
+        var listBox = new ListBox
+        {
+            Width = width,
+            MaxHeight = 150,
+            ItemsSource = filtered,
+            IsVisible = false
+        };
+        var suppressShow = false;
+
+        void Filter()
+        {
+            var search = textBox.Text ?? "";
+            filtered.Clear();
+            foreach (var city in allItems.Where(c => c.Contains(search, StringComparison.OrdinalIgnoreCase)))
+                filtered.Add(city);
+        }
+
+        textBox.GotFocus += (s, e) =>
+        {
+            if (suppressShow) return;
+            Filter();
+            listBox.IsVisible = filtered.Count > 0;
+        };
+        textBox.TextChanged += (s, e) =>
+        {
+            if (suppressShow) return;
+            Filter();
+            listBox.IsVisible = filtered.Count > 0;
+        };
+        textBox.LostFocus += (s, e) =>
+        {
+            // 稍等一帧再隐藏，避免点击列表项时列表提前消失导致选不中
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!suppressShow) listBox.IsVisible = false;
+            }, DispatcherPriority.Background);
+        };
+
+        listBox.LostFocus += (s, e) =>
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (!suppressShow) listBox.IsVisible = false;
+            }, DispatcherPriority.Background);
+        };
+
+        listBox.SelectionChanged += (s, e) =>
+        {
+            if (listBox.SelectedItem is string city)
+            {
+                suppressShow = true;
+                textBox.Text = city;
+                onSelected(city);
+                listBox.IsVisible = false;
+                listBox.SelectedItem = null;
+                Dispatcher.UIThread.Post(() => suppressShow = false, DispatcherPriority.Background);
+            }
+        };
+
+        return new StackPanel { Spacing = 4, HorizontalAlignment = HorizontalAlignment.Right, Children = { textBox, listBox } };
     }
 
     static ColorPicker ColorPicker(string color, Action<string> onChanged)

@@ -71,6 +71,9 @@ public class WeatherReminderComponent : ComponentBase
         if (_svc == null) return;
         var minutes = _svc.Settings.WeatherReminderRefreshMinutes;
         if (minutes < 1) minutes = 10;
+        // 启用“变化时立即刷新”后，使用 1 分钟间隔快速响应天气变化
+        if (_svc.Settings.WeatherReminderShowImmediatelyOnChange && minutes > 1)
+            minutes = 1;
         _timer.Interval = TimeSpan.FromMinutes(minutes);
     }
 
@@ -112,7 +115,12 @@ public class WeatherReminderComponent : ComponentBase
 
             if (results.Count == 0)
             {
-                _txt.Text = "";
+                // 数据未刷新或不可用时给出占位提示，方便排查
+                if (context.UpdateTime == null || (DateTime.Now - context.UpdateTime.Value).TotalMinutes >= 30)
+                    _txt.Text = "天气未更新";
+                else
+                    _txt.Text = "暂无天气变化提醒";
+                _txt.FontSize = GetClassIslandFontSize();
                 _lastResults = results;
                 return;
             }
@@ -149,9 +157,10 @@ public class WeatherReminderComponent : ComponentBase
                 ?? GetPropertyValue(current, "Text")?.ToString();
         }
 
-        context.HourlyForecasts = GetPropertyValue(data, "ForecastHourly") as IList;
-        context.DailyForecasts = GetPropertyValue(data, "ForecastDaily") as IList;
-        context.Alerts = GetPropertyValue(data, "Alerts") as IList;
+        // 规则内部会从 WeatherInfo 整体中读取 ForecastHourly / ForecastDaily，所以传整个 data
+        context.HourlyForecasts = data;
+        context.DailyForecasts = data;
+        context.Alerts = GetPropertyValue(data, "Alerts");
         context.UpdateTime = GetDateTimeProperty(data, "UpdateTime")
             ?? GetDateTimeProperty(data, "FetchTime")
             ?? GetDateTimeProperty(data, "LastUpdateTime")

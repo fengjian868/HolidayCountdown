@@ -111,7 +111,7 @@ public class PluginSettings
     public int WeatherGreetingRefreshMinutes { get; set; } = 10;
 
     // 天气变化提醒（测试版）
-    public bool WeatherReminderEnabled { get; set; } = false;
+    public bool WeatherReminderEnabled { get; set; } = true;
     public int WeatherReminderRefreshMinutes { get; set; } = 10;
     public int WeatherReminderMaxDisplayCount { get; set; } = 3;
     public bool WeatherReminderShowImmediatelyOnChange { get; set; } = true;
@@ -157,7 +157,7 @@ public class PluginSettings
     public string ExamCountdownTextColor { get; set; } = "#FF2196F3";
     public string ExamCountdownRingColor { get; set; } = "#FFFF5252";
     public bool ExamCountdownShowRing { get; set; } = true;
-    public string ExamCountdownRingStartDate { get; set; } = "08-01";
+    public DateTime ExamCountdownRingStartDate { get; set; } = new DateTime(2025, 8, 1);
     public bool ExamCountdownShowBackground { get; set; } = true;
     public string ExamCountdownBackgroundColor { get; set; } = "#502196F3";
     public int ExamCountdownFontSize { get; set; } = 0;
