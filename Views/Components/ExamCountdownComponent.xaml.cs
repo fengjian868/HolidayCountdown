@@ -18,7 +18,7 @@ namespace HolidayCountdown.Views.Components;
 
 [ComponentInfo(
     "F1A2B3C4-D5E6-7890-1234-567890ABCDEF",
-    "大考倒计时",
+    "大考倒计时[测试版]",
     "fluent(\uE921)",
     "显示中考/高考倒计时，内置全国各地考试时间，每年自动刷新"
 )]
@@ -26,37 +26,53 @@ public class ExamCountdownComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
+    private TextBlock _daysInRing = null!;
     private Arc _ringTrack = null!;
     private Arc _ringProgress = null!;
+    private Grid _ringGrid = null!;
     private HolidayService _svc = new();
 
     public ExamCountdownComponent()
     {
+        // 圆环大小改为 32x32，类似节假日倒计时
+        const double ringSize = 32;
+        const double ringThickness = 2.5;
+
         _ringTrack = new Arc
         {
-            Width = 12,
-            Height = 12,
-            StartAngle = 0,
+            Width = ringSize,
+            Height = ringSize,
+            StartAngle = -90,
             SweepAngle = 360,
-            StrokeThickness = 2,
+            StrokeThickness = ringThickness,
             StrokeLineCap = PenLineCap.Round,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
         _ringProgress = new Arc
         {
-            Width = 12,
-            Height = 12,
+            Width = ringSize,
+            Height = ringSize,
             StartAngle = -90,
-            StrokeThickness = 2,
+            SweepAngle = 0, // 动态设置进度
+            StrokeThickness = ringThickness,
             StrokeLineCap = PenLineCap.Round,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
 
-        var ringGrid = new Grid { Width = 12, Height = 12, Margin = new Thickness(0, 0, 6, 0) };
-        ringGrid.Children.Add(_ringTrack);
-        ringGrid.Children.Add(_ringProgress);
+        _daysInRing = new TextBlock
+        {
+            FontSize = 11,
+            FontWeight = FontWeight.Bold,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        _ringGrid = new Grid { Width = ringSize, Height = ringSize, Margin = new Thickness(0, 0, 8, 0) };
+        _ringGrid.Children.Add(_ringTrack);
+        _ringGrid.Children.Add(_ringProgress);
+        _ringGrid.Children.Add(_daysInRing);
 
         _txt = new TextBlock
         {
@@ -66,13 +82,12 @@ public class ExamCountdownComponent : ComponentBase
             FontWeight = FontWeight.SemiBold
         };
 
-        // 直接圆环 + 文字，无背景块
         Content = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Children = { ringGrid, _txt }
+            Children = { _ringGrid, _txt }
         };
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
@@ -111,13 +126,21 @@ public class ExamCountdownComponent : ComponentBase
             if (Color.TryParse(_svc.Settings.ExamCountdownTextColor, out var fg))
                 _txt.Foreground = new SolidColorBrush(fg);
 
+            // 圆环显示
             var ringVisible = _svc.Settings.ExamCountdownShowRing;
-            _ringTrack.IsVisible = ringVisible;
-            _ringProgress.IsVisible = ringVisible;
-            if (ringVisible && Color.TryParse(_svc.Settings.ExamCountdownRingColor, out var ringColor))
+            _ringGrid.IsVisible = ringVisible;
+            if (ringVisible)
             {
-                _ringTrack.Stroke = new SolidColorBrush(ringColor) { Opacity = 0.25 };
-                _ringProgress.Stroke = new SolidColorBrush(ringColor);
+                // 圆环内显示天数数字
+                _daysInRing.Text = Math.Max(0, days).ToString();
+
+                if (Color.TryParse(_svc.Settings.ExamCountdownRingColor, out var ringColor))
+                {
+                    _ringTrack.Stroke = new SolidColorBrush(ringColor) { Opacity = 0.2 };
+                    _ringProgress.Stroke = new SolidColorBrush(ringColor);
+                    _daysInRing.Foreground = new SolidColorBrush(ringColor);
+                }
+
                 var progress = ComputeRingProgress(examDate);
                 _ringProgress.SweepAngle = Math.Max(0, Math.Min(360, progress * 360));
             }

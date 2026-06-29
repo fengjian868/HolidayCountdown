@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -422,8 +423,49 @@ public class UnifiedSettingsPage : SettingsPageBase
         typeCombo.SelectionChanged += (a, b) => { _svc.Settings.ExamType = typeCombo.SelectedIndex; AutoSave(); };
         basicPanel.Children.Add(SettingItem("考试类型", "选择中考或高考", typeCombo));
         basicPanel.Children.Add(Separator());
-        basicPanel.Children.Add(SettingItem("城市", "输入具体城市名，如 北京、上海、广州",
-            Text(_svc.Settings.ExamCity, 160, v => { _svc.Settings.ExamCity = v; AutoSave(); })));
+
+        // 城市搜索选择框
+        var allCities = ExamDateData.SupportedCities.ToList();
+        var filteredCities = new ObservableCollection<string>(allCities);
+        var citySearchBox = new TextBox
+        {
+            Width = 160,
+            Watermark = "搜索城市...",
+            Text = _svc.Settings.ExamCity
+        };
+        var cityListBox = new ListBox
+        {
+            Width = 160,
+            MaxHeight = 150,
+            ItemsSource = filteredCities,
+            SelectedItem = _svc.Settings.ExamCity
+        };
+
+        citySearchBox.TextChanged += (a, b) =>
+        {
+            var searchText = citySearchBox.Text ?? "";
+            filteredCities.Clear();
+            foreach (var city in allCities.Where(c => c.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
+                filteredCities.Add(city);
+        };
+
+        cityListBox.SelectionChanged += (a, b) =>
+        {
+            if (cityListBox.SelectedItem is string selectedCity)
+            {
+                _svc.Settings.ExamCity = selectedCity;
+                citySearchBox.Text = selectedCity;
+                AutoSave();
+            }
+        };
+
+        var cityPanel = new StackPanel
+        {
+            Spacing = 4,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Children = { citySearchBox, cityListBox }
+        };
+        basicPanel.Children.Add(SettingItem("城市", "搜索并选择城市（如北京、上海、广州）", cityPanel));
         basicPanel.Children.Add(Separator());
         basicPanel.Children.Add(SettingItem("自定义日期", "留空则使用内置数据，格式 M-d",
             Text(_svc.Settings.ExamCountdownCustomDate ?? "", 120, v => { _svc.Settings.ExamCountdownCustomDate = string.IsNullOrWhiteSpace(v) ? null : v; AutoSave(); })));
@@ -450,10 +492,10 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("样式", "圆环、颜色与字体", stylePanel));
 
         var textPanel = new StackPanel { Spacing = 0 };
-        textPanel.Children.Add(SettingItem("倒计时文案", "变量：{exam} {days} {date}",
+        textPanel.Children.Add(SettingItem("倒计时文案", "变量：{exam}=考试名 {days}=剩余天数 {date}=考试日期",
             Text(_svc.Settings.ExamCountdownCustomText, 260, v => { _svc.Settings.ExamCountdownCustomText = v; AutoSave(); })));
         textPanel.Children.Add(Separator());
-        textPanel.Children.Add(SettingItem("当天文案", "变量：{exam} {date}",
+        textPanel.Children.Add(SettingItem("当天文案", "变量：{exam}=考试名 {date}=考试日期",
             Text(_svc.Settings.ExamCountdownTodayText, 260, v => { _svc.Settings.ExamCountdownTodayText = v; AutoSave(); })));
         s.Children.Add(Expander("文案", "自定义显示文字", textPanel));
 
@@ -487,17 +529,68 @@ public class UnifiedSettingsPage : SettingsPageBase
             {
                 var city = cities[i];
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(16, 8, 16, 8) };
-                var nameBox = Text(city.Name, 90, v => { city.Name = v; AutoSave(); });
-                var tzBox = Text(city.TimeZoneId, 180, v => { city.TimeZoneId = v; AutoSave(); });
+
+                // 城市搜索选择
+                var allCities = WorldClockCityData.SupportedCities.ToList();
+                var filteredCities = new ObservableCollection<string>(allCities);
+                var citySearchBox = new TextBox
+                {
+                    Width = 90,
+                    Watermark = "搜索...",
+                    Text = city.Name
+                };
+                var cityListBox = new ListBox
+                {
+                    Width = 90,
+                    MaxHeight = 100,
+                    ItemsSource = filteredCities,
+                    SelectedItem = city.Name
+                };
+
+                citySearchBox.TextChanged += (a, b) =>
+                {
+                    var searchText = citySearchBox.Text ?? "";
+                    filteredCities.Clear();
+                    foreach (var c in allCities.Where(c => c.Contains(searchText, StringComparison.OrdinalIgnoreCase)))
+                        filteredCities.Add(c);
+                };
+
+                cityListBox.SelectionChanged += (a, b) =>
+                {
+                    if (cityListBox.SelectedItem is string selectedCity)
+                    {
+                        city.Name = selectedCity;
+                        city.TimeZoneId = WorldClockCityData.GetTimeZoneId(selectedCity);
+                        citySearchBox.Text = selectedCity;
+                        AutoSave();
+                    }
+                };
+
+                var citySelectPanel = new StackPanel { Spacing = 2, Children = { citySearchBox, cityListBox } };
+
+                // 时区显示（只读，根据城市自动匹配）
+                var tzText = new TextBlock
+                {
+                    Text = city.TimeZoneId,
+                    Width = 180,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Opacity = 0.7,
+                    FontSize = 11
+                };
+                BindThemeForeground(tzText);
+
                 var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
                 delBtn.Click += (a, e) => { _svc.Settings.WorldClockCities.Remove(city); AutoSave(); RefreshCities(); };
 
                 var nameLabel = new TextBlock { Text = "城市", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
                 BindThemeForeground(nameLabel);
-                var tzLabel = new TextBlock { Text = "时区", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
+                var tzLabel = new TextBlock { Text = "时区（自动）", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.6, FontSize = 11 };
                 BindThemeForeground(tzLabel);
-                row.Children.Add(nameLabel); row.Children.Add(nameBox);
-                row.Children.Add(tzLabel); row.Children.Add(tzBox); row.Children.Add(delBtn);
+                row.Children.Add(nameLabel);
+                row.Children.Add(citySelectPanel);
+                row.Children.Add(tzLabel);
+                row.Children.Add(tzText);
+                row.Children.Add(delBtn);
                 citiesPanel.Children.Add(row);
                 if (i < cities.Count - 1) citiesPanel.Children.Add(Separator());
             }
@@ -511,13 +604,13 @@ public class UnifiedSettingsPage : SettingsPageBase
         {
             if (_svc.Settings.WorldClockCities.Count < 5)
             {
-                _svc.Settings.WorldClockCities.Add(new WorldClockCity { Name = "新城市", TimeZoneId = "China Standard Time" });
+                _svc.Settings.WorldClockCities.Add(new WorldClockCity { Name = "北京", TimeZoneId = "China Standard Time" });
                 AutoSave();
                 RefreshCities();
             }
         };
         listPanel.Children.Add(addBtn);
-        listPanel.Children.Add(Info("最多 5 个城市，时区 ID 如：China Standard Time、Tokyo Standard Time、Pacific Standard Time"));
+        listPanel.Children.Add(Info("最多 5 个城市，选择城市后时区自动匹配"));
         s.Children.Add(Expander("城市", "管理显示的城市与时区", listPanel));
 
         return s;
@@ -1097,10 +1190,6 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("\uE7ED 天气变化提醒设置[测试版]"));
 
         var basicPanel = new StackPanel { Spacing = 0 };
-        basicPanel.Children.Add(SettingItem("启用天气变化提醒", "关闭后组件不显示任何内容",
-            Toggle(_svc.Settings.WeatherReminderEnabled, v => { _svc.Settings.WeatherReminderEnabled = v; AutoSave(); })));
-        basicPanel.Children.Add(Separator());
-
         var refreshOptions = new[] { "5分钟", "10分钟", "15分钟", "30分钟" };
         var refreshValues = new[] { 5, 10, 15, 30 };
         var refreshCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
@@ -1119,7 +1208,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         basicPanel.Children.Add(Separator());
         basicPanel.Children.Add(SettingItem("变化时立即刷新", "检测到天气变化时立即更新显示",
             Toggle(_svc.Settings.WeatherReminderShowImmediatelyOnChange, v => { _svc.Settings.WeatherReminderShowImmediatelyOnChange = v; AutoSave(); })));
-        s.Children.Add(Expander("基础设置", "天气变化提醒总开关与刷新策略", basicPanel));
+        s.Children.Add(Expander("基础设置", "天气变化提醒刷新策略", basicPanel));
 
         var rulePanel = new StackPanel { Spacing = 0 };
         var evaluator = new WeatherReminderEvaluator(_svc);
