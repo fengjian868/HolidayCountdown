@@ -33,10 +33,15 @@ public class ClassScheduleComponent : ComponentBase
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
         panel.Children.Add(_txt);
         Content = panel;
+
+        // 同步初始化服务，避免首次 tick 时空白
+        _svc = new HolidayService();
+        HolidayService.SettingsChanged += OnSettingsChanged;
+
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (s, e) => Update();
         _timer.Start();
-        Dispatcher.UIThread.Post(() => { _svc = new HolidayService(); HolidayService.SettingsChanged += OnSettingsChanged; Update(); });
+        Update();
     }
 
     void OnSettingsChanged()
@@ -47,7 +52,9 @@ public class ClassScheduleComponent : ComponentBase
 
     void Update()
     {
-        if (_svc == null || !_svc.Settings.ClassScheduleEnabled) { _txt.Text = ""; return; }
+        if (_svc == null) { _txt.Text = "加载中…"; return; }
+        if (!_svc.Settings.ClassScheduleEnabled) { _txt.Text = "课表联动已禁用"; _txt.Foreground = null; return; }
+
         try
         {
             // 优先从 MainViewModel 读取 UI 相关属性，其次 LessonsService
@@ -55,6 +62,7 @@ public class ClassScheduleComponent : ComponentBase
             if (dataSource == null)
             {
                 _txt.Text = GetFallbackNoClassText();
+                _txt.Foreground = null;
                 return;
             }
 
@@ -62,10 +70,18 @@ public class ClassScheduleComponent : ComponentBase
             if (currentStateObj == null)
             {
                 _txt.Text = GetFallbackNoClassText();
+                _txt.Foreground = null;
                 return;
             }
 
-            int state = currentStateObj is int i ? i : (int)currentStateObj;
+            // 处理 TimeState 枚举（可空枚举需先解包）
+            int state;
+            var stateType = currentStateObj.GetType();
+            if (currentStateObj is int i) state = i;
+            else if (Nullable.GetUnderlyingType(stateType) != null)
+                state = (int)Convert.ChangeType(currentStateObj, Nullable.GetUnderlyingType(stateType)!);
+            else
+                state = (int)currentStateObj;
             // TimeState: 0=None, 1=OnClass, 2=PrepareOnClass, 3=Breaking, 4=AfterSchool
 
             var currentSubject = GetPropertyValue(dataSource, "CurrentSubject");
@@ -87,10 +103,11 @@ public class ClassScheduleComponent : ComponentBase
                 if (isClassPlanEnabled == null) isClassPlanEnabled = GetPropertyValue(lessons, "IsClassPlanEnabled");
             }
 
-            if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = GetFallbackNoClassText(); return; }
+            if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = GetFallbackNoClassText(); _txt.Foreground = null; return; }
             if (isClassPlanLoaded is bool loaded && !loaded)
             {
                 _txt.Text = GetFallbackNoClassText();
+                _txt.Foreground = null;
                 return;
             }
 
@@ -175,12 +192,19 @@ public class ClassScheduleComponent : ComponentBase
 
             result = Regex.Replace(result, @"\s+", " ").Trim();
 
+            if (string.IsNullOrWhiteSpace(result))
+                result = GetFallbackNoClassText();
+
             _txt.Text = result;
             _txt.Foreground = warning && Color.TryParse(_svc.Settings.BreakWarningColor, out var warnColor)
                 ? new SolidColorBrush(warnColor)
                 : null;
         }
-        catch { _txt.Text = GetFallbackNoClassText(); }
+        catch
+        {
+            _txt.Text = GetFallbackNoClassText();
+            _txt.Foreground = null;
+        }
     }
 
     string GetNoClassText()
