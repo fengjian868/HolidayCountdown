@@ -92,21 +92,19 @@ public class ClassScheduleComponent : ComponentBase
             var isClassPlanLoaded = GetPropertyValue(dataSource, "IsClassPlanLoaded");
             var isClassPlanEnabled = GetPropertyValue(dataSource, "IsClassPlanEnabled");
 
-            // 若数据源本身没有这些属性，尝试从 LessonsService 再读一次
+            // 优先用 LessonsService 读取核心课表数据（MainViewModel 只是 UI 同步，可能缺字段/不同步）
             var lessons = GetLessonsService();
             if (lessons != null && !ReferenceEquals(dataSource, lessons))
             {
-                if (currentSubject == null) currentSubject = GetPropertyValue(lessons, "CurrentSubject");
-                if (nextSubject == null) nextSubject = GetPropertyValue(lessons, "NextSubject");
-                if (isClassPlanLoaded == null) isClassPlanLoaded = GetPropertyValue(lessons, "IsClassPlanLoaded");
-                if (isClassPlanEnabled == null) isClassPlanEnabled = GetPropertyValue(lessons, "IsClassPlanEnabled");
+                currentSubject = GetPropertyValue(lessons, "CurrentSubject");
+                nextSubject = GetPropertyValue(lessons, "NextSubject");
+                isClassPlanLoaded = GetPropertyValue(lessons, "IsClassPlanLoaded");
+                isClassPlanEnabled = GetPropertyValue(lessons, "IsClassPlanEnabled");
             }
 
-            // 读取倒计时：优先 dataSource，读不到再用 LessonsService，确保上课/课间倒计时可用
-            var onClassLeftTime = ReadTimeSpan(dataSource, "OnClassLeftTime")
-                               ?? ReadTimeSpan(lessons, "OnClassLeftTime");
-            var onBreakingTimeLeftTime = ReadTimeSpan(dataSource, "OnBreakingTimeLeftTime")
-                                      ?? ReadTimeSpan(lessons, "OnBreakingTimeLeftTime");
+            // 读取倒计时：优先 LessonsService，确保上课/课间倒计时可用
+            var onClassLeftTime = ReadTimeSpan(lessons, "OnClassLeftTime");
+            var onBreakingTimeLeftTime = ReadTimeSpan(lessons, "OnBreakingTimeLeftTime");
 
             if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = GetFallbackNoClassText(); _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush"); return; }
             if (isClassPlanLoaded is bool loaded && !loaded)
@@ -266,16 +264,17 @@ public class ClassScheduleComponent : ComponentBase
 
     string GetNextSubjectName(object dataSource, object? currentSubject, object? nextSubject)
     {
-        // 1. 优先读取下一节课的科目（ClassIsland 提供，已排除课间）
-        var nextClassSubject = GetPropertyValue(dataSource, "NextClassSubject");
+        // 1. 优先读取 LessonsService.NextClassSubject（真正的下一节课科目）
+        var lessons = GetLessonsService();
+        var nextClassSubject = GetPropertyValue(lessons, "NextClassSubject");
         if (nextClassSubject != null)
         {
             var name = GetSubjectName(nextClassSubject);
             if (!string.IsNullOrEmpty(name)) return name;
         }
 
-        // 2. 尝试 NextClassTimeLayoutItem.Subject
-        var nextClassItem = GetPropertyValue(dataSource, "NextClassTimeLayoutItem");
+        // 2. 尝试 LessonsService.NextClassTimeLayoutItem.Subject
+        var nextClassItem = GetPropertyValue(lessons, "NextClassTimeLayoutItem");
         if (IsLessonTimeLayoutItem(nextClassItem))
         {
             var subj = GetPropertyValue(nextClassItem, "Subject");
@@ -288,32 +287,41 @@ public class ClassScheduleComponent : ComponentBase
             if (!string.IsNullOrEmpty(name2)) return name2;
         }
 
-        // 3. 兼容：直接尝试 NextSubject.Name
+        // 3. 兼容：dataSource 的 NextClassSubject / NextClassTimeLayoutItem
+        nextClassSubject = GetPropertyValue(dataSource, "NextClassSubject");
+        if (nextClassSubject != null)
+        {
+            var name = GetSubjectName(nextClassSubject);
+            if (!string.IsNullOrEmpty(name)) return name;
+        }
+        nextClassItem = GetPropertyValue(dataSource, "NextClassTimeLayoutItem");
+        if (IsLessonTimeLayoutItem(nextClassItem))
+        {
+            var subj = GetPropertyValue(nextClassItem, "Subject");
+            if (subj != null)
+            {
+                var name = GetSubjectName(subj);
+                if (!string.IsNullOrEmpty(name)) return name;
+            }
+            var name2 = GetSubjectName(nextClassItem);
+            if (!string.IsNullOrEmpty(name2)) return name2;
+        }
+
+        // 4. 兼容：NextSubject.Name
         if (nextSubject != null)
         {
             var name = GetSubjectName(nextSubject);
             if (!string.IsNullOrEmpty(name)) return name;
         }
 
-        // 4. 尝试 NextTimeLayoutItem.Subject.Name（若不是课间项）
-        var nextItem = GetPropertyValue(dataSource, "NextTimeLayoutItem");
-        if (IsLessonTimeLayoutItem(nextItem))
-        {
-            var subj = GetPropertyValue(nextItem, "Subject");
-            if (subj != null)
-            {
-                var name = GetSubjectName(subj);
-                if (!string.IsNullOrEmpty(name)) return name;
-            }
-            var name2 = GetSubjectName(nextItem);
-            if (!string.IsNullOrEmpty(name2)) return name2;
-        }
-
-        // 5. 尝试 CurrentTimeLayoutItem 后面的第一个上课项目
-        var currentItem = GetPropertyValue(dataSource, "CurrentTimeLayoutItem");
+        // 5. 兜底：从 CurrentTimeLayoutItem 向后找第一个上课项目
+        var currentItem = GetPropertyValue(lessons, "CurrentTimeLayoutItem")
+                       ?? GetPropertyValue(dataSource, "CurrentTimeLayoutItem");
         if (currentItem != null)
         {
-            var timeLayout = GetPropertyValue(dataSource, "CurrentTimeLayout")
+            var timeLayout = GetPropertyValue(lessons, "CurrentTimeLayout")
+                          ?? GetPropertyValue(dataSource, "CurrentTimeLayout")
+                          ?? GetPropertyValue(lessons, "TimeLayout")
                           ?? GetPropertyValue(dataSource, "TimeLayout");
             if (timeLayout != null)
             {
@@ -348,10 +356,6 @@ public class ClassScheduleComponent : ComponentBase
                 }
             }
         }
-
-        // 6. 兜底：当前科目不为空时直接用它作为 next（至少不空）
-        var currentName = GetSubjectName(currentSubject);
-        if (!string.IsNullOrEmpty(currentName)) return currentName;
 
         return "";
     }
