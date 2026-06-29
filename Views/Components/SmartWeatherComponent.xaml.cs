@@ -20,20 +20,21 @@ namespace HolidayCountdown.Views.Components;
     "A1B2C3D4-E5F6-7890-1234-567890ABCDEF",
     "智能天气[测试版]",
     "fluent(\uE753)",
-    "使用和风天气API，1分钟刷新，含彩色图标与预警"
+    "使用免费Open-Meteo API，1分钟刷新，含彩色图标、预警、下雨/停雨倒计时"
 )]
 public class SmartWeatherComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
     private StackPanel _root = null!;
     private HolidayService? _svc;
-    private QWeatherService? _qweather;
-    private string? _lastLocationId;
+    private OpenMeteoService? _openMeteo;
     private string? _lastCityName;
+    private double? _lastLat;
+    private double? _lastLon;
 
     // 缓存天气数据，避免每秒 tick 都请求 API
-    private QWeatherService.QWeatherNowResponse? _cachedNow;
-    private QWeatherService.QWeatherWarningResponse? _cachedWarnings;
+    private OpenMeteoService.WeatherResponse? _cachedWeather;
+    private string[] _cachedClWarnings = Array.Empty<string>();
     private DateTime _lastFetchTime = DateTime.MinValue;
 
     public SmartWeatherComponent()
@@ -64,7 +65,8 @@ public class SmartWeatherComponent : ComponentBase
         _svc?.LoadSettings();
         // 城市可能变了，清空缓存
         _lastCityName = null;
-        _lastLocationId = null;
+        _lastLat = null;
+        _lastLon = null;
         Dispatcher.UIThread.Post(FetchAndUpdate);
     }
 
@@ -74,19 +76,8 @@ public class SmartWeatherComponent : ComponentBase
 
         try
         {
-            var apiKey = _svc.Settings.QWeatherApiKey;
-            if (string.IsNullOrEmpty(apiKey))
-            {
-                Dispatcher.UIThread.Post(() => RenderNoKey());
-                return;
-            }
-
-            // 初始化 QWeatherService
-            if (_qweather == null || _qweather.ApiKey != apiKey)
-            {
-                _qweather = new QWeatherService { ApiKey = apiKey };
-                _lastLocationId = null;
-            }
+            if (_openMeteo == null)
+                _openMeteo = new OpenMeteoService();
 
             // 读取 ClassIsland 设置的城市
             var cityName = GetClassIslandCityName();
@@ -96,26 +87,27 @@ public class SmartWeatherComponent : ComponentBase
                 return;
             }
 
-            // 城市变了，重新查找 LocationId
-            if (cityName != _lastCityName)
+            // 城市变了，重新地理编码
+            if (cityName != _lastCityName || _lastLat == null || _lastLon == null)
             {
                 _lastCityName = cityName;
-                _lastLocationId = await _qweather.GetCityLocationId(cityName);
+                var geo = await _openMeteo.GeocodeAsync(cityName);
+                if (geo == null)
+                {
+                    Dispatcher.UIThread.Post(() => RenderNoCity());
+                    return;
+                }
+                _lastLat = geo.Latitude;
+                _lastLon = geo.Longitude;
             }
 
-            if (string.IsNullOrEmpty(_lastLocationId))
-            {
-                Dispatcher.UIThread.Post(() => RenderNoCity());
-                return;
-            }
+            // 并行请求 Open-Meteo 天气和 ClassIsland 预警（Open-Meteo 没有中国预警数据）
+            var weatherTask = _openMeteo.GetWeatherAsync(_lastLat.Value, _lastLon.Value);
+            var clWarningTask = Task.Run(() => GetClassIslandWarnings());
+            await Task.WhenAll(weatherTask, clWarningTask);
 
-            // 并行请求实时天气和预警
-            var nowTask = _qweather.GetWeatherNowAsync(_lastLocationId);
-            var warningTask = _qweather.GetWarningsAsync(_lastLocationId);
-            await Task.WhenAll(nowTask, warningTask);
-
-            _cachedNow = nowTask.Result;
-            _cachedWarnings = warningTask.Result;
+            _cachedWeather = weatherTask.Result;
+            _cachedClWarnings = clWarningTask.Result;
             _lastFetchTime = DateTime.Now;
 
             Dispatcher.UIThread.Post(RenderFromCache);
@@ -146,43 +138,41 @@ public class SmartWeatherComponent : ComponentBase
     WeatherData BuildWeatherData()
     {
         double? temp = null;
+        double? humidity = null;
         string? weatherText = null;
         string? weatherCode = null;
         DateTime? updateTime = null;
 
-        if (_cachedNow?.Now != null)
+        if (_cachedWeather?.Current != null)
         {
-            var now = _cachedNow.Now;
-            if (double.TryParse(now.Temp, out var t)) temp = t;
-            weatherText = now.Text;
-            weatherCode = now.Icon;
-            if (DateTime.TryParse(_cachedNow.UpdateTime, out var ut)) updateTime = ut;
+            var current = _cachedWeather.Current;
+            temp = current.Temperature2m;
+            humidity = current.RelativeHumidity2m;
+            weatherCode = current.WeatherCode?.ToString();
+            weatherText = GetWeatherTextByWmoCode(current.WeatherCode ?? -1);
+            if (DateTime.TryParse(current.Time, out var ut)) updateTime = ut;
         }
 
-        // 预警
-        var warnings = Array.Empty<string>();
-        if (_cachedWarnings?.Warning != null && _cachedWarnings.Warning.Count > 0)
+        // 下雨/停雨倒计时
+        string? rainInfo = null;
+        if (_cachedWeather?.Hourly != null)
         {
-            warnings = _cachedWarnings.Warning
-                .Where(w => !string.IsNullOrEmpty(w.Title))
-                .Select(w => w.Title!)
-                .ToArray();
+            var hourly = _cachedWeather.Hourly.ToHourlyDataList();
+            var (isRainingNow, minutes, changeType) = OpenMeteoService.GetRainInfo(hourly);
+            if (minutes.HasValue && minutes.Value > 0)
+            {
+                if (isRainingNow)
+                    rainInfo = $"{minutes}分钟后停雨";
+                else
+                    rainInfo = $"{minutes}分钟后下雨";
+            }
+            else if (isRainingNow)
+            {
+                rainInfo = "正在下雨";
+            }
         }
 
-        return new WeatherData(temp, weatherCode, weatherText, warnings, updateTime);
-    }
-
-    void RenderNoKey()
-    {
-        _root.Children.Clear();
-        var tb = new TextBlock
-        {
-            Text = "请设置和风天气API Key",
-            VerticalAlignment = VerticalAlignment.Center,
-            Opacity = 0.8
-        };
-        tb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
-        _root.Children.Add(tb);
+        return new WeatherData(temp, weatherCode, weatherText, _cachedClWarnings, updateTime, humidity, rainInfo);
     }
 
     void RenderNoCity()
@@ -241,6 +231,36 @@ public class SmartWeatherComponent : ComponentBase
         catch { return null; }
     }
 
+    /// <summary>
+    /// 从 ClassIsland 读取天气预警信息（Open-Meteo 没有中国预警）
+    /// </summary>
+    string[] GetClassIslandWarnings()
+    {
+        try
+        {
+            var settings = GetSettingsServiceSettings();
+            if (settings == null) return Array.Empty<string>();
+
+            var lastWeatherInfo = GetPropertyValue(settings, "LastWeatherInfo");
+            if (lastWeatherInfo == null) return Array.Empty<string>();
+
+            var alerts = GetPropertyValue(lastWeatherInfo, "Alerts") as System.Collections.IEnumerable;
+            if (alerts == null) return Array.Empty<string>();
+
+            var result = new List<string>();
+            foreach (var alert in alerts)
+            {
+                var title = GetPropertyValue(alert, "Title")?.ToString()
+                         ?? GetPropertyValue(alert, "TypeName")?.ToString()
+                         ?? GetPropertyValue(alert, "Type")?.ToString();
+                if (!string.IsNullOrEmpty(title))
+                    result.Add(title);
+            }
+            return result.ToArray();
+        }
+        catch { return Array.Empty<string>(); }
+    }
+
     double GetClassIslandFontSize()
     {
         try
@@ -284,7 +304,7 @@ public class SmartWeatherComponent : ComponentBase
             .Select(g => g.First())
             .ToList();
 
-        // D: 穿衣/出行提醒
+        // D: 穿衣/出行/下雨提醒
         vars.D = GetReminder(data);
 
         // E: 更新时间/状态
@@ -402,17 +422,24 @@ public class SmartWeatherComponent : ComponentBase
 
     string GetReminder(WeatherData data)
     {
+        var parts = new List<string>();
+
+        // 下雨/停雨倒计时
+        if (!string.IsNullOrEmpty(data.RainInfo))
+            parts.Add(data.RainInfo);
+
+        // 自定义温度问候
         if (data.Temp.HasValue && _svc?.Settings.TempGreetings.Count > 0)
         {
             var match = _svc.Settings.TempGreetings
                 .FirstOrDefault(x => data.Temp.Value >= x.MinTemp && data.Temp.Value <= x.MaxTemp);
-            if (match != null && !string.IsNullOrEmpty(match.Text)) return match.Text;
+            if (match != null && !string.IsNullOrEmpty(match.Text))
+                parts.Add(match.Text);
         }
-
-        if (data.Temp.HasValue)
+        else if (data.Temp.HasValue)
         {
             var t = data.Temp.Value;
-            return t switch
+            var text = t switch
             {
                 >= 35 => "高温预警，注意防暑 \uD83C\uDF21️",
                 >= 30 => "很热，穿短袖注意防晒 ☀️",
@@ -424,8 +451,10 @@ public class SmartWeatherComponent : ComponentBase
                 >= 0 => "很冷，注意保暖 \uD83E\uDD76",
                 _ => "严寒，多穿点别冻着 \uD83E\uDDCA"
             };
+            parts.Add(text);
         }
 
+        // 天气关键字问候
         if (!string.IsNullOrEmpty(data.WeatherText))
         {
             var match = _svc?.Settings.WeatherGreetingItems
@@ -438,10 +467,11 @@ public class SmartWeatherComponent : ComponentBase
                 var def = _svc?.Settings.WeatherGreetingItems.FirstOrDefault(i => i.Keyword == "默认");
                 if (def != null) greet = def.Text.Replace("{weather}", data.WeatherText);
             }
-            return greet;
+            if (!string.IsNullOrEmpty(greet))
+                parts.Add(greet);
         }
 
-        return "";
+        return string.Join("，", parts);
     }
 
     #region ClassIsland Reflection
@@ -493,15 +523,15 @@ public class SmartWeatherComponent : ComponentBase
 
     (string icon, IBrush color) GetWeatherIconAndColor(string? weatherText, string? weatherCode)
     {
-        if (string.IsNullOrEmpty(weatherText) && !string.IsNullOrEmpty(weatherCode))
-            weatherText = GetWeatherTextByIconCode(weatherCode);
+        if (!string.IsNullOrEmpty(weatherCode) && int.TryParse(weatherCode, out var code))
+            weatherText = GetWeatherTextByWmoCode(code);
         if (string.IsNullOrEmpty(weatherText))
             return ("🌤️", new SolidColorBrush(Color.Parse("#FFD54F")));
 
         var t = weatherText;
 
-        if (t.Contains("雷阵雨")) return ("⛈️", new SolidColorBrush(Color.Parse("#5C6BC0")));
-        if (t.Contains("雨")) return ("🌧️", new SolidColorBrush(Color.Parse("#2196F3")));
+        if (t.Contains("雷")) return ("⛈️", new SolidColorBrush(Color.Parse("#5C6BC0")));
+        if (t.Contains("雨") || t.Contains("阵雨")) return ("🌧️", new SolidColorBrush(Color.Parse("#2196F3")));
         if (t.Contains("晴") || t.Contains("高温")) return ("☀️", new SolidColorBrush(Color.Parse("#FFA500")));
         if (t.Contains("多云")) return ("⛅", new SolidColorBrush(Color.Parse("#FFD700")));
         if (t.Contains("阴")) return ("☁️", new SolidColorBrush(Color.Parse("#90A4AE")));
@@ -513,29 +543,41 @@ public class SmartWeatherComponent : ComponentBase
     }
 
     /// <summary>
-    /// 和风天气图标代码映射为中文天气文本
+    /// WMO 天气代码映射为中文天气文本
     /// </summary>
-    string GetWeatherTextByIconCode(string iconCode)
+    string GetWeatherTextByWmoCode(int code)
     {
-        if (string.IsNullOrEmpty(iconCode)) return "";
-        return iconCode switch
+        return code switch
         {
-            "100" => "晴", "101" => "多云", "102" => "少云", "103" => "晴间多云",
-            "104" => "阴", "150" => "晴",
-            "300" => "阵雨", "301" => "强阵雨", "302" => "雷阵雨", "303" => "强雷阵雨",
-            "304" => "雷阵雨伴有冰雹", "305" => "小雨", "306" => "中雨", "307" => "大雨",
-            "308" => "极端降雨", "309" => "毛毛雨/细雨", "310" => "暴雨", "311" => "大暴雨",
-            "312" => "特大暴雨", "313" => "冻雨", "314" => "小到中雨", "315" => "中到大雨",
-            "316" => "大到暴雨", "317" => "暴雨到大暴雨", "318" => "大暴雨到特大暴雨",
-            "399" => "雨",
-            "400" => "小雪", "401" => "中雪", "402" => "大雪", "403" => "暴雪",
-            "404" => "雨夹雪", "405" => "雨雪天气", "406" => "阵雨夹雪", "407" => "阵雪",
-            "408" => "小到中雪", "409" => "中到大雪", "410" => "大到暴雪", "499" => "雪",
-            "500" => "薄雾", "501" => "雾", "502" => "霾", "503" => "扬沙",
-            "504" => "浮尘", "507" => "沙尘暴", "508" => "强沙尘暴",
-            "509" => "浓雾", "510" => "强浓雾", "514" => "大雾", "515" => "特强浓雾",
-            "900" => "热", "901" => "冷", "999" => "未知",
-            _ => ""
+            0 => "晴",
+            1 => "主要晴朗",
+            2 => "多云",
+            3 => "阴",
+            45 => "雾",
+            48 => "雾凇",
+            51 => "毛毛雨",
+            53 => "中度毛毛雨",
+            55 => "强毛毛雨",
+            56 => "冻毛毛雨",
+            57 => "强冻毛毛雨",
+            61 => "小雨",
+            63 => "中雨",
+            65 => "大雨",
+            66 => "冻雨",
+            67 => "强冻雨",
+            71 => "小雪",
+            73 => "中雪",
+            75 => "大雪",
+            77 => "雪粒",
+            80 => "阵雨",
+            81 => "强阵雨",
+            82 => "暴雨",
+            85 => "阵雪",
+            86 => "强阵雪",
+            95 => "雷雨",
+            96 => "雷雨伴小冰雹",
+            99 => "雷雨伴大冰雹",
+            _ => "未知"
         };
     }
 
@@ -668,14 +710,18 @@ public class WeatherData
     public string? WeatherText { get; }
     public string[] Warnings { get; }
     public DateTime? UpdateTime { get; }
+    public double? Humidity { get; }
+    public string? RainInfo { get; }
 
     public WeatherData(double? temp = null, string? weatherCode = null, string? weatherText = null,
-        string[]? warnings = null, DateTime? updateTime = null)
+        string[]? warnings = null, DateTime? updateTime = null, double? humidity = null, string? rainInfo = null)
     {
         Temp = temp;
         WeatherCode = weatherCode;
         WeatherText = weatherText;
         Warnings = warnings ?? Array.Empty<string>();
         UpdateTime = updateTime;
+        Humidity = humidity;
+        RainInfo = rainInfo;
     }
 }
