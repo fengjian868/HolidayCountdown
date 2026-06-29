@@ -533,19 +533,107 @@ public static class LocalGreetingDB
     }
 
     /// <summary>
+    /// 根据标签从本地数据库获取随机问候语（真正随机，每次调用结果不同）
+    /// </summary>
+    public static string GetRandom(string tag, Dictionary<string, List<string>> db)
+    {
+        if (!db.TryGetValue(tag, out var list) || list.Count == 0) return "";
+        var rng = new Random();
+        return list[rng.Next(list.Count)];
+    }
+
+    /// <summary>
+    /// 根据标签从本地数据库获取随机问候语，数据库不存在时返回空
+    /// </summary>
+    public static string GetRandomOrEmpty(string tag, Dictionary<string, List<string>> db)
+    {
+        return GetRandom(tag, db);
+    }
+
+    /// <summary>
+    /// 天气关键词问候语备用库，供一键刷新使用
+    /// </summary>
+    public static readonly Dictionary<string, List<string>> WeatherGreetings = new()
+    {
+        ["雨天"] = new()
+        {
+            "记得带伞 ☔",
+            "雨天路滑，注意安全 🌧️",
+            "出门别忘伞 🌂",
+            "雨水绵绵，保持好心情 💧",
+            "雨声伴奏，学习更专注 🎵"
+        },
+        ["寒冷"] = new()
+        {
+            "注意保暖 ❄️",
+            "多穿点，别感冒了 🧣",
+            "寒冷天气，喝杯热水 ☕",
+            "手套围巾安排上 🧤",
+            "天冷加衣，健康第一 🧥"
+        },
+        ["高温"] = new()
+        {
+            "注意防暑 ☀️",
+            "多喝水，别中暑 💧",
+            "高温来袭，尽量减少外出 🌡️",
+            "记得涂防晒 🧴",
+            "热浪滚滚，保持清凉 🍃"
+        },
+        ["舒适"] = new()
+        {
+            "天气不错，适合学习 📖",
+            "舒适宜人，效率满满 ✨",
+            "好天气，好心情 🌈",
+            "温度刚刚好 🌤️",
+            "适合出去走走 🚶"
+        },
+        ["恶劣天气"] = new()
+        {
+            "恶劣天气，减少外出 ⛈️",
+            "注意安全，关好门窗 🏠",
+            "极端天气，谨慎出行 ⚠️",
+            "关注预警，做好防护 🛡️",
+            "安全第一，别大意 ❗"
+        },
+        ["大风"] = new()
+        {
+            "风大，远离广告牌 🍃",
+            "注意防风，关好窗户 🪟",
+            "大风天气，注意安全 💨",
+            "出门护好发型 😄",
+            "别在高楼下久站 🏢"
+        },
+        ["雷电"] = new()
+        {
+            "雷电交加，注意安全 ⛈️",
+            "雷雨天气，待在室内 ⚡",
+            "别在大树下躲雨 🌳",
+            "拔掉电器插头 🔌",
+            "雷声隆隆，注意安全 📢"
+        },
+        ["默认"] = new()
+        {
+            "{weather}",
+            "今天天气{weather}",
+            "当前天气{weather}，注意出行"
+        }
+    };
+
+    /// <summary>
     /// 温度区间默认问候语
     /// </summary>
     public static readonly List<TempGreeting> DefaultTempGreetings = new()
     {
-        new TempGreeting { MinTemp = -999, MaxTemp = 0, Text = "严寒，多穿点别冻着 🧊" },
-        new TempGreeting { MinTemp = 0, MaxTemp = 5, Text = "很冷，注意保暖 🥶" },
-        new TempGreeting { MinTemp = 5, MaxTemp = 10, Text = "冷，穿羽绒服或棉衣 ❄️" },
-        new TempGreeting { MinTemp = 10, MaxTemp = 15, Text = "较冷，穿厚外套 🧥" },
-        new TempGreeting { MinTemp = 15, MaxTemp = 20, Text = "微凉，建议穿外套 🧣" },
-        new TempGreeting { MinTemp = 20, MaxTemp = 25, Text = "舒适，薄长袖或短袖 🌿" },
-        new TempGreeting { MinTemp = 25, MaxTemp = 30, Text = "较热，短袖即可 👕" },
-        new TempGreeting { MinTemp = 30, MaxTemp = 35, Text = "很热，穿短袖注意防晒 ☀️" },
-        new TempGreeting { MinTemp = 35, MaxTemp = 999, Text = "高温预警，注意防暑 🌡️" }
+        // 区间互不重叠：上限与下一区间下限相差 1
+        new TempGreeting { MinTemp = -999, MaxTemp = 0, Text = "严寒，多穿点别冻着 🧊", Tag = "极寒" },
+        new TempGreeting { MinTemp = 1, MaxTemp = 5, Text = "很冷，注意保暖 🥶", Tag = "寒冷" },
+        new TempGreeting { MinTemp = 6, MaxTemp = 10, Text = "冷，穿羽绒服或棉衣 ❄️", Tag = "偏冷" },
+        new TempGreeting { MinTemp = 11, MaxTemp = 15, Text = "较冷，穿厚外套 🧥", Tag = "凉" },
+        new TempGreeting { MinTemp = 16, MaxTemp = 20, Text = "微凉，建议穿外套 🧣", Tag = "微凉" },
+        new TempGreeting { MinTemp = 21, MaxTemp = 25, Text = "舒适，薄长袖或短袖 🌿", Tag = "舒适" },
+        new TempGreeting { MinTemp = 26, MaxTemp = 30, Text = "较热，短袖即可 👕", Tag = "偏热" },
+        new TempGreeting { MinTemp = 31, MaxTemp = 35, Text = "很热，穿短袖注意防晒 ☀️", Tag = "炎热" },
+        new TempGreeting { MinTemp = 36, MaxTemp = 999, Text = "高温预警，注意防暑 🌡️", Tag = "极热" }
     };
 }
 
@@ -554,4 +642,5 @@ public class TempGreeting
     public int MinTemp { get; set; }
     public int MaxTemp { get; set; }
     public string Text { get; set; } = "";
+    public string Tag { get; set; } = "";
 }

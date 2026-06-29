@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
@@ -18,7 +20,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "E5F6A7B8-C9D0-1234-EF01-234567890ABC",
     "学习时长统计",
-    "\uE917",
+    "fluent(\uE9D1)",
     "记录ClassIsland运行时长，显示今日学习时长"
 )]
 public class StudyTimeComponent : ComponentBase
@@ -26,7 +28,9 @@ public class StudyTimeComponent : ComponentBase
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
     private HolidayService? _svc;
-    private DateTime _sessionStart;
+    private static readonly DateTime _sessionStart = DateTime.Now;
+    private static DateTime _lastUpdate = DateTime.Now;
+    private static readonly object _saveLock = new();
     private static readonly string DataDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "ClassIsland", "Plugins", "HolidayCountdown");
@@ -34,7 +38,7 @@ public class StudyTimeComponent : ComponentBase
 
     public StudyTimeComponent()
     {
-        _sessionStart = DateTime.Now;
+        // 多个组件实例共享同一会话计时，避免重复统计或统计丢失
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
         panel.Children.Add(_txt);
@@ -57,23 +61,96 @@ public class StudyTimeComponent : ComponentBase
 
         try
         {
-            var today = DateTime.Now.Date;
-            var data = LoadStudyData();
-            var key = today.ToString("yyyy-MM-dd");
+            var now = DateTime.Now;
+            var elapsedMinutes = (now - _lastUpdate).TotalMinutes;
+            _lastUpdate = now;
 
-            // Add current session time
-            var sessionMinutes = (DateTime.Now - _sessionStart).TotalMinutes;
-            if (!data.ContainsKey(key)) data[key] = 0;
-            data[key] = data[key] + sessionMinutes;
+            // 若只统计已上课时长，则仅在上课状态时累加
+            if (_svc.Settings.StudyTimeCountClassTimeOnly)
+            {
+                var state = GetCurrentState();
+                if (state != 1) elapsedMinutes = 0;
+            }
 
-            // Save updated data
-            SaveStudyData(data);
+            var key = GetCurrentKey();
 
-            var totalMinutes = data[key];
-            var icon = _svc.Settings.StudyTimeShowIcon ? "📚 " : "";
-            _txt.Text = $"{icon}今日学习 {FormatDuration(totalMinutes)}";
+            lock (_saveLock)
+            {
+                var data = LoadStudyData();
+
+                if (!data.ContainsKey(key)) data[key] = 0;
+                data[key] = data[key] + elapsedMinutes;
+
+                SaveStudyData(data);
+
+                var totalMinutes = data[key];
+                var icon = _svc.Settings.StudyTimeShowIcon ? "📚 " : "";
+                var timeScope = _svc.Settings.StudyTimeWeeklyReset ? "本周" : "今日";
+                var action = _svc.Settings.StudyTimeCountClassTimeOnly ? "已上课" : "已学习";
+                _txt.Text = $"{icon}{timeScope}{action} {FormatDuration(totalMinutes)}";
+            }
         }
         catch { _txt.Text = ""; }
+    }
+
+    string GetCurrentKey()
+    {
+        if (_svc?.Settings.StudyTimeWeeklyReset == true)
+        {
+            var now = DateTime.Now;
+            return $"{now.Year}-W{ISOWeek.GetWeekOfYear(now)}";
+        }
+        return DateTime.Now.ToString("yyyy-MM-dd");
+    }
+
+    int GetCurrentState()
+    {
+        try
+        {
+            var svc = GetLessonsService();
+            if (svc == null) return 0;
+            var stateObj = GetPropertyValue(svc, "CurrentState");
+            return stateObj as int? ?? 0;
+        }
+        catch { return 0; }
+    }
+
+    object? GetLessonsService()
+    {
+        try
+        {
+            var appHostType = Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Shared")
+                ?? Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Core")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .FirstOrDefault(t => t.Name == "IAppHost");
+
+            if (appHostType == null) return null;
+
+            var tryGetService = appHostType.GetMethod("TryGetService", BindingFlags.Public | BindingFlags.Static);
+            if (tryGetService == null || !tryGetService.IsGenericMethodDefinition) return null;
+
+            var lessonsServiceType = Type.GetType("ClassIsland.Core.Abstractions.Services.ILessonsService, ClassIsland.Core")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .FirstOrDefault(t => t.Name == "ILessonsService" || t.Name == "LessonsService");
+
+            if (lessonsServiceType == null) return null;
+
+            var genericMethod = tryGetService.MakeGenericMethod(lessonsServiceType);
+            return genericMethod.Invoke(null, null);
+        }
+        catch { return null; }
+    }
+
+    object? GetPropertyValue(object obj, string propName)
+    {
+        try
+        {
+            var prop = obj.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
+            return prop?.GetValue(obj);
+        }
+        catch { return null; }
     }
 
     string FormatDuration(double totalMinutes)

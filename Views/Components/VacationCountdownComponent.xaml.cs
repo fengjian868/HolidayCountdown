@@ -14,7 +14,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "F6A7B8C9-D0E1-2345-F012-123456789015",
     "寒暑假倒计时",
-    "\uE7BE",
+    "fluent(\uE8F3)",
     "显示距离寒暑假的剩余周数和天数"
 )]
 public class VacationCountdownComponent : ComponentBase
@@ -40,7 +40,7 @@ public class VacationCountdownComponent : ComponentBase
     void Update()
     {
         _main.Children.Clear();
-        if (_svc == null || !_svc.Settings.ShowVacationCountdown) return;
+        if (_svc == null) return;
         var now = DateTime.Now; var s = _svc.Settings;
         var targets = new[] { ("暑假", s.SummerStart, s.SummerEnd), ("寒假", s.WinterStart, s.WinterEnd) };
         
@@ -65,19 +65,17 @@ public class VacationCountdownComponent : ComponentBase
             var weeks = nearest.Days / 7; var days = nearest.Days % 7;
             if (nearest.IsActive)
             {
-                _main.Children.Add(new TextBlock 
-                { 
-                    Text = $"{nearest.Name}进行中", 
-                    HorizontalAlignment = HorizontalAlignment.Center, 
-                    Foreground = new SolidColorBrush(Color.Parse("#4CAF50")),
+                _main.Children.Add(new TextBlock
+                {
+                    Text = $"{nearest.Name}进行中",
+                    HorizontalAlignment = HorizontalAlignment.Center,
                     FontWeight = FontWeight.SemiBold,
                     Margin = new Thickness(0, 1, 0, 0)
                 });
-                _main.Children.Add(new TextBlock 
-                { 
-                    Text = $"剩余 {weeks} 周 {days} 天", 
-                    HorizontalAlignment = HorizontalAlignment.Center, 
-                    Foreground = new SolidColorBrush(Color.Parse("#4CAF50")),
+                _main.Children.Add(new TextBlock
+                {
+                    Text = $"剩余 {weeks} 周 {days} 天",
+                    HorizontalAlignment = HorizontalAlignment.Center,
                     Margin = new Thickness(0, 0, 0, 1)
                 });
             }
@@ -87,14 +85,12 @@ public class VacationCountdownComponent : ComponentBase
                 row.Children.Add(new TextBlock
                 {
                     Text = $"距离{nearest.Name}还有",
-                    Foreground = new SolidColorBrush(Color.Parse("#FF9800")),
                     FontWeight = FontWeight.SemiBold,
                     VerticalAlignment = VerticalAlignment.Center
                 });
                 row.Children.Add(new TextBlock
                 {
                     Text = $"{weeks} 周 {days} 天",
-                    Foreground = new SolidColorBrush(Color.Parse("#FF9800")),
                     VerticalAlignment = VerticalAlignment.Center
                 });
                 _main.Children.Add(row);

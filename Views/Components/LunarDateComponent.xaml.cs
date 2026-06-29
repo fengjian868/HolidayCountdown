@@ -1,6 +1,4 @@
 using System;
-using System.IO;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Avalonia;
@@ -18,7 +16,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "D4E5F6A7-B8C9-0123-DEF0-123456789013",
     "农历日期",
-    "\uE787",
+    "fluent(\uE8C0)",
     "显示当前农历日期，支持自定义模板，有网络时自动刷新"
 )]
 public class LunarDateComponent : ComponentBase
@@ -26,12 +24,9 @@ public class LunarDateComponent : ComponentBase
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
     private HolidayService? _svc;
-    private readonly string _cache;
 
     public LunarDateComponent()
     {
-        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ClassIsland", "Plugins", "HolidayCountdown");
-        Directory.CreateDirectory(dir); _cache = Path.Combine(dir, "lunar_cache.json");
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.85 };
         panel.Children.Add(new TextBlock { Text = "\u2630", FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 });
@@ -49,28 +44,12 @@ public class LunarDateComponent : ComponentBase
 
     async Task RefreshAsync()
     {
-        if (_svc == null || !_svc.Settings.ShowLunarDate) { UpdateText(""); return; }
+        if (_svc == null) { UpdateText(""); return; }
         try
         {
-            if (File.Exists(_cache))
-            {
-                var c = JsonSerializer.Deserialize<LunarInfo>(File.ReadAllText(_cache));
-                if (c != null && c.Date == DateTime.Now.Date) { UpdateText(Format(c)); return; }
-            }
-        }
-        catch { }
-        if (!_svc.Settings.LunarAutoRefresh) { UpdateText("农历获取失败"); return; }
-        try
-        {
-            using var cl = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-            var r = await cl.GetStringAsync($"https://api.mu-jie.cc/lunar?date={DateTime.Now:yyyy-MM-dd}");
-            using var doc = JsonDocument.Parse(r);
-            var root = doc.RootElement;
-            if (root.TryGetProperty("code", out var cp) && cp.GetInt32() == 200 && root.TryGetProperty("data", out var dp))
-            {
-                var info = new LunarInfo { Date = DateTime.Now.Date, gzYear = GetStr(dp, "gzYear") + "年", IMonthCn = GetStr(dp, "IMonthCn"), IDayCn = GetStr(dp, "IDayCn"), Animal = GetStr(dp, "Animal"), Term = GetStr(dp, "Term"), lunarDate = GetStr(dp, "lunarDate") };
-                File.WriteAllText(_cache, JsonSerializer.Serialize(info)); UpdateText(Format(info)); return;
-            }
+            // 使用 HolidayService 的月度缓存，每日自动刷新，避免每次联网
+            var info = await _svc.GetLunarAsync();
+            if (info != null) { UpdateText(Format(info)); return; }
         }
         catch { }
         UpdateText("农历获取失败");

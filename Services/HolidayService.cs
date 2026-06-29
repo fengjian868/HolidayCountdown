@@ -14,7 +14,7 @@ public class HolidayService
 {
     private readonly List<Holiday> _builtIn;
     private List<Holiday> _holidays = new();
-    private readonly string _cachePath, _settingsPath, _lunarCachePath, _lunarYearCachePath;
+    private readonly string _cachePath, _settingsPath, _lunarCachePath, _lunarYearCachePath, _lunarMonthCachePath;
     private static bool _netTried;
     private static readonly object _netLock = new();
     private static bool _netLoaded;
@@ -36,6 +36,7 @@ public class HolidayService
         _settingsPath = Path.Combine(dir, "settings.json");
         _lunarCachePath = Path.Combine(dir, "lunar_cache.json");
         _lunarYearCachePath = Path.Combine(dir, "lunar_year_cache.json");
+        _lunarMonthCachePath = Path.Combine(dir, "lunar_month_cache.json");
         LoadSettings();
         if (CacheValid()) { var c = LoadCache(); if (c.Count > 0) _holidays = c; }
         if (!_netTried)
@@ -105,7 +106,14 @@ public class HolidayService
         if (Settings.TempGreetings.Count == 0)
         {
             foreach (var g in LocalGreetingDB.DefaultTempGreetings)
-                Settings.TempGreetings.Add(new TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text });
+                Settings.TempGreetings.Add(new TempGreeting { MinTemp = g.MinTemp, MaxTemp = g.MaxTemp, Text = g.Text, Tag = g.Tag });
+        }
+        if (Settings.NoClassTimeSlots.Count == 0)
+        {
+            Settings.NoClassTimeSlots.Add(new NoClassTimeSlot { Name = "上午", StartHour = 5, StartMinute = 0, EndHour = 11, EndMinute = 0, Text = Settings.NoClassMorningText });
+            Settings.NoClassTimeSlots.Add(new NoClassTimeSlot { Name = "中午", StartHour = 11, StartMinute = 0, EndHour = 13, EndMinute = 0, Text = Settings.NoClassNoonText });
+            Settings.NoClassTimeSlots.Add(new NoClassTimeSlot { Name = "下午", StartHour = 13, StartMinute = 0, EndHour = 18, EndMinute = 0, Text = Settings.NoClassAfternoonText });
+            Settings.NoClassTimeSlots.Add(new NoClassTimeSlot { Name = "晚间", StartHour = 18, StartMinute = 0, EndHour = 5, EndMinute = 0, Text = Settings.NoClassEveningText });
         }
     }
 
@@ -118,6 +126,32 @@ public class HolidayService
         }
         catch { }
         SettingsChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// 自动对齐温度区间：排序后首项固定 -999，后续每项 Min = 上一项 Max + 1，避免重叠
+    /// </summary>
+    public void AlignTempGreetings()
+    {
+        var items = Settings.TempGreetings.OrderBy(g => g.MinTemp).ToList();
+        if (items.Count == 0) return;
+
+        // 第一项固定为 -999 ~ Max
+        items[0].MinTemp = -999;
+        if (items[0].MaxTemp <= -999) items[0].MaxTemp = 0;
+
+        for (int i = 1; i < items.Count; i++)
+        {
+            items[i].MinTemp = items[i - 1].MaxTemp + 1;
+            // 如果上限不合法，给默认跨度；最后一项若原先是 999 则保持无界
+            if (items[i].MaxTemp <= items[i].MinTemp)
+            {
+                if (i == items.Count - 1)
+                    items[i].MaxTemp = 999;
+                else
+                    items[i].MaxTemp = items[i].MinTemp + 5;
+            }
+        }
     }
 
     bool CacheValid() => File.Exists(_cachePath) && (DateTime.Now - new FileInfo(_cachePath).LastWriteTime).TotalDays < 7;
@@ -260,30 +294,96 @@ public class HolidayService
 
     // ===== 农历年度缓存 =====
 
-    public async Task<LunarInfo?> GetLunarAsync()
+    public async Task<LunarInfo?> GetLunarAsync(bool autoRefresh = true)
     {
-        var year = DateTime.Now.Year;
+        var today = DateTime.Now.Date;
+        var monthKey = today.ToString("yyyy-MM");
 
-        // 尝试加载年度缓存
-        var yearCache = LoadLunarYearCache(year);
-        if (yearCache != null)
+        // 优先使用本月本地缓存
+        var monthCache = LoadLunarMonthCache(monthKey);
+        if (monthCache != null)
         {
-            var today = DateTime.Now.Date;
-            var info = yearCache.FirstOrDefault(x => x.Date == today);
+            var info = monthCache.Data.FirstOrDefault(x => x.Date == today);
             if (info != null) return info;
         }
 
-        if (!Settings.LunarAutoRefresh) return null;
+        if (!autoRefresh) return null;
 
-        // 刷新整年缓存
-        await RefreshLunarYearAsync(year);
-        yearCache = LoadLunarYearCache(year);
-        if (yearCache != null)
+        // 每日自动刷新一次当月数据
+        await RefreshLunarMonthAsync(today.Year, today.Month);
+        monthCache = LoadLunarMonthCache(monthKey);
+        return monthCache?.Data.FirstOrDefault(x => x.Date == today);
+    }
+
+    LunarMonthCache? LoadLunarMonthCache(string month)
+    {
+        try
         {
-            var today = DateTime.Now.Date;
-            return yearCache.FirstOrDefault(x => x.Date == today);
+            if (File.Exists(_lunarMonthCachePath))
+            {
+                var json = File.ReadAllText(_lunarMonthCachePath);
+                var cache = JsonSerializer.Deserialize<LunarMonthCache>(json);
+                if (cache != null && cache.Month == month && cache.Data.Count > 0 && cache.LastRefresh.Date == DateTime.Now.Date)
+                    return cache;
+            }
         }
+        catch { }
         return null;
+    }
+
+    async Task RefreshLunarMonthAsync(int year, int month)
+    {
+        try
+        {
+            var list = new List<LunarInfo>();
+            var daysInMonth = DateTime.DaysInMonth(year, month);
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                var date = new DateTime(year, month, day);
+                try
+                {
+                    var r = await client.GetStringAsync($"https://api.mu-jie.cc/lunar?date={date:yyyy-MM-dd}");
+                    using var doc = JsonDocument.Parse(r);
+                    var root = doc.RootElement;
+                    if (root.TryGetProperty("code", out var cp) && cp.GetInt32() == 200 && root.TryGetProperty("data", out var dp))
+                    {
+                        list.Add(new LunarInfo
+                        {
+                            Date = date,
+                            gzYear = GetStr(dp, "gzYear") + "年",
+                            IMonthCn = GetStr(dp, "IMonthCn"),
+                            IDayCn = GetStr(dp, "IDayCn"),
+                            Animal = GetStr(dp, "Animal"),
+                            Term = GetStr(dp, "Term"),
+                            lunarDate = GetStr(dp, "lunarDate")
+                        });
+                    }
+                }
+                catch { }
+            }
+
+            if (list.Count > 0)
+            {
+                SaveLunarMonthCache(new LunarMonthCache
+                {
+                    Month = $"{year:0000}-{month:00}",
+                    LastRefresh = DateTime.Now,
+                    Data = list
+                });
+            }
+        }
+        catch { }
+    }
+
+    void SaveLunarMonthCache(LunarMonthCache cache)
+    {
+        try
+        {
+            File.WriteAllText(_lunarMonthCachePath, JsonSerializer.Serialize(cache, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch { }
     }
 
     List<LunarInfo>? LoadLunarYearCache(int year)
@@ -396,6 +496,104 @@ public class HolidayService
     }
 
     public bool IsNetLoaded => _netLoaded;
+
+    /// <summary>
+    /// 判断今天是否为调休上班日
+    /// </summary>
+    public bool IsTodayWorkday()
+    {
+        return _holidays.Any(h => h.Date.Date == DateTime.Now.Date && h.IsWorkday);
+    }
+
+    /// <summary>
+    /// 判断今天是否为24节气日
+    /// </summary>
+    public bool IsTodaySolarTerm()
+    {
+        var today = DateTime.Now.Date;
+        var yearCache = LoadLunarYearCache(today.Year);
+        if (yearCache != null)
+        {
+            var info = yearCache.FirstOrDefault(x => x.Date == today);
+            return info != null && !string.IsNullOrEmpty(info.Term);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// 获取今天节气名称，无则返回空字符串
+    /// </summary>
+    public string GetTodaySolarTermName()
+    {
+        var today = DateTime.Now.Date;
+        var yearCache = LoadLunarYearCache(today.Year);
+        if (yearCache != null)
+        {
+            var info = yearCache.FirstOrDefault(x => x.Date == today);
+            return info?.Term ?? "";
+        }
+        return "";
+    }
+
+    /// <summary>
+    /// 一键刷新全部文案问候语（手动触发，真正随机）
+    /// </summary>
+    public void RefreshAllGreetings()
+    {
+        // 重置每日刷新标记，让问候语组件重新随机
+        Settings.LastGreetingRefreshDate = null;
+
+        // 刷新时段问候语
+        foreach (var slot in Settings.TimeSlotGreetings)
+        {
+            if (!string.IsNullOrEmpty(slot.Tag))
+            {
+                var tagText = LocalGreetingDB.GetRandom(slot.Tag, LocalGreetingDB.TimeSlotGreetings);
+                if (!string.IsNullOrEmpty(tagText)) slot.Text = tagText;
+            }
+        }
+
+        // 刷新特殊日期问候语
+        foreach (var special in Settings.SpecialDateGreetings)
+        {
+            if (!string.IsNullOrEmpty(special.Tag))
+            {
+                var tagText = LocalGreetingDB.GetRandom(special.Tag, LocalGreetingDB.WeeklyReminders);
+                if (!string.IsNullOrEmpty(tagText)) special.Text = tagText;
+            }
+        }
+
+        SaveSettings();
+    }
+
+    /// <summary>
+    /// 一键刷新全部天气关键词问候语
+    /// </summary>
+    public void RefreshAllWeatherGreetings()
+    {
+        foreach (var item in Settings.WeatherGreetingItems)
+        {
+            if (item.Keyword == "默认") continue;
+            var tag = string.IsNullOrEmpty(item.Tag) ? "默认" : item.Tag;
+            var text = LocalGreetingDB.GetRandom(tag, LocalGreetingDB.WeatherGreetings);
+            if (!string.IsNullOrEmpty(text)) item.Text = text;
+        }
+        SaveSettings();
+    }
+
+    /// <summary>
+    /// 一键刷新全部温度区间问候语
+    /// </summary>
+    public void RefreshAllTempGreetings()
+    {
+        foreach (var item in Settings.TempGreetings)
+        {
+            var tag = string.IsNullOrEmpty(item.Tag) ? "舒适" : item.Tag;
+            var text = LocalGreetingDB.GetRandom(tag, LocalGreetingDB.WeatherGreetings);
+            if (!string.IsNullOrEmpty(text)) item.Text = text;
+        }
+        SaveSettings();
+    }
 }
 
 public class LunarYearCache

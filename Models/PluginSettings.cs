@@ -25,6 +25,7 @@ public class PluginSettings
 
     // 问候语
     public bool ShowGreeting { get; set; } = true;
+    public bool AutoRefreshGreetings { get; set; } = true;
     public DateTime? LastGreetingRefreshDate { get; set; }
     public List<TimeSlotGreeting> TimeSlotGreetings { get; set; } = new();
     public List<SpecialDateGreeting> SpecialDateGreetings { get; set; } = new();
@@ -36,12 +37,6 @@ public class PluginSettings
     public string AfterSchoolEndText { get; set; } = "run！";
     public bool ShowSundayEveningStudy { get; set; } = true;
     public string SundayEveningStudyText { get; set; } = "今晚有晚修，记得按时到教室！";
-
-    // 每周提醒
-    public bool WeeklyReminderEnabled { get; set; } = true;
-    public int WeeklyReminderDay { get; set; } = 1; // 1=周一, 7=周日
-    public int WeeklyReminderStartHour { get; set; } = 0;
-    public int WeeklyReminderEndHour { get; set; } = 23;
 
     // 农历
     public bool ShowLunarDate { get; set; } = true;
@@ -70,8 +65,7 @@ public class PluginSettings
     // 天气问候
     public bool WeatherGreetingEnabled { get; set; } = true;
     public bool WeatherWarningOverride { get; set; } = true;
-    public string? WeatherTemplate { get; set; } = "{greeting}";
-    public bool WeatherShowIcon { get; set; } = true;
+    public string? WeatherTemplate { get; set; } = "{icon}{temp} {greeting}";
     public bool WeatherShowTemp { get; set; } = true;
     public List<TempGreeting> TempGreetings { get; set; } = new();
     public List<WeatherGreetingItem> WeatherGreetingItems { get; set; } = new()
@@ -101,13 +95,84 @@ public class PluginSettings
         new WeatherGreetingItem { Keyword = "默认", Text = "{weather}", Tag = "默认" }
     };
 
+    // 智能天气
+    public string SmartWeatherTemplate { get; set; } = "{B} {A} {C} {D}";
+    public bool SmartWeatherShowA { get; set; } = true;
+    public bool SmartWeatherShowB { get; set; } = true;
+    public bool SmartWeatherShowC { get; set; } = true;
+    public bool SmartWeatherShowD { get; set; } = true;
+    public bool SmartWeatherShowE { get; set; } = false;
+    public bool SmartWeatherWarningOverride { get; set; } = true;
+    public bool SmartWeatherTempColorEnabled { get; set; } = true;
+
+    // 天气问候
+    public bool WeatherShowIcon { get; set; } = true;
+    public int WeatherGreetingRefreshMinutes { get; set; } = 10;
+
+    // 天气变化提醒（测试版）
+    public bool WeatherReminderEnabled { get; set; } = false;
+    public int WeatherReminderRefreshMinutes { get; set; } = 10;
+    public int WeatherReminderMaxDisplayCount { get; set; } = 3;
+    public bool WeatherReminderShowImmediatelyOnChange { get; set; } = true;
+    public List<string> EnabledWeatherReminderRuleIds { get; set; } = new();
+
     // 课程表联动
     public bool ClassScheduleEnabled { get; set; } = true;
     public bool ClassScheduleShowIcon { get; set; } = true;
+    public bool ClassScheduleShowSubject { get; set; } = true;
+    public int PreClassMinutes { get; set; } = 5;
+    public bool BreakWarningEnabled { get; set; } = true;
+    public int BreakWarningMinutes { get; set; } = 3;
+    public string BreakWarningColor { get; set; } = "#FFE53935";
+    public List<NoClassTimeSlot> NoClassTimeSlots { get; set; } = new();
+    public string NoClassMorningText { get; set; } = "上午好，暂无课程";
+    public string NoClassNoonText { get; set; } = "中午好，暂无课程";
+    public string NoClassAfternoonText { get; set; } = "下午好，暂无课程";
+    public string NoClassEveningText { get; set; } = "晚上好，暂无课程";
+    public string ClassScheduleTemplate { get; set; } = "{icon}{subject} 还有{countdown}";
+    public string ClassScheduleOnClassTemplate { get; set; } = "{icon}{subject} 还有{countdown}";
+    public string ClassScheduleBreakTemplate { get; set; } = "{icon}课间 {countdown} 下节{next}";
+    public string ClassSchedulePrepareTemplate { get; set; } = "{icon}准备上课 {next}";
+    public string ClassScheduleAfterSchoolTemplate { get; set; } = "{icon}放学啦";
+    public string ClassScheduleNoClassTemplate { get; set; } = "{icon}{text}";
+
+    // 课程联动问候语
+    public bool ClassGreetingEnabled { get; set; } = false;
+    public string ClassGreetingOnClassTemplate { get; set; } = "正在上{subject}，加油 📖";
+    public string ClassGreetingBreakTemplate { get; set; } = "课间休息，下节{next} ☕";
+    public string ClassGreetingPrepareTemplate { get; set; } = "准备上{next}，拿好课本 🔔";
+    public string ClassGreetingAfterSchoolTemplate { get; set; } = "放学啦，今天辛苦了 🏠";
+    public string ClassGreetingNoClassTemplate { get; set; } = "暂无课程，好好休息 📅";
 
     // 学习时长统计
     public bool StudyTimeEnabled { get; set; } = true;
     public bool StudyTimeShowIcon { get; set; } = true;
+    public bool StudyTimeCountClassTimeOnly { get; set; } = false;
+    public bool StudyTimeWeeklyReset { get; set; } = false;
+
+    // 大考倒计时
+    public int ExamType { get; set; } = 0; // 0 高考, 1 中考
+    public string ExamCity { get; set; } = "北京";
+    public string ExamCountdownTextColor { get; set; } = "#FF2196F3";
+    public string ExamCountdownRingColor { get; set; } = "#FFFF5252";
+    public bool ExamCountdownShowRing { get; set; } = true;
+    public string ExamCountdownRingStartDate { get; set; } = "08-01";
+    public bool ExamCountdownShowBackground { get; set; } = true;
+    public string ExamCountdownBackgroundColor { get; set; } = "#502196F3";
+    public int ExamCountdownFontSize { get; set; } = 0;
+    public string? ExamCountdownCustomDate { get; set; }
+    public string ExamCountdownCustomText { get; set; } = "距离{exam}还有{days}天";
+    public string ExamCountdownTodayText { get; set; } = "今天就是{exam}，加油！";
+    public bool ExamCountdownRepeatYearly { get; set; } = true;
+
+    // 世界时钟
+    public bool WorldClockShowSeconds { get; set; } = false;
+    public bool WorldClockShowDate { get; set; } = false;
+    public string WorldClockTextColor { get; set; } = "#FFFFFFFF";
+    public List<WorldClockCity> WorldClockCities { get; set; } = new()
+    {
+        new WorldClockCity { Name = "北京", TimeZoneId = "China Standard Time" }
+    };
 }
 
 public class CustomHoliday
@@ -115,6 +180,16 @@ public class CustomHoliday
     public string Name { get; set; } = "";
     public DateTime Date { get; set; }
     public bool RepeatYearly { get; set; } = false;
+}
+
+public class NoClassTimeSlot
+{
+    public string Name { get; set; } = "";
+    public int StartHour { get; set; }
+    public int StartMinute { get; set; }
+    public int EndHour { get; set; }
+    public int EndMinute { get; set; }
+    public string Text { get; set; } = "";
 }
 
 public class TimeSlotGreeting
@@ -145,4 +220,10 @@ public class WeatherGreetingItem
     public string Keyword { get; set; } = "";
     public string Text { get; set; } = "";
     public string Tag { get; set; } = "";
+}
+
+public class WorldClockCity
+{
+    public string Name { get; set; } = "";
+    public string TimeZoneId { get; set; } = "";
 }
