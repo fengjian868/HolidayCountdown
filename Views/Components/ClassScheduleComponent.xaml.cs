@@ -267,63 +267,30 @@ public class ClassScheduleComponent : ComponentBase
     string GetNextSubjectName(object dataSource, object? currentSubject, object? nextSubject)
     {
         var lessons = GetLessonsService();
+        var currentName = GetSubjectName(currentSubject);
 
-        // 1. 优先读取 LessonsService.NextClassSubject（真正的下一节课科目）
-        var nextClassSubject = GetPropertyValue(lessons, "NextClassSubject");
+        // 方案 A：从时间布局直接遍历找下一节课（最可靠）
+        var fromLayout = FindNextFromTimeLayout(lessons, dataSource, currentSubject);
+        if (!string.IsNullOrEmpty(fromLayout))
+            return fromLayout;
+
+        // 方案 B：尝试 CL 提供的 NextClassSubject
+        var nextClassSubject = GetPropertyValue(lessons, "NextClassSubject")
+                            ?? GetPropertyValue(dataSource, "NextClassSubject");
         if (nextClassSubject != null)
         {
             var name = GetSubjectName(nextClassSubject);
-            if (!string.IsNullOrEmpty(name) && name != GetSubjectName(currentSubject))
-                return name;
+            if (!string.IsNullOrEmpty(name)) return name;
         }
 
-        // 2. 尝试 LessonsService.NextClassTimeLayoutItem.Subject
-        var nextClassItem = GetPropertyValue(lessons, "NextClassTimeLayoutItem");
-        if (nextClassItem != null && IsLessonTimeLayoutItem(nextClassItem))
-        {
-            var subj = GetPropertyValue(nextClassItem, "Subject");
-            if (subj != null)
-            {
-                var name = GetSubjectName(subj);
-                if (!string.IsNullOrEmpty(name) && name != GetSubjectName(currentSubject))
-                    return name;
-            }
-        }
-
-        // 3. 兼容：dataSource 的 NextClassSubject / NextClassTimeLayoutItem
-        nextClassSubject = GetPropertyValue(dataSource, "NextClassSubject");
-        if (nextClassSubject != null)
-        {
-            var name = GetSubjectName(nextClassSubject);
-            if (!string.IsNullOrEmpty(name) && name != GetSubjectName(currentSubject))
-                return name;
-        }
-        nextClassItem = GetPropertyValue(dataSource, "NextClassTimeLayoutItem");
-        if (nextClassItem != null && IsLessonTimeLayoutItem(nextClassItem))
-        {
-            var subj = GetPropertyValue(nextClassItem, "Subject");
-            if (subj != null)
-            {
-                var name = GetSubjectName(subj);
-                if (!string.IsNullOrEmpty(name) && name != GetSubjectName(currentSubject))
-                    return name;
-            }
-        }
-
-        // 4. 兼容：NextSubject（但排除和当前科目同名的）
+        // 方案 C：尝试 NextSubject（CL 的 NextSubject 可能不准确）
         if (nextSubject != null)
         {
             var name = GetSubjectName(nextSubject);
-            if (!string.IsNullOrEmpty(name) && name != GetSubjectName(currentSubject))
-                return name;
+            if (!string.IsNullOrEmpty(name)) return name;
         }
 
-        // 5. 兜底：从时间布局中向后找第一个不同于当前科目的上课项
-        var foundName = FindNextFromTimeLayout(lessons, dataSource, currentSubject);
-        if (!string.IsNullOrEmpty(foundName))
-            return foundName;
-
-        // 6. 没有下节课
+        // 没有下节课
         return "已无课程";
     }
 
@@ -344,11 +311,10 @@ public class ClassScheduleComponent : ComponentBase
                       ?? timeLayout.GetType().GetProperty("Layouts", BindingFlags.Public | BindingFlags.Instance);
         if (itemsProp?.GetValue(timeLayout) is not System.Collections.IEnumerable items) return null;
 
-        // 先找到当前项在列表中的索引
         var itemList = items.Cast<object>().ToList();
         int currentIdx = -1;
 
-        // 方式1：通过 StartSecond 匹配（更可靠）
+        // 方式1：通过 StartSecond 匹配
         var currentStart = GetPropertyValue(currentItem, "StartSecond");
         for (int i = 0; i < itemList.Count; i++)
         {
@@ -360,7 +326,7 @@ public class ClassScheduleComponent : ComponentBase
             }
         }
 
-        // 方式2：回退到引用比较
+        // 方式2：引用比较
         if (currentIdx < 0)
         {
             for (int i = 0; i < itemList.Count; i++)
@@ -375,16 +341,15 @@ public class ClassScheduleComponent : ComponentBase
 
         if (currentIdx < 0) return null;
 
-        // 从当前项之后找第一个上课项（且不是当前科目）
-        var currentName = GetSubjectName(currentSubject);
+        // 从当前项之后找第一个上课类型的项（跳过课间/午休）
         for (int i = currentIdx + 1; i < itemList.Count; i++)
         {
             var item = itemList[i];
             if (!IsLessonTimeLayoutItem(item))
-                continue; // 跳过课间、午休等非课程项
+                continue;
             var subj = GetPropertyValue(item, "Subject");
             var name = subj != null ? GetSubjectName(subj) : GetSubjectName(item);
-            if (!string.IsNullOrEmpty(name) && name != currentName)
+            if (!string.IsNullOrEmpty(name))
                 return name;
         }
 
