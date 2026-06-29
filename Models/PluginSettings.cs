@@ -105,6 +105,17 @@ public class PluginSettings
     public bool SmartWeatherWarningOverride { get; set; } = true;
     public bool SmartWeatherTempColorEnabled { get; set; } = true;
 
+    // 天气问候
+    public bool WeatherShowIcon { get; set; } = true;
+    public int WeatherGreetingRefreshMinutes { get; set; } = 10;
+
+    // 天气变化提醒（测试版）
+    public bool WeatherReminderEnabled { get; set; } = false;
+    public int WeatherReminderRefreshMinutes { get; set; } = 10;
+    public int WeatherReminderMaxDisplayCount { get; set; } = 3;
+    public bool WeatherReminderShowImmediatelyOnChange { get; set; } = true;
+    public List<string> EnabledWeatherReminderRuleIds { get; set; } = new();
+
     // 课程表联动
     public bool ClassScheduleEnabled { get; set; } = true;
     public bool ClassScheduleShowIcon { get; set; } = true;
@@ -153,9 +164,6 @@ public class PluginSettings
     public string ExamCountdownCustomText { get; set; } = "距离{exam}还有{days}天";
     public string ExamCountdownTodayText { get; set; } = "今天就是{exam}，加油！";
     public bool ExamCountdownRepeatYearly { get; set; } = true;
-
-    // 天气问候
-    public bool WeatherShowIcon { get; set; } = true;
 
     // 世界时钟
     public bool WorldClockShowSeconds { get; set; } = false;
