@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace HolidayCountdown.Models
 {
     public static class ChinaCities
