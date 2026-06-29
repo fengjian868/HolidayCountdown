@@ -130,12 +130,12 @@ public class PluginSettings
     public string NoClassNoonText { get; set; } = "中午好，暂无课程";
     public string NoClassAfternoonText { get; set; } = "下午好，暂无课程";
     public string NoClassEveningText { get; set; } = "晚上好，暂无课程";
-    public string ClassScheduleTemplate { get; set; } = "{icon}{subject} 还有{countdown}";
-    public string ClassScheduleOnClassTemplate { get; set; } = "{icon}{subject} 还有{countdown}";
-    public string ClassScheduleBreakTemplate { get; set; } = "{icon}课间 {countdown} 下节{next}";
-    public string ClassSchedulePrepareTemplate { get; set; } = "{icon}准备上课 {next}";
-    public string ClassScheduleAfterSchoolTemplate { get; set; } = "{icon}放学啦";
-    public string ClassScheduleNoClassTemplate { get; set; } = "{icon}{text}";
+    public string ClassScheduleTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject} 本节还剩{curRemain}";
+    public string ClassScheduleOnClassTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject} 本节还剩{curRemain}";
+    public string ClassScheduleBreakTemplate { get; set; } = "{breakIcon}课间休息还有{breakRemain} → 下节课是:{nextIcon}{nextSubject}";
+    public string ClassSchedulePrepareTemplate { get; set; } = "{prepIcon}准备上课 → 下节课是:{nextIcon}{nextSubject} {prepRemain}";
+    public string ClassScheduleAfterSchoolTemplate { get; set; } = "{afterIcon}放学了";
+    public string ClassScheduleNoClassTemplate { get; set; } = "{noClassIcon}{text}";
 
     // 课程联动问候语
     public bool ClassGreetingEnabled { get; set; } = false;

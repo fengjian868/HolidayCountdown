@@ -102,28 +102,33 @@ public class ClassScheduleComponent : ComponentBase
             string template;
             string stateText;
             string countdownText;
-            string iconText;
             string text = "";
             bool warning = false;
+
+            // 各学科图标
+            string curIcon = _svc.Settings.ClassScheduleShowIcon ? "📖" : "";
+            string breakIcon = _svc.Settings.ClassScheduleShowIcon ? "☕" : "";
+            string prepIcon = _svc.Settings.ClassScheduleShowIcon ? "🔔" : "";
+            string afterIcon = _svc.Settings.ClassScheduleShowIcon ? "🏠" : "";
+            string noClassIcon = _svc.Settings.ClassScheduleShowIcon ? "📅" : "";
+            string nextIcon = _svc.Settings.ClassScheduleShowIcon ? "📚" : "";
 
             switch (state)
             {
                 case 1: // OnClass
                     stateText = "上课中";
-                    iconText = _svc.Settings.ClassScheduleShowIcon ? "📖" : "";
                     countdownText = leftTimeOnClass.TotalSeconds > 0 ? FormatTime(leftTimeOnClass) : "";
                     template = _svc.Settings.ClassScheduleOnClassTemplate;
                     break;
                 case 3: // Breaking
                     stateText = "课间";
-                    iconText = _svc.Settings.ClassScheduleShowIcon ? "☕" : "";
                     var breakLeft = leftTimeBreaking.TotalSeconds > 0 ? leftTimeBreaking : leftTimeOnClass;
                     countdownText = breakLeft.TotalSeconds > 0 ? FormatTime(breakLeft) : "";
-                    if (breakLeft.TotalSeconds > 0 && breakLeft.TotalMinutes <= _svc.Settings.PreClassMinutes)
+                    // 当课间剩余时间 <= 警示分钟数时切换为准备上课模板
+                    if (breakLeft.TotalSeconds > 0 && breakLeft.TotalMinutes <= _svc.Settings.BreakWarningMinutes)
                     {
                         template = _svc.Settings.ClassSchedulePrepareTemplate;
                         stateText = "准备上课";
-                        iconText = _svc.Settings.ClassScheduleShowIcon ? "🔔" : "";
                     }
                     else
                     {
@@ -134,19 +139,16 @@ public class ClassScheduleComponent : ComponentBase
                     break;
                 case 4: // AfterSchool
                     stateText = "放学";
-                    iconText = _svc.Settings.ClassScheduleShowIcon ? "🏠" : "";
                     countdownText = "";
                     template = _svc.Settings.ClassScheduleAfterSchoolTemplate;
                     break;
                 case 2: // PrepareOnClass
                     stateText = "准备上课";
-                    iconText = _svc.Settings.ClassScheduleShowIcon ? "🔔" : "";
                     countdownText = leftTimeOnClass.TotalSeconds > 0 ? FormatTime(leftTimeOnClass) : "";
                     template = _svc.Settings.ClassSchedulePrepareTemplate;
                     break;
                 default: // None
                     stateText = "暂无课程";
-                    iconText = _svc.Settings.ClassScheduleShowIcon ? "📅" : "";
                     countdownText = leftTimeOnClass.TotalSeconds > 0 ? FormatTime(leftTimeOnClass) : "";
                     text = GetNoClassText();
                     template = _svc.Settings.ClassScheduleNoClassTemplate;
@@ -154,15 +156,22 @@ public class ClassScheduleComponent : ComponentBase
             }
 
             if (string.IsNullOrWhiteSpace(template))
-                template = "{icon}{subject} 还有{countdown}";
+                template = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject} 本节还剩{curRemain}";
 
             var result = template
-                .Replace("{icon}", string.IsNullOrEmpty(iconText) ? "" : $"{iconText} ")
-                .Replace("{subject}", subjectName)
-                .Replace("{next}", nextName)
-                .Replace("{countdown}", countdownText)
-                .Replace("{state}", stateText)
-                .Replace("{text}", text);
+                .Replace("{curIcon}", string.IsNullOrEmpty(curIcon) ? "" : $"{curIcon} ")
+                .Replace("{curSubject}", subjectName)
+                .Replace("{curRemain}", countdownText)
+                .Replace("{breakIcon}", string.IsNullOrEmpty(breakIcon) ? "" : $"{breakIcon} ")
+                .Replace("{breakRemain}", countdownText)
+                .Replace("{prepIcon}", string.IsNullOrEmpty(prepIcon) ? "" : $"{prepIcon} ")
+                .Replace("{prepRemain}", countdownText)
+                .Replace("{nextIcon}", string.IsNullOrEmpty(nextIcon) ? "" : $"{nextIcon} ")
+                .Replace("{nextSubject}", nextName)
+                .Replace("{afterIcon}", string.IsNullOrEmpty(afterIcon) ? "" : $"{afterIcon} ")
+                .Replace("{noClassIcon}", string.IsNullOrEmpty(noClassIcon) ? "" : $"{noClassIcon} ")
+                .Replace("{text}", text)
+                .Replace("{state}", stateText);
 
             result = Regex.Replace(result, @"\s+", " ").Trim();
 

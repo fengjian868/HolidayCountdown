@@ -323,7 +323,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("无课程文案", "无课程时按时段显示的内容", noClassPanel));
 
         var preClassPanel = new StackPanel { Spacing = 0 };
-        preClassPanel.Children.Add(SettingItem("课前提示分钟", "上课前多少分钟开始显示下节课和总课时",
+        preClassPanel.Children.Add(SettingItem("课前提示分钟", "上课前多少分钟开始显示准备上课（当前由课间警示分钟数控制）",
             Number(_svc.Settings.PreClassMinutes, 0, 60, v => { _svc.Settings.PreClassMinutes = v; AutoSave(); })));
         s.Children.Add(Expander("课前提示", "上课前提前显示下节课信息", preClassPanel));
 
@@ -339,19 +339,19 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("课间警示", "课间剩余时间较少时高亮显示", warningPanel));
 
         var templatePanel = new StackPanel { Spacing = 0 };
-        templatePanel.Children.Add(SettingItem("上课模板", "{icon}=学科图标 {subject}=学科名 {remaining}=本节课剩余时间",
+        templatePanel.Children.Add(SettingItem("上课模板", "{curIcon}=当前学科图标 {curSubject}=当前学科名 {curRemain}=本节课剩余时间 {nextIcon}=下节课图标 {nextSubject}=下节课名",
             Text(_svc.Settings.ClassScheduleOnClassTemplate, 320, v => { _svc.Settings.ClassScheduleOnClassTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("课间模板", "{icon}=学科图标 {remaining}=课间剩余时间 {next}=下节课名",
+        templatePanel.Children.Add(SettingItem("课间模板", "{breakIcon}=课间图标 {breakRemain}=课间剩余时间 {nextIcon}=下节课图标 {nextSubject}=下节课名",
             Text(_svc.Settings.ClassScheduleBreakTemplate, 320, v => { _svc.Settings.ClassScheduleBreakTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("准备上课模板", "{icon}=学科图标 {next}=下节课名",
+        templatePanel.Children.Add(SettingItem("准备上课模板", "{prepIcon}=准备上课图标 {nextIcon}=下节课图标 {nextSubject}=下节课名 {prepRemain}=距上课剩余时间",
             Text(_svc.Settings.ClassSchedulePrepareTemplate, 320, v => { _svc.Settings.ClassSchedulePrepareTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("放学模板", "{icon}=学科图标（固定放学图标）",
+        templatePanel.Children.Add(SettingItem("放学模板", "{afterIcon}=放学图标",
             Text(_svc.Settings.ClassScheduleAfterSchoolTemplate, 320, v => { _svc.Settings.ClassScheduleAfterSchoolTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("无课程模板", "{icon}=学科图标 {text}=无课程文案",
+        templatePanel.Children.Add(SettingItem("无课程模板", "{noClassIcon}=无课程图标 {text}=无课程文案",
             Text(_svc.Settings.ClassScheduleNoClassTemplate, 320, v => { _svc.Settings.ClassScheduleNoClassTemplate = v; AutoSave(); })));
         s.Children.Add(Expander("显示模板", "自定义各类状态的显示格式", templatePanel));
 
