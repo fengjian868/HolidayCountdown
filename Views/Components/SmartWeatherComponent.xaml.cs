@@ -72,6 +72,21 @@ public class SmartWeatherComponent : ComponentBase
         }
     }
 
+    double GetClassIslandFontSize()
+    {
+        try
+        {
+            var settings = GetSettingsServiceSettings();
+            if (settings == null) return 14;
+            var value = GetPropertyValue(settings, "MainWindowBodyFontSize");
+            if (value is double d) return d;
+            if (value is float f) return f;
+            if (value != null && double.TryParse(value.ToString(), out var parsed)) return parsed;
+        }
+        catch { }
+        return 14;
+    }
+
     /// <summary>
     /// 集中生成所有模板变量 A/B/C/D/E
     /// </summary>
@@ -160,11 +175,12 @@ public class SmartWeatherComponent : ComponentBase
     /// </summary>
     Control Badge(string text, IBrush? foreground, IBrush? background)
     {
+        var baseFontSize = GetClassIslandFontSize();
         var tb = new TextBlock
         {
             Text = text,
             VerticalAlignment = VerticalAlignment.Center,
-            FontSize = 13
+            FontSize = baseFontSize
         };
         if (foreground != null) tb.Foreground = foreground;
 
@@ -202,10 +218,11 @@ public class SmartWeatherComponent : ComponentBase
     {
         var (bg, fg) = GetWarningColors(w.Level);
         var text = $"{w.Icon} {w.Type} {w.LevelText}";
+        var baseFontSize = GetClassIslandFontSize();
         var tb = new TextBlock
         {
             Text = text,
-            FontSize = 11,
+            FontSize = baseFontSize - 2,
             Foreground = fg,
             VerticalAlignment = VerticalAlignment.Center
         };

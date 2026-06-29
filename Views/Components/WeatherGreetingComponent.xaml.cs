@@ -39,13 +39,21 @@ public class WeatherGreetingComponent : ComponentBase
         };
         Content = _panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) }; _timer.Tick += (s, e) => Update(); _timer.Start();
-        Dispatcher.UIThread.Post(() => { _svc = new HolidayService(); HolidayService.SettingsChanged += OnSettingsChanged; Update(); });
+        Dispatcher.UIThread.Post(() => { _svc = new HolidayService(); HolidayService.SettingsChanged += OnSettingsChanged; UpdateTimerInterval(); Update(); });
     }
 
     void OnSettingsChanged()
     {
         _svc?.LoadSettings();
-        Dispatcher.UIThread.Post(Update);
+        Dispatcher.UIThread.Post(() => { UpdateTimerInterval(); Update(); });
+    }
+
+    void UpdateTimerInterval()
+    {
+        if (_svc == null) return;
+        var minutes = _svc.Settings.WeatherGreetingRefreshMinutes;
+        if (minutes < 1) minutes = 10;
+        _timer.Interval = TimeSpan.FromMinutes(minutes);
     }
 
     void Update()

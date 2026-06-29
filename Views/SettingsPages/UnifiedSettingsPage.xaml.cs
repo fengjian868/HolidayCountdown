@@ -17,6 +17,7 @@ using ClassIsland.Core.Attributes;
 using ClassIsland.Core.Abstractions.Controls;
 using HolidayCountdown.Models;
 using HolidayCountdown.Services;
+using HolidayCountdown.WeatherReminders;
 
 namespace HolidayCountdown.Views.SettingsPages;
 
@@ -28,6 +29,9 @@ public class UnifiedSettingsPage : SettingsPageBase
     private readonly DispatcherTimer _saveTimer;
     private StackPanel _contentPanel = null!;
     private ScrollViewer _scrollViewer = null!;
+    private Grid _tabBarGrid = null!;
+    private StackPanel _tabRow0 = null!;
+    private StackPanel _tabRow1 = null!;
 
     private readonly (string Icon, string Label, Func<Control> Build)[] _tabs;
     private int _currentIndex = -1;
@@ -56,6 +60,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             ("\uE70F", "自定义", BuildCustomHolidayPanel),
             ("\uE8F3", "寒暑假", BuildVacationPanel),
             ("\uE753", "天气", BuildWeatherPanel),
+            ("\uE7ED", "天气提醒", BuildWeatherReminderPanel),
             ("\uE7BE", "课表", BuildClassSchedulePanel),
             ("\uE9D1", "学习", BuildStudyTimePanel),
             ("\uE921", "大考", BuildExamCountdownPanel),
@@ -71,14 +76,14 @@ public class UnifiedSettingsPage : SettingsPageBase
             RowDefinitions = new RowDefinitions("Auto Auto *")
         };
 
-        var tabBar = new StackPanel
+        _tabBarGrid = new Grid
         {
-            Orientation = Orientation.Horizontal,
-            Spacing = 4,
             Margin = new Thickness(16, 12, 16, 8),
-            HorizontalAlignment = HorizontalAlignment.Left,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
             VerticalAlignment = VerticalAlignment.Center
         };
+        _tabBarGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        _tabBarGrid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
 
         // 顶部导航栏左侧显示设置页图标
         var navIconBlock = new TextBlock
@@ -90,7 +95,22 @@ public class UnifiedSettingsPage : SettingsPageBase
             Margin = new Thickness(0, 0, 10, 0)
         };
         BindThemeForeground(navIconBlock);
-        tabBar.Children.Add(navIconBlock);
+
+        _tabRow0 = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 4,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        _tabRow0.Children.Add(navIconBlock);
+
+        _tabRow1 = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 4,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 4, 0, 0)
+        };
 
         for (int i = 0; i < _tabs.Length; i++)
         {
@@ -121,10 +141,15 @@ public class UnifiedSettingsPage : SettingsPageBase
             };
             btn.PointerPressed += (s, e) => SwitchTab(idx);
             _tabButtons.Add(btn);
-            tabBar.Children.Add(btn);
+            _tabRow0.Children.Add(btn);
         }
-        Grid.SetRow(tabBar, 0);
-        root.Children.Add(tabBar);
+
+        Grid.SetRow(_tabRow0, 0);
+        Grid.SetRow(_tabRow1, 1);
+        _tabBarGrid.Children.Add(_tabRow0);
+        _tabBarGrid.Children.Add(_tabRow1);
+        Grid.SetRow(_tabBarGrid, 0);
+        root.Children.Add(_tabBarGrid);
 
         var sep = new Border
         {
@@ -145,8 +170,47 @@ public class UnifiedSettingsPage : SettingsPageBase
         Grid.SetRow(_scrollViewer, 2);
         root.Children.Add(_scrollViewer);
 
+        _tabBarGrid.SizeChanged += (s, e) => RebalanceTabRows();
         SwitchTab(0);
         return root;
+    }
+
+    void RebalanceTabRows()
+    {
+        if (_tabBarGrid == null || _tabRow0 == null || _tabRow1 == null) return;
+
+        var availableWidth = _tabBarGrid.Bounds.Width;
+        if (availableWidth <= 0 || _tabRow0.Children.Count == 0) return;
+
+        // 先把所有按钮收回第一行（保留第一个导航图标不移动）
+        while (_tabRow1.Children.Count > 0)
+        {
+            var btn = _tabRow1.Children[0];
+            _tabRow1.Children.RemoveAt(0);
+            _tabRow0.Children.Add(btn);
+        }
+
+        // 计算第一行期望总宽度
+        double totalWidth = 0;
+        foreach (var child in _tabRow0.Children)
+        {
+            if (child is Control c) totalWidth += c.Bounds.Width;
+        }
+
+        // 若溢出，从末尾依次移到第二行，直到不溢出
+        // 注意：第一个导航图标保留在第一行
+        while (totalWidth > availableWidth && _tabRow0.Children.Count > 2)
+        {
+            var last = _tabRow0.Children[_tabRow0.Children.Count - 1];
+            _tabRow0.Children.RemoveAt(_tabRow0.Children.Count - 1);
+            _tabRow1.Children.Insert(0, last);
+
+            totalWidth = 0;
+            foreach (var child in _tabRow0.Children)
+            {
+                if (child is Control c) totalWidth += c.Bounds.Width;
+            }
+        }
     }
 
     void SwitchTab(int index)
@@ -1016,6 +1080,70 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("天气关键词", "根据天气关键词匹配显示文案", BuildWeatherGreetingPanel()));
 
         s.Children.Add(Info("天气数据来自ClassIsland内置天气服务，插件会自动读取当前天气并匹配对应的问候语。"));
+        return s;
+    }
+
+    Control BuildWeatherReminderPanel()
+    {
+        var s = new StackPanel { Spacing = 0 };
+        s.Children.Add(PageHeader("\uE7ED 天气变化提醒设置[测试版]"));
+
+        var basicPanel = new StackPanel { Spacing = 0 };
+        basicPanel.Children.Add(SettingItem("启用天气变化提醒", "关闭后组件不显示任何内容",
+            Toggle(_svc.Settings.WeatherReminderEnabled, v => { _svc.Settings.WeatherReminderEnabled = v; AutoSave(); })));
+        basicPanel.Children.Add(Separator());
+
+        var refreshOptions = new[] { "5分钟", "10分钟", "15分钟", "30分钟" };
+        var refreshValues = new[] { 5, 10, 15, 30 };
+        var refreshCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
+        foreach (var o in refreshOptions) refreshCombo.Items.Add(o);
+        refreshCombo.SelectedIndex = Math.Max(0, Array.IndexOf(refreshValues, _svc.Settings.WeatherReminderRefreshMinutes));
+        refreshCombo.SelectionChanged += (a, b) =>
+        {
+            var idx = refreshCombo.SelectedIndex;
+            if (idx >= 0 && idx < refreshValues.Length) _svc.Settings.WeatherReminderRefreshMinutes = refreshValues[idx];
+            AutoSave();
+        };
+        basicPanel.Children.Add(SettingItem("刷新间隔", "多久评估一次天气变化", refreshCombo));
+        basicPanel.Children.Add(Separator());
+        basicPanel.Children.Add(SettingItem("最多显示条数", "同时显示多少条提醒",
+            Number(_svc.Settings.WeatherReminderMaxDisplayCount, 1, 5, v => { _svc.Settings.WeatherReminderMaxDisplayCount = v; AutoSave(); })));
+        basicPanel.Children.Add(Separator());
+        basicPanel.Children.Add(SettingItem("变化时立即刷新", "检测到天气变化时立即更新显示",
+            Toggle(_svc.Settings.WeatherReminderShowImmediatelyOnChange, v => { _svc.Settings.WeatherReminderShowImmediatelyOnChange = v; AutoSave(); })));
+        s.Children.Add(Expander("基础设置", "天气变化提醒总开关与刷新策略", basicPanel));
+
+        var rulePanel = new StackPanel { Spacing = 0 };
+        var evaluator = new WeatherReminderEvaluator(_svc);
+        var allRules = evaluator.GetAllRules();
+        var enabledIds = _svc.Settings.EnabledWeatherReminderRuleIds;
+
+        foreach (var rule in allRules)
+        {
+            var ruleId = rule.Id;
+            var isEnabled = enabledIds.Contains(ruleId) || (enabledIds.Count == 0 && rule.EnabledByDefault);
+            var chk = new CheckBox
+            {
+                Content = $"{rule.DefaultIcon} {rule.Name}",
+                IsChecked = isEnabled
+            };
+            chk.IsCheckedChanged += (a, b) =>
+            {
+                if (chk.IsChecked == true)
+                {
+                    if (!enabledIds.Contains(ruleId)) enabledIds.Add(ruleId);
+                }
+                else
+                {
+                    enabledIds.Remove(ruleId);
+                }
+                AutoSave();
+            };
+            rulePanel.Children.Add(SettingItem(rule.Name, null, chk));
+        }
+        s.Children.Add(Expander("提醒规则", "勾选要启用的天气变化提醒类型", rulePanel));
+
+        s.Children.Add(Info("天气变化提醒为测试版功能，当前内置 6 条核心规则，后续会逐步补充更多类型。"));
         return s;
     }
 
