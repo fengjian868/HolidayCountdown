@@ -7,6 +7,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
@@ -124,7 +125,13 @@ public class ExamCountdownComponent : ComponentBase
             _txt.FontSize = fontSize;
 
             if (Color.TryParse(_svc.Settings.ExamCountdownTextColor, out var fg))
-                _txt.Foreground = new SolidColorBrush(fg);
+            {
+                // 黑白/灰度颜色跟随主题，带颜色则保持用户设置
+                if (fg.R == fg.G && fg.G == fg.B)
+                    _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+                else
+                    _txt.Foreground = new SolidColorBrush(fg);
+            }
 
             // 圆环显示
             var ringVisible = _svc.Settings.ExamCountdownShowRing;
