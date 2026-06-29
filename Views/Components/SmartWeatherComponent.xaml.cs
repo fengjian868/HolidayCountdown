@@ -129,7 +129,7 @@ public class SmartWeatherComponent : ComponentBase
     /// </summary>
     void Render(SmartWeatherVariables vars)
     {
-        var template = _svc?.Settings.SmartWeatherTemplate ?? "{A} {B} {C} {D}";
+        var template = _svc?.Settings.SmartWeatherTemplate ?? "{B} {A} {C} {D}";
         var showMap = new Dictionary<string, bool>
         {
             ["A"] = _svc?.Settings.SmartWeatherShowA ?? true,
@@ -242,7 +242,11 @@ public class SmartWeatherComponent : ComponentBase
 
     string GetReminder(WeatherData data)
     {
-        // 优先根据温度
+        // 优先显示降雨/停雨时间
+        var rainTiming = GetRainTiming(data);
+        if (!string.IsNullOrEmpty(rainTiming)) return rainTiming;
+
+        // 其次根据温度给出穿衣提醒
         if (data.Temp.HasValue && _svc?.Settings.TempGreetings.Count > 0)
         {
             var match = _svc.Settings.TempGreetings
@@ -288,6 +292,68 @@ public class SmartWeatherComponent : ComponentBase
         return "";
     }
 
+    /// <summary>
+    /// 根据当前天气和小时预报计算多久下雨/停雨。
+    /// </summary>
+    string? GetRainTiming(WeatherData data)
+    {
+        if (data.HourlyCodes.Count == 0 && string.IsNullOrEmpty(data.WeatherText))
+            return null;
+
+        bool IsRainingNow()
+        {
+            if (!string.IsNullOrEmpty(data.WeatherText) && IsRainingText(data.WeatherText)) return true;
+            if (data.HourlyCodes.Count > 0 && IsRainingCode(data.HourlyCodes[0])) return true;
+            if (data.HourlyTexts.Count > 0 && IsRainingText(data.HourlyTexts[0])) return true;
+            return false;
+        }
+
+        var maxHours = Math.Max(data.HourlyCodes.Count, data.HourlyTexts.Count);
+        if (maxHours == 0) return null;
+
+        if (IsRainingNow())
+        {
+            // 找未来首次停雨的时刻
+            for (int i = 1; i < maxHours; i++)
+            {
+                var code = i < data.HourlyCodes.Count ? data.HourlyCodes[i] : (int?)null;
+                var text = i < data.HourlyTexts.Count ? data.HourlyTexts[i] : null;
+                if (!IsRainingCode(code) && !IsRainingText(text))
+                {
+                    return i == 1 ? "1小时后停雨" : $"{i}小时后停雨";
+                }
+            }
+            return "将持续降雨";
+        }
+        else
+        {
+            // 找未来首次降雨的时刻
+            for (int i = 0; i < maxHours; i++)
+            {
+                var code = i < data.HourlyCodes.Count ? data.HourlyCodes[i] : (int?)null;
+                var text = i < data.HourlyTexts.Count ? data.HourlyTexts[i] : null;
+                if (IsRainingCode(code) || IsRainingText(text))
+                {
+                    return i == 0 ? "即将下雨" : $"{i}小时后下雨";
+                }
+            }
+        }
+
+        return null;
+    }
+
+    static bool IsRainingText(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        return text.Contains("雨") || text.Contains("雪") || text.Contains("冰雹");
+    }
+
+    static bool IsRainingCode(int? code)
+    {
+        // 小米天气代码：8~19 为降水天气
+        return code.HasValue && code.Value >= 8 && code.Value <= 19;
+    }
+
     #region Weather Data Reading
 
     WeatherData GetWeatherData()
@@ -323,7 +389,9 @@ public class SmartWeatherComponent : ComponentBase
             ?? GetDateTimeProperty(lastWeatherInfo, "LastUpdateTime")
             ?? GetDateTimeProperty(lastWeatherInfo, "UpdatedTime");
 
-        return new WeatherData(temp, weatherCode, weatherText, warnings, updateTime);
+        var (hourlyCodes, hourlyTexts) = GetHourlyForecasts(lastWeatherInfo);
+
+        return new WeatherData(temp, weatherCode, weatherText, warnings, updateTime, hourlyCodes, hourlyTexts);
     }
 
     object? GetSettingsServiceSettings()
@@ -412,6 +480,45 @@ public class SmartWeatherComponent : ComponentBase
             return result.ToArray();
         }
         catch { return Array.Empty<string>(); }
+    }
+
+    (IReadOnlyList<int> codes, IReadOnlyList<string> texts) GetHourlyForecasts(object lastWeatherInfo)
+    {
+        var codes = new List<int>();
+        var texts = new List<string>();
+        try
+        {
+            var forecastHourly = GetPropertyValue(lastWeatherInfo, "ForecastHourly");
+            if (forecastHourly == null) return (codes, texts);
+
+            var weather = GetPropertyValue(forecastHourly, "Weather");
+            if (weather != null)
+            {
+                var value = GetPropertyValue(weather, "Value");
+                if (value is System.Collections.IList codeList)
+                {
+                    foreach (var item in codeList)
+                    {
+                        if (int.TryParse(item?.ToString(), out var c)) codes.Add(c);
+                    }
+                }
+            }
+
+            var weatherText = GetPropertyValue(forecastHourly, "WeatherText");
+            if (weatherText != null)
+            {
+                var value = GetPropertyValue(weatherText, "Value");
+                if (value is System.Collections.IList textList)
+                {
+                    foreach (var item in textList)
+                    {
+                        texts.Add(item?.ToString() ?? "");
+                    }
+                }
+            }
+        }
+        catch { }
+        return (codes, texts);
     }
 
     string GetWeatherTextByCode(string code)
@@ -605,14 +712,19 @@ public class WeatherData
     public string? WeatherText { get; }
     public string[] Warnings { get; }
     public DateTime? UpdateTime { get; }
+    public IReadOnlyList<int> HourlyCodes { get; }
+    public IReadOnlyList<string> HourlyTexts { get; }
 
     public WeatherData(double? temp = null, string? weatherCode = null, string? weatherText = null,
-        string[]? warnings = null, DateTime? updateTime = null)
+        string[]? warnings = null, DateTime? updateTime = null,
+        IReadOnlyList<int>? hourlyCodes = null, IReadOnlyList<string>? hourlyTexts = null)
     {
         Temp = temp;
         WeatherCode = weatherCode;
         WeatherText = weatherText;
         Warnings = warnings ?? Array.Empty<string>();
         UpdateTime = updateTime;
+        HourlyCodes = hourlyCodes ?? Array.Empty<int>();
+        HourlyTexts = hourlyTexts ?? Array.Empty<string>();
     }
 }
