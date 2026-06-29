@@ -31,11 +31,11 @@ public class Plugin : PluginBase
             services.AddComponent<Views.Components.ExamCountdownComponent>();
             services.AddComponent<Views.Components.WorldClockComponent>();
             services.AddComponent<Views.Components.WeatherReminderComponent>();
-        }
 
-        services.AddAction<Automation.Actions.OpenUsbDriveAction>();
-        services.AddAction<Automation.Actions.RefreshWeatherAction>();
-        services.AddAction<Automation.Actions.RefreshWeatherTextAction>();
+            services.AddAction<Automation.Actions.OpenUsbDriveAction>();
+            services.AddAction<Automation.Actions.RefreshWeatherAction>();
+            services.AddAction<Automation.Actions.RefreshWeatherTextAction>();
+        }
 
         services.AddSettingsPage<Views.SettingsPages.UnifiedSettingsPage>();
     }

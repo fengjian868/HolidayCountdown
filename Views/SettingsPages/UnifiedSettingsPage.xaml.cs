@@ -1532,7 +1532,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var expPanel = new StackPanel { Spacing = 8, Margin = new Thickness(16, 12, 16, 12) };
         var expDesc = new TextBlock
         {
-            Text = "实验性功能包含：智能天气、大考倒计时、世界时钟、天气变化提醒。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
+            Text = "实验性功能包含：智能天气、大考倒计时、世界时钟、天气变化提醒、自动化行动（打开U盘/刷新天气/刷新天气文案）。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
             FontSize = 12,
             Opacity = 0.7
         };
