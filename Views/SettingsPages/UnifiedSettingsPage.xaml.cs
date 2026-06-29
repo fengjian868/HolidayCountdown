@@ -49,9 +49,10 @@ public class UnifiedSettingsPage : SettingsPageBase
         _svc = new HolidayService();
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _svc.SaveSettings(); };
-        _tabs = new (string, string, Func<Control>)[]
+
+        var expEnabled = _svc.Settings.ExperimentalFeaturesEnabled;
+        var tabList = new List<(string, string, Func<Control>)>
         {
-            // 关于页放在最左侧
             ("\uE946", "关于", BuildAboutPanel),
             ("\uE8F5", "节假日", BuildHolidayPanel),
             ("\uE8BD", "问候语", BuildGreetingPanel),
@@ -60,12 +61,19 @@ public class UnifiedSettingsPage : SettingsPageBase
             ("\uE70F", "自定义", BuildCustomHolidayPanel),
             ("\uE8F3", "寒暑假", BuildVacationPanel),
             ("\uE753", "天气", BuildWeatherPanel),
-            ("\uE7ED", "天气提醒", BuildWeatherReminderPanel),
             ("\uE7BE", "课表", BuildClassSchedulePanel),
             ("\uE9D1", "学习", BuildStudyTimePanel),
-            ("\uE921", "大考", BuildExamCountdownPanel),
-            ("\uE823", "时钟", BuildWorldClockPanel),
         };
+
+        // 实验性功能 Tab
+        if (expEnabled)
+        {
+            tabList.Add(("\uE7ED", "天气提醒", BuildWeatherReminderPanel));
+            tabList.Add(("\uE921", "大考", BuildExamCountdownPanel));
+            tabList.Add(("\uE823", "时钟", BuildWorldClockPanel));
+        }
+
+        _tabs = tabList.ToArray();
         Content = Build();
     }
 
@@ -1431,6 +1439,84 @@ public class UnifiedSettingsPage : SettingsPageBase
         }
         s.Children.Add(Expander("功能模块", "插件支持的所有功能", featurePanel, expanded: true));
 
+        // 实验性功能开关
+        var expPanel = new StackPanel { Spacing = 8, Margin = new Thickness(16, 12, 16, 12) };
+        var expDesc = new TextBlock
+        {
+            Text = "实验性功能包含：智能天气、大考倒计时、世界时钟、天气变化提醒。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
+            FontSize = 12,
+            Opacity = 0.7
+        };
+        BindThemeForeground(expDesc);
+        expPanel.Children.Add(expDesc);
+
+        var expEnabled = _svc.Settings.ExperimentalFeaturesEnabled;
+        var expToggle = new ToggleSwitch { IsChecked = expEnabled };
+        expToggle.IsCheckedChanged += (a, b) =>
+        {
+            var enable = expToggle.IsChecked == true;
+            _svc.Settings.ExperimentalFeaturesEnabled = enable;
+            AutoSave();
+
+            // 写入/删除标记文件
+            var expFile = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "ClassIsland", "Plugins", "HolidayCountdown", "experimental_enabled");
+            try
+            {
+                if (enable)
+                {
+                    var dir = Path.GetDirectoryName(expFile);
+                    if (!Directory.Exists(dir)) Directory.CreateDirectory(dir!);
+                    File.WriteAllText(expFile, "1");
+                }
+                else
+                {
+                    if (File.Exists(expFile)) File.Delete(expFile);
+                }
+            }
+            catch { }
+
+            // 提示需要重启
+            try
+            {
+                var appHostType = Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Shared")
+                    ?? Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Core")
+                    ?? AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(asm => asm.GetTypes())
+                        .FirstOrDefault(t => t.Name == "IAppHost");
+                if (appHostType != null)
+                {
+                    var tryGetService = appHostType.GetMethod("TryGetService", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    if (tryGetService != null && tryGetService.IsGenericMethodDefinition)
+                    {
+                        var notifType = Type.GetType("ClassIsland.Core.Abstractions.Services.INotificationHostService, ClassIsland.Core")
+                            ?? AppDomain.CurrentDomain.GetAssemblies()
+                                .SelectMany(asm => asm.GetTypes())
+                                .FirstOrDefault(t => t.Name == "INotificationHostService");
+                        if (notifType != null)
+                        {
+                            var genericMethod = tryGetService.MakeGenericMethod(notifType);
+                            var notifService = genericMethod.Invoke(null, null);
+                            if (notifService != null)
+                            {
+                                var showMethod = notifService.GetType().GetMethod("ShowNotification", System.Reflection.BindingFlags.Public | System.Reflection.Instance);
+                                if (showMethod != null)
+                                {
+                                    // 尝试调用重启提示
+                                    showMethod.Invoke(notifService, new object[] { "实验性功能设置已更改", "请重启 ClassIsland 以使更改生效。", 5000 });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+        };
+        expPanel.Children.Add(SettingItem("开启实验性功能", "需重启 ClassIsland 后生效", expToggle));
+
+        s.Children.Add(Expander("实验性功能", "测试版功能，默认关闭", expPanel));
+
         var footerBlock = new TextBlock { Text = "Made with love for ClassIsland", FontSize = 12, Opacity = 0.5, Margin = new Thickness(0, 8, 0, 0) };
         BindThemeForeground(footerBlock);
         s.Children.Add(footerBlock);
@@ -1515,9 +1601,9 @@ public class UnifiedSettingsPage : SettingsPageBase
 
     void AutoSave()
     {
-        // 延迟 500ms 保存，避免每次按键都触发文件写入和全局事件
+        // 立即保存，确保组件能立即获取最新设置
         _saveTimer.Stop();
-        _saveTimer.Start();
+        _svc.SaveSettings();
     }
 
     static ToggleSwitch Toggle(bool value, Action<bool> onChanged)

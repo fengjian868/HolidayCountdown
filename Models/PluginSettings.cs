@@ -7,6 +7,7 @@ public class PluginSettings
 {
     // 全局
     public int Version { get; set; } = 123;
+    public bool ExperimentalFeaturesEnabled { get; set; } = false;
 
     // 节假日组件
     public int DisplayCount { get; set; } = 3;
