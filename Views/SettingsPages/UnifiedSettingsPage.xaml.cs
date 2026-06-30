@@ -1149,7 +1149,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var presetCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
         foreach (var p in presets) presetCombo.Items.Add(p);
 
-        var currentTemplate = _svc.Settings.WeatherTemplate ?? "{A}{B} {C} {D}";
+        var currentTemplate = _svc.Settings.WeatherTemplate ?? "{icon} {weather} {temp} {greeting}";
         presetCombo.SelectedIndex = currentTemplate switch
         {
             "{D}" => 0,
@@ -1157,6 +1157,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             "{A}{B} {C} {D}" => 2,
             "{A}{C}" => 3,
             "{A}{B} {C} {D} {E}" => 4,
+            "{icon} {weather} {temp} {greeting}" => 2,
             _ => -1
         };
 
@@ -1177,7 +1178,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 2 => "{A}{B} {C} {D}",
                 3 => "{A}{C}",
                 4 => "{A}{B} {C} {D} {E}",
-                _ => _svc.Settings.WeatherTemplate ?? "{A}{B} {C} {D}"
+                _ => _svc.Settings.WeatherTemplate ?? "{icon} {weather} {temp} {greeting}"
             };
             _svc.Settings.WeatherTemplate = newTemplate;
             // 同步到自定义模板输入框

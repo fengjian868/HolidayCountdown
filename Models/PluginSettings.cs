@@ -66,7 +66,7 @@ public class PluginSettings
     // 天气问候
     public bool WeatherGreetingEnabled { get; set; } = true;
     public bool WeatherWarningOverride { get; set; } = true;
-    public string? WeatherTemplate { get; set; } = "{icon}{temp} {greeting}";
+    public string? WeatherTemplate { get; set; } = "{icon} {weather} {temp} {greeting} {rain}";
     public bool WeatherShowTemp { get; set; } = true;
     public List<TempGreeting> TempGreetings { get; set; } = new();
     public List<WeatherGreetingItem> WeatherGreetingItems { get; set; } = new()
@@ -97,12 +97,13 @@ public class PluginSettings
     };
 
     // 智能天气
-    public string SmartWeatherTemplate { get; set; } = "{B} {A} {C} {D}";
+    public string SmartWeatherTemplate { get; set; } = "{B} {F} {A} {D}";
     public bool SmartWeatherShowA { get; set; } = true;
     public bool SmartWeatherShowB { get; set; } = true;
     public bool SmartWeatherShowC { get; set; } = true;
     public bool SmartWeatherShowD { get; set; } = true;
     public bool SmartWeatherShowE { get; set; } = false;
+    public bool SmartWeatherShowF { get; set; } = true;
     public bool SmartWeatherWarningOverride { get; set; } = true;
     public bool SmartWeatherTempColorEnabled { get; set; } = true;
 

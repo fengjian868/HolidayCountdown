@@ -298,6 +298,23 @@ public class ClassScheduleComponent : ComponentBase
         try
         {
             var source = lessons ?? dataSource;
+
+            // 优先尝试直接读取 NextSubject / NextTimeLayoutItem
+            var nextSubject = GetPropertyValue(source, "NextSubject")
+                           ?? GetPropertyValue(dataSource, "NextSubject");
+            if (nextSubject != null)
+            {
+                var name = GetSubjectName(nextSubject);
+                if (!string.IsNullOrEmpty(name)) return name;
+            }
+            var nextItem = GetPropertyValue(source, "NextTimeLayoutItem")
+                        ?? GetPropertyValue(dataSource, "NextTimeLayoutItem");
+            if (nextItem != null)
+            {
+                var name = GetSubjectNameFromItem(nextItem);
+                if (!string.IsNullOrEmpty(name)) return name;
+            }
+
             var timeLayout = GetPropertyValue(source, "CurrentTimeLayout")
                           ?? GetPropertyValue(dataSource, "CurrentTimeLayout")
                           ?? GetPropertyValue(source, "TimeLayout")
@@ -551,6 +568,13 @@ public class ClassScheduleComponent : ComponentBase
         var value = GetPropertyValue(source, propName);
         if (value == null) return null;
         if (value is TimeSpan ts) return ts;
+        // ClassIsland 的 OnClassLeftTime 等属性可能是 DateTime（表示结束时刻）
+        if (value is DateTime dt)
+        {
+            if (dt == default) return null;
+            var diff = dt - DateTime.Now;
+            return diff.TotalSeconds > 0 ? diff : TimeSpan.Zero;
+        }
         try
         {
             return TimeSpan.Parse(value.ToString()!);

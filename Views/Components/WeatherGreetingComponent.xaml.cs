@@ -99,7 +99,7 @@ public class WeatherGreetingComponent : ComponentBase
             var icon = _svc.Settings.WeatherShowIcon ? GetWeatherIcon(actualWeatherText) : "";
             var (coloredIcon, iconColor) = GetWeatherIconAndColor(actualWeatherText, weatherCode);
 
-            var template = _svc.Settings.WeatherTemplate ?? "{A}{B} {C} {D}";
+            var template = _svc.Settings.WeatherTemplate ?? "{icon} {weather} {temp} {greeting} {rain}";
 
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
