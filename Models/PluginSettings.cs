@@ -158,7 +158,7 @@ public class PluginSettings
     public string ExamCountdownTextColor { get; set; } = "#FF2196F3";
     public string ExamCountdownRingColor { get; set; } = "#FFFF5252";
     public bool ExamCountdownShowRing { get; set; } = true;
-    public DateTime ExamCountdownRingStartDate { get; set; } = new DateTime(2025, 8, 1);
+    public DateTime ExamCountdownRingStartDate { get; set; } = new DateTime(2025, 6, 9);
     public bool ExamCountdownShowBackground { get; set; } = true;
     public string ExamCountdownBackgroundColor { get; set; } = "#502196F3";
     public int ExamCountdownFontSize { get; set; } = 0;

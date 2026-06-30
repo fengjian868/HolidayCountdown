@@ -35,8 +35,10 @@ public class ExamCountdownComponent : ComponentBase
     public ExamCountdownComponent()
     {
         // 圆环大小改为 32x32，类似节假日倒计时
-        const double ringSize = 32;
+        const double ringSize = 28;
         const double ringThickness = 2.5;
+
+        var defaultRingColor = Color.Parse("#FFFF5252");
 
         _ringTrack = new Arc
         {
@@ -44,6 +46,7 @@ public class ExamCountdownComponent : ComponentBase
             Height = ringSize,
             StartAngle = -90,
             SweepAngle = 360,
+            Stroke = new SolidColorBrush(defaultRingColor) { Opacity = 0.2 },
             StrokeThickness = ringThickness,
             StrokeLineCap = PenLineCap.Round,
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -55,6 +58,7 @@ public class ExamCountdownComponent : ComponentBase
             Height = ringSize,
             StartAngle = -90,
             SweepAngle = 0, // 动态设置进度
+            Stroke = new SolidColorBrush(defaultRingColor),
             StrokeThickness = ringThickness,
             StrokeLineCap = PenLineCap.Round,
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -145,7 +149,8 @@ public class ExamCountdownComponent : ComponentBase
                 }
 
                 var progress = ComputeRingProgress(examDate);
-                _ringProgress.SweepAngle = Math.Max(0, Math.Min(360, progress * 360));
+                var sweepAngle = Math.Max(0, Math.Min(360, progress * 360));
+                _ringProgress.SweepAngle = sweepAngle;
             }
 
         }
@@ -197,7 +202,7 @@ public class ExamCountdownComponent : ComponentBase
     {
         var start = _svc.Settings.ExamCountdownRingStartDate;
         try { return new DateTime(year, start.Month, start.Day); }
-        catch { return new DateTime(year, 8, 1); }
+        catch { return new DateTime(year, 6, 9); }
     }
 
     double GetClassIslandFontSize()

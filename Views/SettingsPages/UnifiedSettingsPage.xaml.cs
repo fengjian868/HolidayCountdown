@@ -420,7 +420,28 @@ public class UnifiedSettingsPage : SettingsPageBase
         typeCombo.Items.Add("高考");
         typeCombo.Items.Add("中考");
         typeCombo.SelectedIndex = _svc.Settings.ExamType == 1 ? 1 : 0;
-        typeCombo.SelectionChanged += (a, b) => { _svc.Settings.ExamType = typeCombo.SelectedIndex; AutoSave(); };
+
+        // 当前考试日期显示（实时同步）
+        var examDateText = new TextBlock
+        {
+            Text = GetCurrentExamDateDisplay(),
+            FontSize = 12,
+            Opacity = 0.7
+        };
+        BindThemeForeground(examDateText);
+
+        void RefreshExamDateDisplay()
+        {
+            examDateText.Text = GetCurrentExamDateDisplay();
+        }
+
+        typeCombo.SelectionChanged += (a, b) =>
+        {
+            _svc.Settings.ExamType = typeCombo.SelectedIndex;
+            AutoSave();
+            RefreshExamDateDisplay();
+        };
+
         basicPanel.Children.Add(SettingItem("考试类型", "选择中考或高考", typeCombo));
         basicPanel.Children.Add(Separator());
 
@@ -429,11 +450,44 @@ public class UnifiedSettingsPage : SettingsPageBase
             _svc.Settings.ExamCity,
             "搜索城市...",
             160,
-            selectedCity => { _svc.Settings.ExamCity = selectedCity; AutoSave(); });
+            selectedCity =>
+            {
+                _svc.Settings.ExamCity = selectedCity;
+                AutoSave();
+                RefreshExamDateDisplay();
+            });
         basicPanel.Children.Add(SettingItem("城市", "搜索并选择城市（如北京、上海、广州）", cityPanel));
         basicPanel.Children.Add(Separator());
-        basicPanel.Children.Add(SettingItem("自定义日期", "留空则使用内置数据，格式 M-d",
-            Text(_svc.Settings.ExamCountdownCustomDate ?? "", 120, v => { _svc.Settings.ExamCountdownCustomDate = string.IsNullOrWhiteSpace(v) ? null : v; AutoSave(); })));
+
+        // 当前考试日期
+        basicPanel.Children.Add(SettingItem("当前考试日期", "根据城市和考试类型自动计算", examDateText));
+        basicPanel.Children.Add(Separator());
+
+        // 自定义日期：改为日期选择器
+        var customDatePicker = new DatePicker
+        {
+            Width = 150,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            SelectedDate = !string.IsNullOrWhiteSpace(_svc.Settings.ExamCountdownCustomDate)
+                ? ParseCustomDate(_svc.Settings.ExamCountdownCustomDate)
+                : null,
+            Watermark = "使用内置数据"
+        };
+        customDatePicker.SelectedDateChanged += (a, b) =>
+        {
+            if (customDatePicker.SelectedDate.HasValue)
+            {
+                var d = customDatePicker.SelectedDate.Value;
+                _svc.Settings.ExamCountdownCustomDate = $"{d.Month}-{d.Day}";
+            }
+            else
+            {
+                _svc.Settings.ExamCountdownCustomDate = null;
+            }
+            AutoSave();
+            RefreshExamDateDisplay();
+        };
+        basicPanel.Children.Add(SettingItem("自定义日期", "选择日期覆盖内置数据，清空则恢复默认", customDatePicker));
         basicPanel.Children.Add(Separator());
         basicPanel.Children.Add(SettingItem("每年重复", "考试过后自动显示下一年倒计时",
             Toggle(_svc.Settings.ExamCountdownRepeatYearly, v => { _svc.Settings.ExamCountdownRepeatYearly = v; AutoSave(); })));
@@ -465,6 +519,52 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("文案", "自定义显示文字", textPanel));
 
         return s;
+    }
+
+    string GetCurrentExamDateDisplay()
+    {
+        var year = DateTime.Now.Year;
+        var examType = _svc.Settings.ExamType;
+        var city = _svc.Settings.ExamCity;
+        var examName = examType == 1 ? "中考" : "高考";
+
+        DateTime examDate;
+        var custom = _svc.Settings.ExamCountdownCustomDate;
+        if (!string.IsNullOrWhiteSpace(custom) &&
+            DateTime.TryParseExact(year + "-" + custom, "yyyy-M-d", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var cd))
+        {
+            examDate = cd;
+        }
+        else
+        {
+            examDate = ExamDateData.GetExamDate(year, examType, city);
+        }
+
+        if (examDate.Date < DateTime.Now.Date && _svc.Settings.ExamCountdownRepeatYearly)
+        {
+            if (!string.IsNullOrWhiteSpace(custom) &&
+                DateTime.TryParseExact((year + 1) + "-" + custom, "yyyy-M-d", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var cd2))
+            {
+                examDate = cd2;
+            }
+            else
+            {
+                examDate = ExamDateData.GetExamDate(year + 1, examType, city);
+            }
+        }
+
+        var days = (examDate.Date - DateTime.Now.Date).Days;
+        var daysText = days <= 0 ? "今天" : $"还有{days}天";
+        return $"{examName} {examDate:yyyy年M月d日}（{daysText}）";
+    }
+
+    static DateTimeOffset? ParseCustomDate(string? customDate)
+    {
+        if (string.IsNullOrWhiteSpace(customDate)) return null;
+        var year = DateTime.Now.Year;
+        if (DateTime.TryParseExact(year + "-" + customDate, "yyyy-M-d", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d))
+            return new DateTimeOffset(d);
+        return null;
     }
 
     Control BuildWorldClockPanel()
