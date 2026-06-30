@@ -776,18 +776,3 @@ public class WeatherGreetingComponent : ComponentBase
 
     #endregion
 }
-
-public class WarningInfo
-{
-    public string Type { get; }
-    public string Level { get; }
-    public string Icon { get; }
-    public string LevelText => string.IsNullOrEmpty(Level) ? "预警" : Level;
-
-    public WarningInfo(string type, string level, string icon)
-    {
-        Type = type;
-        Level = level;
-        Icon = icon;
-    }
-}
