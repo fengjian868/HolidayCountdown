@@ -470,8 +470,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             HorizontalAlignment = HorizontalAlignment.Right,
             SelectedDate = !string.IsNullOrWhiteSpace(_svc.Settings.ExamCountdownCustomDate)
                 ? ParseCustomDate(_svc.Settings.ExamCountdownCustomDate)
-                : null,
-            Watermark = "使用内置数据"
+                : null
         };
         customDatePicker.SelectedDateChanged += (a, b) =>
         {
