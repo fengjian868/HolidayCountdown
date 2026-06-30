@@ -129,6 +129,35 @@ public static class WeatherDataHelper
     }
 
     /// <summary>
+    /// 获取未来 N 小时的小时级天气文本列表。
+    /// </summary>
+    public static List<string> GetHourlyWeatherTexts(object? data, int maxHours = 24)
+    {
+        var result = new List<string>();
+        if (data == null) return result;
+
+        try
+        {
+            var forecastHourly = GetPropertyValue(data, "ForecastHourly");
+            if (forecastHourly == null) return result;
+
+            var weatherText = GetPropertyValue(forecastHourly, "WeatherText");
+            if (weatherText == null) return result;
+
+            var value = GetPropertyValue(weatherText, "Value");
+            if (value is not IList list) return result;
+
+            for (int i = 0; i < list.Count && i < maxHours; i++)
+            {
+                result.Add(list[i]?.ToString() ?? "");
+            }
+        }
+        catch { }
+
+        return result;
+    }
+
+    /// <summary>
     /// 获取当前天气信息中的温度。
     /// </summary>
     public static double? GetCurrentTemp(object? data)

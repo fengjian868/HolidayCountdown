@@ -3,6 +3,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
@@ -37,6 +38,21 @@ public class VacationCountdownComponent : ComponentBase
         Dispatcher.UIThread.Post(Update);
     }
 
+    static TextBlock ThemedText(string text, double fontSize = 13, FontWeight weight = FontWeight.Normal,
+        HorizontalAlignment hAlign = HorizontalAlignment.Center, VerticalAlignment vAlign = VerticalAlignment.Center)
+    {
+        var tb = new TextBlock
+        {
+            Text = text,
+            FontSize = fontSize,
+            FontWeight = weight,
+            HorizontalAlignment = hAlign,
+            VerticalAlignment = vAlign
+        };
+        tb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+        return tb;
+    }
+
     void Update()
     {
         _main.Children.Clear();
@@ -65,40 +81,20 @@ public class VacationCountdownComponent : ComponentBase
             var weeks = nearest.Days / 7; var days = nearest.Days % 7;
             if (nearest.IsActive)
             {
-                _main.Children.Add(new TextBlock
-                {
-                    Text = $"{nearest.Name}进行中",
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    FontWeight = FontWeight.SemiBold,
-                    Margin = new Thickness(0, 1, 0, 0)
-                });
-                _main.Children.Add(new TextBlock
-                {
-                    Text = $"剩余 {weeks} 周 {days} 天",
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(0, 0, 0, 1)
-                });
+                _main.Children.Add(ThemedText($"{nearest.Name}进行中", weight: FontWeight.SemiBold));
+                _main.Children.Add(ThemedText($"剩余 {weeks} 周 {days} 天"));
             }
             else
             {
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-                row.Children.Add(new TextBlock
-                {
-                    Text = $"距离{nearest.Name}还有",
-                    FontWeight = FontWeight.SemiBold,
-                    VerticalAlignment = VerticalAlignment.Center
-                });
-                row.Children.Add(new TextBlock
-                {
-                    Text = $"{weeks} 周 {days} 天",
-                    VerticalAlignment = VerticalAlignment.Center
-                });
+                row.Children.Add(ThemedText($"距离{nearest.Name}还有", weight: FontWeight.SemiBold, hAlign: HorizontalAlignment.Left));
+                row.Children.Add(ThemedText($"{weeks} 周 {days} 天", hAlign: HorizontalAlignment.Left));
                 _main.Children.Add(row);
             }
         }
         else
         {
-            _main.Children.Add(new TextBlock { Text = "暂无寒暑假安排", HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.5 });
+            _main.Children.Add(ThemedText("暂无寒暑假安排"));
         }
     }
 }

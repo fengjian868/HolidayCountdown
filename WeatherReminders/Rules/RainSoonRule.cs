@@ -19,7 +19,7 @@ public class RainSoonRule : IWeatherReminderRule
         // 当前已有降水则不提醒
         if (WeatherDataHelper.IsPrecipitationText(context.WeatherText)) return null;
 
-        var hourly = WeatherDataHelper.GetHourlyWeatherCodes(context.WeatherData, 24);
+        var hourly = WeatherDataHelper.GetHourlyWeatherCodes(context.WeatherInfo, 24);
         if (hourly.Count == 0) return null;
 
         // 找到未来 2 小时内首次出现降水的时刻

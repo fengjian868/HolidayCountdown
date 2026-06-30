@@ -7,6 +7,7 @@ public class PluginSettings
 {
     // 全局
     public int Version { get; set; } = 123;
+    public bool ExperimentalFeaturesEnabled { get; set; } = false;
 
     // 节假日组件
     public int DisplayCount { get; set; } = 3;
@@ -50,10 +51,10 @@ public class PluginSettings
     public List<CustomHoliday> CustomHolidays { get; set; } = new();
 
     // 寒暑假
-    public DateTime SummerStart { get; set; } = new DateTime(2025, 7, 1);
-    public DateTime SummerEnd { get; set; } = new DateTime(2025, 8, 31);
-    public DateTime WinterStart { get; set; } = new DateTime(2026, 1, 15);
-    public DateTime WinterEnd { get; set; } = new DateTime(2026, 2, 13);
+    public DateTime SummerStart { get; set; } = new DateTime(2026, 7, 1);
+    public DateTime SummerEnd { get; set; } = new DateTime(2026, 8, 31);
+    public DateTime WinterStart { get; set; } = new DateTime(2027, 1, 15);
+    public DateTime WinterEnd { get; set; } = new DateTime(2027, 2, 13);
     public bool ShowVacationCountdown { get; set; } = true;
 
     // 节气颜色
@@ -65,7 +66,7 @@ public class PluginSettings
     // 天气问候
     public bool WeatherGreetingEnabled { get; set; } = true;
     public bool WeatherWarningOverride { get; set; } = true;
-    public string? WeatherTemplate { get; set; } = "{icon} {weather} {temp} {greeting}";
+    public string? WeatherTemplate { get; set; } = "{icon}{temp} {greeting}";
     public bool WeatherShowTemp { get; set; } = true;
     public List<TempGreeting> TempGreetings { get; set; } = new();
     public List<WeatherGreetingItem> WeatherGreetingItems { get; set; } = new()
@@ -96,13 +97,12 @@ public class PluginSettings
     };
 
     // 智能天气
-    public string SmartWeatherTemplate { get; set; } = "{B} {F} {A} {D}";
+    public string SmartWeatherTemplate { get; set; } = "{B} {A} {C} {D}";
     public bool SmartWeatherShowA { get; set; } = true;
     public bool SmartWeatherShowB { get; set; } = true;
     public bool SmartWeatherShowC { get; set; } = true;
     public bool SmartWeatherShowD { get; set; } = true;
     public bool SmartWeatherShowE { get; set; } = false;
-    public bool SmartWeatherShowF { get; set; } = true;
     public bool SmartWeatherWarningOverride { get; set; } = true;
     public bool SmartWeatherTempColorEnabled { get; set; } = true;
 
@@ -111,11 +111,12 @@ public class PluginSettings
     public int WeatherGreetingRefreshMinutes { get; set; } = 10;
 
     // 天气变化提醒（测试版）
-    public bool WeatherReminderEnabled { get; set; } = false;
-    public int WeatherReminderRefreshMinutes { get; set; } = 10;
-    public int WeatherReminderMaxDisplayCount { get; set; } = 3;
+    public bool WeatherReminderEnabled { get; set; } = true;
+    public int WeatherReminderRefreshMinutes { get; set; } = 5;
     public bool WeatherReminderShowImmediatelyOnChange { get; set; } = true;
     public List<string> EnabledWeatherReminderRuleIds { get; set; } = new();
+    public int WeatherReminderRandomMinMinutes { get; set; } = 30;
+    public int WeatherReminderRandomMaxMinutes { get; set; } = 60;
 
     // 课程表联动
     public bool ClassScheduleEnabled { get; set; } = true;
@@ -130,18 +131,18 @@ public class PluginSettings
     public string NoClassNoonText { get; set; } = "中午好，暂无课程";
     public string NoClassAfternoonText { get; set; } = "下午好，暂无课程";
     public string NoClassEveningText { get; set; } = "晚上好，暂无课程";
-    public string ClassScheduleTemplate { get; set; } = "{icon}{subject} 还有{countdown}";
-    public string ClassScheduleOnClassTemplate { get; set; } = "{icon}{subject} 还有{countdown}";
-    public string ClassScheduleBreakTemplate { get; set; } = "{icon}课间 {countdown} 下节{next}";
-    public string ClassSchedulePrepareTemplate { get; set; } = "{icon}准备上课 {next}";
-    public string ClassScheduleAfterSchoolTemplate { get; set; } = "{icon}放学啦";
-    public string ClassScheduleNoClassTemplate { get; set; } = "{icon}{text}";
+    public string ClassScheduleTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject} 本节还剩{curRemain}";
+    public string ClassScheduleOnClassTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject} 本节还剩{curRemain}";
+    public string ClassScheduleBreakTemplate { get; set; } = "{breakIcon}课间休息还有{breakRemain} → 下节课是:{nextIcon}{nextSubject}";
+    public string ClassSchedulePrepareTemplate { get; set; } = "{prepIcon}准备上课 → 下节课是:{nextIcon}{nextSubject} {prepRemain}";
+    public string ClassScheduleAfterSchoolTemplate { get; set; } = "{afterIcon}放学了";
+    public string ClassScheduleNoClassTemplate { get; set; } = "{noClassIcon}{text}";
 
     // 课程联动问候语
     public bool ClassGreetingEnabled { get; set; } = false;
-    public string ClassGreetingOnClassTemplate { get; set; } = "正在上{subject}，加油 📖";
-    public string ClassGreetingBreakTemplate { get; set; } = "课间休息，下节{next} ☕";
-    public string ClassGreetingPrepareTemplate { get; set; } = "准备上{next}，拿好课本 🔔";
+    public string ClassGreetingOnClassTemplate { get; set; } = "正在上{A}，加油 📖";
+    public string ClassGreetingBreakTemplate { get; set; } = "课间休息，下节{B} ☕";
+    public string ClassGreetingPrepareTemplate { get; set; } = "准备上{B}，拿好课本 🔔";
     public string ClassGreetingAfterSchoolTemplate { get; set; } = "放学啦，今天辛苦了 🏠";
     public string ClassGreetingNoClassTemplate { get; set; } = "暂无课程，好好休息 📅";
 
@@ -157,13 +158,13 @@ public class PluginSettings
     public string ExamCountdownTextColor { get; set; } = "#FF2196F3";
     public string ExamCountdownRingColor { get; set; } = "#FFFF5252";
     public bool ExamCountdownShowRing { get; set; } = true;
-    public string ExamCountdownRingStartDate { get; set; } = "08-01";
+    public DateTime ExamCountdownRingStartDate { get; set; } = new DateTime(2025, 6, 9);
     public bool ExamCountdownShowBackground { get; set; } = true;
     public string ExamCountdownBackgroundColor { get; set; } = "#502196F3";
     public int ExamCountdownFontSize { get; set; } = 0;
     public string? ExamCountdownCustomDate { get; set; }
-    public string ExamCountdownCustomText { get; set; } = "距离{exam}还有{days}天";
-    public string ExamCountdownTodayText { get; set; } = "今天就是{exam}，加油！";
+    public string ExamCountdownCustomText { get; set; } = "距离{A}还有{B}天";
+    public string ExamCountdownTodayText { get; set; } = "今天就是{A}，加油！";
     public bool ExamCountdownRepeatYearly { get; set; } = true;
 
     // 世界时钟

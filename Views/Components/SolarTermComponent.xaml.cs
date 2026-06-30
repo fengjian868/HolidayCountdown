@@ -8,6 +8,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
@@ -276,8 +277,8 @@ public class SolarTermComponent : ComponentBase
                 Text = days == 0 ? "今天" : $"还有{days}天",
                 VerticalAlignment = VerticalAlignment.Center,
                 Opacity = 0.8,
-               
             };
+            daysBlock[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
             _panel.Children.Add(daysBlock);
 
             if (days == 0)
