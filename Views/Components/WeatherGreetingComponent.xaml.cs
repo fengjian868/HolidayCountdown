@@ -99,7 +99,7 @@ public class WeatherGreetingComponent : ComponentBase
             var icon = _svc.Settings.WeatherShowIcon ? GetWeatherIcon(actualWeatherText) : "";
             var (coloredIcon, iconColor) = GetWeatherIconAndColor(actualWeatherText, weatherCode);
 
-            var template = _svc.Settings.WeatherTemplate ?? "{icon}{temp} {greeting}";
+            var template = _svc.Settings.WeatherTemplate ?? "{icon}{weather} {temp} {greeting}";
 
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -289,25 +289,46 @@ public class WeatherGreetingComponent : ComponentBase
             var alerts = GetPropertyValue(lastWeatherInfo, "Alerts");
             if (alerts == null) return Array.Empty<string>();
 
-            var countProp = alerts.GetType().GetProperty("Count");
-            var count = (int?)countProp?.GetValue(alerts) ?? 0;
-            if (count == 0) return Array.Empty<string>();
-
             var result = new List<string>();
-            var indexer = alerts.GetType().GetProperties()
-                .FirstOrDefault(p => p.GetIndexParameters().Length == 1);
-            if (indexer != null)
+
+            // 方式1：作为 IEnumerable 遍历（最可靠）
+            if (alerts is IEnumerable enumerable and not string)
             {
-                for (int i = 0; i < count; i++)
+                foreach (var alert in enumerable)
                 {
-                    var alert = indexer.GetValue(alerts, new object[] { i });
-                    if (alert != null)
+                    if (alert == null) continue;
+                    var title = GetPropertyValue(alert, "Title")?.ToString()
+                             ?? GetPropertyValue(alert, "TypeName")?.ToString()
+                             ?? GetPropertyValue(alert, "Type")?.ToString()
+                             ?? alert.ToString();
+                    if (!string.IsNullOrEmpty(title) && title != alert.GetType().Name)
+                        result.Add(title);
+                }
+            }
+
+            // 方式2：通过索引器遍历（备用）
+            if (result.Count == 0)
+            {
+                var countProp = alerts.GetType().GetProperty("Count");
+                var count = (int?)countProp?.GetValue(alerts) ?? 0;
+                if (count > 0)
+                {
+                    var indexer = alerts.GetType().GetProperties()
+                        .FirstOrDefault(p => p.GetIndexParameters().Length == 1);
+                    if (indexer != null)
                     {
-                        var title = GetPropertyValue(alert, "Title")?.ToString();
-                        if (!string.IsNullOrEmpty(title)) result.Add(title);
+                        for (int i = 0; i < count; i++)
+                        {
+                            var alert = indexer.GetValue(alerts, new object[] { i });
+                            if (alert == null) continue;
+                            var title = GetPropertyValue(alert, "Title")?.ToString()
+                                     ?? GetPropertyValue(alert, "TypeName")?.ToString();
+                            if (!string.IsNullOrEmpty(title)) result.Add(title);
+                        }
                     }
                 }
             }
+
             return result.ToArray();
         }
         catch { return Array.Empty<string>(); }

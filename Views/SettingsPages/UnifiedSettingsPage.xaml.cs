@@ -1046,7 +1046,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("🌤️ 天气问候设置"));
 
         var layoutPanel = new StackPanel { Spacing = 0 };
-        var presets = new[] { "仅问候", "图标+问候", "温度+问候", "图标+温度", "完整信息" };
+        var presets = new[] { "仅问候", "图标+问候", "图标+天气+温度+问候", "图标+温度", "完整信息" };
         var presetCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
         foreach (var p in presets) presetCombo.Items.Add(p);
 
@@ -1055,9 +1055,9 @@ public class UnifiedSettingsPage : SettingsPageBase
         {
             "{greeting}" => 0,
             "{icon} {greeting}" => 1,
-            "{temp} {greeting}" => 2,
+            "{icon}{weather} {temp} {greeting}" => 2,
             "{icon}{temp}" => 3,
-            "{icon} {temp} {greeting} {warning}" => 4,
+            "{icon}{weather} {temp} {greeting} {warning}" => 4,
             _ => -1
         };
         presetCombo.SelectionChanged += (a, b) =>
@@ -1066,10 +1066,10 @@ public class UnifiedSettingsPage : SettingsPageBase
             {
                 0 => "{greeting}",
                 1 => "{icon} {greeting}",
-                2 => "{temp} {greeting}",
+                2 => "{icon}{weather} {temp} {greeting}",
                 3 => "{icon}{temp}",
-                4 => "{icon} {temp} {greeting} {warning}",
-                _ => _svc.Settings.WeatherTemplate ?? "{greeting}"
+                4 => "{icon}{weather} {temp} {greeting} {warning}",
+                _ => _svc.Settings.WeatherTemplate ?? "{icon}{weather} {temp} {greeting}"
             };
             AutoSave();
         };
