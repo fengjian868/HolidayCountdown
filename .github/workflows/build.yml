@@ -2,7 +2,7 @@ name: Build
 
 on:
   push:
-    branches: [main, master, trae/solo-agent-Nhi4Zr]
+    branches: [main, master, trae/solo-agent-Nhi4Zr, trae/solo-agent-KwbbfQ]
     tags: ['v*']
   workflow_dispatch:
 
