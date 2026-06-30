@@ -132,8 +132,8 @@ public class PluginSettings
     public string NoClassNoonText { get; set; } = "中午好，暂无课程";
     public string NoClassAfternoonText { get; set; } = "下午好，暂无课程";
     public string NoClassEveningText { get; set; } = "晚上好，暂无课程";
-    public string ClassScheduleTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject} 本节还剩{curRemain}";
-    public string ClassScheduleOnClassTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject} 本节还剩{curRemain}";
+    public string ClassScheduleTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject}";
+    public string ClassScheduleOnClassTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject}";
     public string ClassScheduleBreakTemplate { get; set; } = "{breakIcon}课间休息还有{breakRemain} → 下节课是:{nextIcon}{nextSubject}";
     public string ClassSchedulePrepareTemplate { get; set; } = "{prepIcon}准备上课 → 下节课是:{nextIcon}{nextSubject} {prepRemain}";
     public string ClassScheduleAfterSchoolTemplate { get; set; } = "{afterIcon}放学了";
