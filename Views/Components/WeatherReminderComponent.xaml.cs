@@ -29,6 +29,7 @@ public class WeatherReminderComponent : ComponentBase
     private HolidayService? _svc;
     private WeatherReminderEvaluator? _evaluator;
     private IReadOnlyList<WeatherReminderResult> _lastResults = new List<WeatherReminderResult>();
+    private Random _random = new();
 
     public WeatherReminderComponent()
     {
@@ -48,8 +49,8 @@ public class WeatherReminderComponent : ComponentBase
             Children = { _txt }
         };
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(10) };
-        _timer.Tick += (s, e) => Update();
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
+        _timer.Tick += (s, e) => ScheduleRandomUpdate();
         _timer.Start();
 
         Dispatcher.UIThread.Post(() =>
@@ -62,6 +63,25 @@ public class WeatherReminderComponent : ComponentBase
         });
     }
 
+    /// <summary>
+    /// 在随机刷新区间内延迟刷新，模拟随机时间
+    /// </summary>
+    void ScheduleRandomUpdate()
+    {
+        if (_svc == null) { Update(); return; }
+        var minSec = Math.Max(1, _svc.Settings.WeatherReminderRandomMinSeconds);
+        var maxSec = Math.Max(minSec, _svc.Settings.WeatherReminderRandomMaxSeconds);
+        var delay = _random.Next(minSec, maxSec + 1);
+
+        var delayTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(delay), IsEnabled = false };
+        delayTimer.Tick += (s, e) =>
+        {
+            delayTimer.Stop();
+            Update();
+        };
+        delayTimer.Start();
+    }
+
     void OnSettingsChanged()
     {
         _svc?.LoadSettings();
@@ -71,9 +91,8 @@ public class WeatherReminderComponent : ComponentBase
     void UpdateTimerInterval()
     {
         if (_svc == null) return;
-        var minutes = _svc.Settings.WeatherReminderRefreshMinutes;
-        if (minutes < 1) minutes = 10;
-        // 启用“变化时立即刷新”后，使用 1 分钟间隔快速响应天气变化
+        var minutes = Math.Max(1, Math.Min(10, _svc.Settings.WeatherReminderRefreshMinutes));
+        // 启用"变化时立即刷新"后，使用 1 分钟间隔快速响应天气变化
         if (_svc.Settings.WeatherReminderShowImmediatelyOnChange && minutes > 1)
             minutes = 1;
         _timer.Interval = TimeSpan.FromMinutes(minutes);

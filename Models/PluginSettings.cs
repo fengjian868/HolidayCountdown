@@ -112,10 +112,11 @@ public class PluginSettings
 
     // 天气变化提醒（测试版）
     public bool WeatherReminderEnabled { get; set; } = true;
-    public int WeatherReminderRefreshMinutes { get; set; } = 10;
-    public int WeatherReminderMaxDisplayCount { get; set; } = 3;
+    public int WeatherReminderRefreshMinutes { get; set; } = 5;
     public bool WeatherReminderShowImmediatelyOnChange { get; set; } = true;
     public List<string> EnabledWeatherReminderRuleIds { get; set; } = new();
+    public int WeatherReminderRandomMinSeconds { get; set; } = 30;
+    public int WeatherReminderRandomMaxSeconds { get; set; } = 60;
 
     // 课程表联动
     public bool ClassScheduleEnabled { get; set; } = true;

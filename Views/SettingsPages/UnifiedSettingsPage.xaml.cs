@@ -1060,9 +1060,18 @@ public class UnifiedSettingsPage : SettingsPageBase
             "{A}{B} {C} {D} {E}" => 4,
             _ => -1
         };
+
+        // 自定义模板 TextBox 需要在预设切换时同步更新
+        var templateTextBox = new TextBox { Text = currentTemplate, Width = 280 };
+        templateTextBox.TextChanged += (s, e) =>
+        {
+            _svc.Settings.WeatherTemplate = templateTextBox.Text ?? "";
+            AutoSave();
+        };
+
         presetCombo.SelectionChanged += (a, b) =>
         {
-            _svc.Settings.WeatherTemplate = presetCombo.SelectedIndex switch
+            var newTemplate = presetCombo.SelectedIndex switch
             {
                 0 => "{D}",
                 1 => "{A} {D}",
@@ -1071,13 +1080,15 @@ public class UnifiedSettingsPage : SettingsPageBase
                 4 => "{A}{B} {C} {D} {E}",
                 _ => _svc.Settings.WeatherTemplate ?? "{A}{B} {C} {D}"
             };
+            _svc.Settings.WeatherTemplate = newTemplate;
+            // 同步到自定义模板输入框
+            templateTextBox.Text = newTemplate;
             AutoSave();
         };
 
         layoutPanel.Children.Add(SettingItem("预设模板", "快速选择排版样式", presetCombo));
         layoutPanel.Children.Add(Separator());
-        layoutPanel.Children.Add(SettingItem("自定义模板", null,
-            Text(_svc.Settings.WeatherTemplate ?? "{greeting}", 280, v => { _svc.Settings.WeatherTemplate = v; AutoSave(); })));
+        layoutPanel.Children.Add(SettingItem("自定义模板", null, templateTextBox));
         layoutPanel.Children.Add(Separator());
         layoutPanel.Children.Add(SettingItem("显示天气图标", "在模板中使用 {icon}",
             Toggle(_svc.Settings.WeatherShowIcon, v => { _svc.Settings.WeatherShowIcon = v; AutoSave(); })));
@@ -1110,57 +1121,182 @@ public class UnifiedSettingsPage : SettingsPageBase
         basicPanel.Children.Add(SettingItem("启用天气变化提醒", "关闭后组件不显示任何内容",
             Toggle(_svc.Settings.WeatherReminderEnabled, v => { _svc.Settings.WeatherReminderEnabled = v; AutoSave(); })));
         basicPanel.Children.Add(Separator());
-        var refreshOptions = new[] { "5分钟", "10分钟", "15分钟", "30分钟" };
-        var refreshValues = new[] { 5, 10, 15, 30 };
-        var refreshCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
-        foreach (var o in refreshOptions) refreshCombo.Items.Add(o);
-        refreshCombo.SelectedIndex = Math.Max(0, Array.IndexOf(refreshValues, _svc.Settings.WeatherReminderRefreshMinutes));
-        refreshCombo.SelectionChanged += (a, b) =>
+
+        // 刷新间隔：Slider 横条拖动 1-10 分钟
+        var refreshSlider = new Slider
         {
-            var idx = refreshCombo.SelectedIndex;
-            if (idx >= 0 && idx < refreshValues.Length) _svc.Settings.WeatherReminderRefreshMinutes = refreshValues[idx];
+            Minimum = 1,
+            Maximum = 10,
+            Value = Math.Max(1, Math.Min(10, _svc.Settings.WeatherReminderRefreshMinutes)),
+            Width = 180,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            TickFrequency = 1,
+            IsSnapToTickEnabled = true
+        };
+        var refreshValueText = new TextBlock
+        {
+            Text = $"{_svc.Settings.WeatherReminderRefreshMinutes}分钟",
+            VerticalAlignment = VerticalAlignment.Center,
+            FontSize = 12,
+            Margin = new Thickness(8, 0, 0, 0),
+            Width = 50,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
+        BindThemeForeground(refreshValueText);
+        var refreshPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 4,
+            Children = { refreshSlider, refreshValueText }
+        };
+        refreshSlider.ValueChanged += (a, b) =>
+        {
+            var val = (int)Math.Round(refreshSlider.Value);
+            _svc.Settings.WeatherReminderRefreshMinutes = val;
+            refreshValueText.Text = $"{val}分钟";
             AutoSave();
         };
-        basicPanel.Children.Add(SettingItem("刷新间隔", "多久评估一次天气变化", refreshCombo));
+
+        basicPanel.Children.Add(SettingItem("刷新间隔", "拖动设置多久评估一次天气变化（1-10分钟）", refreshPanel));
         basicPanel.Children.Add(Separator());
-        basicPanel.Children.Add(SettingItem("最多显示条数", "同时显示多少条提醒",
-            Number(_svc.Settings.WeatherReminderMaxDisplayCount, 1, 5, v => { _svc.Settings.WeatherReminderMaxDisplayCount = v; AutoSave(); })));
+
+        // 随机刷新区间输入框（默认30-60秒）
+        var randomMinBox = new NumericUpDown
+        {
+            Value = _svc.Settings.WeatherReminderRandomMinSeconds,
+            Minimum = 1,
+            Maximum = 999,
+            Increment = 5,
+            Width = 80,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        var randomMaxBox = new NumericUpDown
+        {
+            Value = _svc.Settings.WeatherReminderRandomMaxSeconds,
+            Minimum = 1,
+            Maximum = 999,
+            Increment = 5,
+            Width = 80,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center
+        };
+        var dashBlock = new TextBlock { Text = "-", VerticalAlignment = VerticalAlignment.Center, FontSize = 14 };
+        BindThemeForeground(dashBlock);
+        var secBlock1 = new TextBlock { Text = "秒", VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Opacity = 0.7 };
+        BindThemeForeground(secBlock1);
+        var secBlock2 = new TextBlock { Text = "秒", VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Opacity = 0.7 };
+        BindThemeForeground(secBlock2);
+        var randomPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Spacing = 4,
+            Children = { randomMinBox, secBlock1, dashBlock, randomMaxBox, secBlock2 }
+        };
+        randomMinBox.ValueChanged += (a, b) =>
+        {
+            _svc.Settings.WeatherReminderRandomMinSeconds = Math.Max(1, (int)(randomMinBox.Value ?? 30));
+            AutoSave();
+        };
+        randomMaxBox.ValueChanged += (a, b) =>
+        {
+            _svc.Settings.WeatherReminderRandomMaxSeconds = Math.Max(1, (int)(randomMaxBox.Value ?? 60));
+            AutoSave();
+        };
+
+        basicPanel.Children.Add(SettingItem("随机刷新区间", "在此区间内随机选择时间刷新一条变化提醒", randomPanel));
         basicPanel.Children.Add(Separator());
         basicPanel.Children.Add(SettingItem("变化时立即刷新", "检测到天气变化时立即更新显示",
             Toggle(_svc.Settings.WeatherReminderShowImmediatelyOnChange, v => { _svc.Settings.WeatherReminderShowImmediatelyOnChange = v; AutoSave(); })));
         s.Children.Add(Expander("基础设置", "天气变化提醒刷新策略", basicPanel));
 
+        // 提醒规则：三列布局 + 分割线
         var rulePanel = new StackPanel { Spacing = 0 };
         var evaluator = new WeatherReminderEvaluator(_svc);
         var allRules = evaluator.GetAllRules();
         var enabledIds = _svc.Settings.EnabledWeatherReminderRuleIds;
 
-        foreach (var rule in allRules)
+        // 将规则分为三组，每组放在一列
+        var totalRules = allRules.Count;
+        var colSize = (int)Math.Ceiling(totalRules / 3.0);
+
+        var columnsWrap = new WrapPanel
         {
-            var ruleId = rule.Id;
-            var isEnabled = enabledIds.Contains(ruleId) || (enabledIds.Count == 0 && rule.EnabledByDefault);
-            var chk = new CheckBox
+            Orientation = Orientation.Horizontal,
+            Margin = new Thickness(8, 4, 8, 4)
+        };
+
+        for (int col = 0; col < 3; col++)
+        {
+            var colPanel = new StackPanel
             {
-                Content = $"{rule.DefaultIcon} {rule.Name}",
-                IsChecked = isEnabled
+                Width = 220,
+                Spacing = 2,
+                Margin = new Thickness(col > 0 ? 12 : 0, 0, 0, 0)
             };
-            chk.IsCheckedChanged += (a, b) =>
+
+            // 在第二列和第三列前加分割线
+            if (col > 0)
             {
-                if (chk.IsChecked == true)
+                var vLine = new Border
                 {
-                    if (!enabledIds.Contains(ruleId)) enabledIds.Add(ruleId);
-                }
-                else
+                    Width = 1,
+                    Background = new SolidColorBrush(Color.Parse("#30FFFFFF")),
+                    Margin = new Thickness(-6, 0, 0, 0),
+                    Height = colSize * 36
+                };
+            }
+
+            for (int i = col * colSize; i < Math.Min((col + 1) * colSize, totalRules); i++)
+            {
+                var rule = allRules[i];
+                var ruleId = rule.Id;
+                var isEnabled = enabledIds.Contains(ruleId) || (enabledIds.Count == 0 && rule.EnabledByDefault);
+                var chk = new CheckBox
                 {
-                    enabledIds.Remove(ruleId);
-                }
-                AutoSave();
-            };
-            rulePanel.Children.Add(SettingItem(rule.Name, null, chk));
+                    Content = $"{rule.DefaultIcon} {rule.Name}",
+                    IsChecked = isEnabled
+                };
+                chk.IsCheckedChanged += (a, b) =>
+                {
+                    if (chk.IsChecked == true)
+                    {
+                        if (!enabledIds.Contains(ruleId)) enabledIds.Add(ruleId);
+                    }
+                    else
+                    {
+                        enabledIds.Remove(ruleId);
+                    }
+                    AutoSave();
+                };
+                colPanel.Children.Add(chk);
+            }
+
+            columnsWrap.Children.Add(colPanel);
+
+            // 在第一列和第二列之间加垂直分割线
+            if (col < 2)
+            {
+                var vSep = new Border
+                {
+                    Width = 1,
+                    Height = colSize * 36,
+                    Background = new SolidColorBrush(Color.Parse("#30FFFFFF")),
+                    VerticalAlignment = VerticalAlignment.Stretch,
+                    Margin = new Thickness(0, 4, 0, 4)
+                };
+                columnsWrap.Children.Add(vSep);
+            }
         }
+
+        rulePanel.Children.Add(columnsWrap);
         s.Children.Add(Expander("提醒规则", "勾选要启用的天气变化提醒类型", rulePanel));
 
-        s.Children.Add(Info("天气变化提醒为测试版功能，当前内置 6 条核心规则，后续会逐步补充更多类型。"));
+        s.Children.Add(Info("天气变化提醒为测试版功能，当前内置 " + totalRules + " 条规则。随机刷新区间控制每次刷新提醒时的随机延迟秒数。"));
         return s;
     }
 
