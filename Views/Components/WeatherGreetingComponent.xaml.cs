@@ -99,7 +99,7 @@ public class WeatherGreetingComponent : ComponentBase
             var icon = _svc.Settings.WeatherShowIcon ? GetWeatherIcon(actualWeatherText) : "";
             var (coloredIcon, iconColor) = GetWeatherIconAndColor(actualWeatherText, weatherCode);
 
-            var template = _svc.Settings.WeatherTemplate ?? "{A}{B} {C} {D}";
+            var template = _svc.Settings.WeatherTemplate ?? "{icon} {weather} {temp} {greeting} {rain}";
 
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -775,19 +775,4 @@ public class WeatherGreetingComponent : ComponentBase
     }
 
     #endregion
-}
-
-public class WarningInfo
-{
-    public string Type { get; }
-    public string Level { get; }
-    public string Icon { get; }
-    public string LevelText => string.IsNullOrEmpty(Level) ? "预警" : Level;
-
-    public WarningInfo(string type, string level, string icon)
-    {
-        Type = type;
-        Level = level;
-        Icon = icon;
-    }
 }

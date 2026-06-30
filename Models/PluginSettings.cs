@@ -6,7 +6,7 @@ namespace HolidayCountdown.Models;
 public class PluginSettings
 {
     // 全局
-    public int Version { get; set; } = 123;
+    public int Version { get; set; } = 124;
     public bool ExperimentalFeaturesEnabled { get; set; } = false;
 
     // 节假日组件
@@ -66,7 +66,7 @@ public class PluginSettings
     // 天气问候
     public bool WeatherGreetingEnabled { get; set; } = true;
     public bool WeatherWarningOverride { get; set; } = true;
-    public string? WeatherTemplate { get; set; } = "{icon}{temp} {greeting}";
+    public string? WeatherTemplate { get; set; } = "{icon} {weather} {temp} {greeting} {rain}";
     public bool WeatherShowTemp { get; set; } = true;
     public List<TempGreeting> TempGreetings { get; set; } = new();
     public List<WeatherGreetingItem> WeatherGreetingItems { get; set; } = new()
@@ -97,12 +97,13 @@ public class PluginSettings
     };
 
     // 智能天气
-    public string SmartWeatherTemplate { get; set; } = "{B} {A} {C} {D}";
+    public string SmartWeatherTemplate { get; set; } = "{B} {F} {A} {D}";
     public bool SmartWeatherShowA { get; set; } = true;
     public bool SmartWeatherShowB { get; set; } = true;
     public bool SmartWeatherShowC { get; set; } = true;
     public bool SmartWeatherShowD { get; set; } = true;
     public bool SmartWeatherShowE { get; set; } = false;
+    public bool SmartWeatherShowF { get; set; } = true;
     public bool SmartWeatherWarningOverride { get; set; } = true;
     public bool SmartWeatherTempColorEnabled { get; set; } = true;
 
@@ -119,7 +120,7 @@ public class PluginSettings
     public int WeatherReminderRandomMaxMinutes { get; set; } = 60;
 
     // 课程表联动
-    public bool ClassScheduleEnabled { get; set; } = true;
+    public bool ClassScheduleEnabled { get; set; } = false;
     public bool ClassScheduleShowIcon { get; set; } = true;
     public bool ClassScheduleShowSubject { get; set; } = true;
     public int PreClassMinutes { get; set; } = 5;
@@ -131,8 +132,8 @@ public class PluginSettings
     public string NoClassNoonText { get; set; } = "中午好，暂无课程";
     public string NoClassAfternoonText { get; set; } = "下午好，暂无课程";
     public string NoClassEveningText { get; set; } = "晚上好，暂无课程";
-    public string ClassScheduleTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject} 本节还剩{curRemain}";
-    public string ClassScheduleOnClassTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject} 本节还剩{curRemain}";
+    public string ClassScheduleTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject}";
+    public string ClassScheduleOnClassTemplate { get; set; } = "当前:{curIcon}{curSubject} 下节:{nextIcon}{nextSubject}";
     public string ClassScheduleBreakTemplate { get; set; } = "{breakIcon}课间休息还有{breakRemain} → 下节课是:{nextIcon}{nextSubject}";
     public string ClassSchedulePrepareTemplate { get; set; } = "{prepIcon}准备上课 → 下节课是:{nextIcon}{nextSubject} {prepRemain}";
     public string ClassScheduleAfterSchoolTemplate { get; set; } = "{afterIcon}放学了";

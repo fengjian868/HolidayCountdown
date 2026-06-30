@@ -88,7 +88,7 @@ public class ClassScheduleComponent : ComponentBase
             // TimeState: 0=None, 1=OnClass, 2=PrepareOnClass, 3=Breaking, 4=AfterSchool
 
             var currentSubject = GetPropertyValue(dataSource, "CurrentSubject");
-            var nextSubject = GetPropertyValue(dataSource, "NextSubject");
+            var nextSubject = GetPropertyValue(dataSource, "NextClassSubject") ?? GetPropertyValue(dataSource, "NextSubject");
             var isClassPlanLoaded = GetPropertyValue(dataSource, "IsClassPlanLoaded");
             var isClassPlanEnabled = GetPropertyValue(dataSource, "IsClassPlanEnabled");
 
@@ -97,7 +97,7 @@ public class ClassScheduleComponent : ComponentBase
             if (lessons != null && !ReferenceEquals(dataSource, lessons))
             {
                 currentSubject = GetPropertyValue(lessons, "CurrentSubject");
-                nextSubject = GetPropertyValue(lessons, "NextSubject");
+                nextSubject = GetPropertyValue(lessons, "NextClassSubject") ?? GetPropertyValue(lessons, "NextSubject");
                 isClassPlanLoaded = GetPropertyValue(lessons, "IsClassPlanLoaded");
                 isClassPlanEnabled = GetPropertyValue(lessons, "IsClassPlanEnabled");
             }
@@ -287,10 +287,32 @@ public class ClassScheduleComponent : ComponentBase
         if (subject == null) return "";
         try
         {
-            var nameProp = subject.GetType().GetProperty("Name", BindingFlags.Public | BindingFlags.Instance);
-            return nameProp?.GetValue(subject)?.ToString() ?? "";
+            // ClassIsland 的 ISubjectInfo 可能有多个名称属性，依次尝试
+            var type = subject.GetType();
+            foreach (var propName in new[] { "Name", "MainWindowName", "SimpleName", "SubjectName", "DisplayName", "Title" })
+            {
+                var prop = type.GetProperty(propName, BindingFlags.Public | BindingFlags.Instance);
+                if (prop != null)
+                {
+                    var v = prop.GetValue(subject)?.ToString();
+                    if (!string.IsNullOrWhiteSpace(v)) return v.Trim();
+                }
+            }
+            return "";
         }
         catch { return ""; }
+    }
+
+    /// <summary>
+    /// 判断科目名是否有意义：非空，且不是 ClassIsland 的占位科目（"???"、"课间休息"等）
+    /// </summary>
+    bool IsMeaningfulSubjectName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        var n = name.Trim();
+        // ClassIsland Subject.Fallback.Name = "???"，Subject.Breaking.Name = "课间休息"
+        if (n == "???" || n == "课间休息" || n == "?") return false;
+        return true;
     }
 
     string GetNextSubjectFromTimeLayout(object dataSource, object? lessons, int currentState)
@@ -298,19 +320,43 @@ public class ClassScheduleComponent : ComponentBase
         try
         {
             var source = lessons ?? dataSource;
+
+            // 优先尝试直接读取 NextClassSubject / NextClassTimeLayoutItem
+            // 注意：ClassIsland 的真实属性名是 NextClassSubject / NextClassTimeLayoutItem（带 Class 前缀）
+            // MainViewModel（dataSource）是 UI 绑定源，最可靠；LessonsService 作为 fallback
+            // 同时兼容旧版/别名的 NextSubject / NextTimeLayoutItem
+            var nextSubject = GetPropertyValue(dataSource, "NextClassSubject")
+                           ?? GetPropertyValue(source, "NextClassSubject")
+                           ?? GetPropertyValue(dataSource, "NextSubject")
+                           ?? GetPropertyValue(source, "NextSubject");
+            if (nextSubject != null)
+            {
+                var name = GetSubjectName(nextSubject);
+                if (IsMeaningfulSubjectName(name)) return name;
+            }
+            var nextItem = GetPropertyValue(dataSource, "NextClassTimeLayoutItem")
+                        ?? GetPropertyValue(source, "NextClassTimeLayoutItem")
+                        ?? GetPropertyValue(dataSource, "NextTimeLayoutItem")
+                        ?? GetPropertyValue(source, "NextTimeLayoutItem");
+            if (nextItem != null)
+            {
+                var name = GetSubjectNameFromItem(nextItem);
+                if (IsMeaningfulSubjectName(name)) return name;
+            }
+
             var timeLayout = GetPropertyValue(source, "CurrentTimeLayout")
                           ?? GetPropertyValue(dataSource, "CurrentTimeLayout")
                           ?? GetPropertyValue(source, "TimeLayout")
                           ?? GetPropertyValue(dataSource, "TimeLayout");
-            if (timeLayout == null) return "已无课程";
+            if (timeLayout == null) return "";
 
             var itemsProp = timeLayout.GetType().GetProperty("Items", BindingFlags.Public | BindingFlags.Instance)
                           ?? timeLayout.GetType().GetProperty("LayoutItems", BindingFlags.Public | BindingFlags.Instance)
                           ?? timeLayout.GetType().GetProperty("Layouts", BindingFlags.Public | BindingFlags.Instance);
-            if (itemsProp?.GetValue(timeLayout) is not System.Collections.IEnumerable items) return "已无课程";
+            if (itemsProp?.GetValue(timeLayout) is not System.Collections.IEnumerable items) return "";
 
             var itemList = items.Cast<object>().ToList();
-            if (itemList.Count == 0) return "已无课程";
+            if (itemList.Count == 0) return "";
 
             // 找到当前时间布局项的索引
             var currentItem = GetPropertyValue(source, "CurrentTimeLayoutItem")
@@ -370,7 +416,7 @@ public class ClassScheduleComponent : ComponentBase
                 }
             }
 
-            if (currentIdx < 0) return "已无课程";
+            if (currentIdx < 0) return "";
 
             // 从当前项之后找第一个上课类型的项（跳过课间/休息）
             for (int i = currentIdx + 1; i < itemList.Count; i++)
@@ -379,15 +425,15 @@ public class ClassScheduleComponent : ComponentBase
                 if (!IsLessonTimeLayoutItem(item))
                     continue;
                 var name = GetSubjectNameFromItem(item);
-                if (!string.IsNullOrEmpty(name))
+                if (IsMeaningfulSubjectName(name))
                     return name;
             }
 
-            return "已无课程";
+            return "";
         }
         catch
         {
-            return "已无课程";
+            return "";
         }
     }
 
@@ -551,6 +597,13 @@ public class ClassScheduleComponent : ComponentBase
         var value = GetPropertyValue(source, propName);
         if (value == null) return null;
         if (value is TimeSpan ts) return ts;
+        // ClassIsland 的 OnClassLeftTime 等属性可能是 DateTime（表示结束时刻）
+        if (value is DateTime dt)
+        {
+            if (dt == default) return null;
+            var diff = dt - DateTime.Now;
+            return diff.TotalSeconds > 0 ? diff : TimeSpan.Zero;
+        }
         try
         {
             return TimeSpan.Parse(value.ToString()!);

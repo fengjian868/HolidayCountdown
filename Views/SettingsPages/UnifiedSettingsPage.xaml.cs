@@ -62,13 +62,13 @@ public class UnifiedSettingsPage : SettingsPageBase
             ("\uE70F", "自定义", BuildCustomHolidayPanel),
             ("\uE8F3", "寒暑假", BuildVacationPanel),
             ("\uE753", "天气", BuildWeatherPanel),
-            ("\uE7BE", "课表", BuildClassSchedulePanel),
             ("\uE9D1", "学习", BuildStudyTimePanel),
         };
 
         // 实验性功能 Tab
         if (expEnabled)
         {
+            tabList.Add(("\uE7BE", "课表", BuildClassSchedulePanel));
             tabList.Add(("\uE7ED", "天气提醒", BuildWeatherReminderPanel));
             tabList.Add(("\uE921", "大考", BuildExamCountdownPanel));
             tabList.Add(("\uE823", "时钟", BuildWorldClockPanel));
@@ -1149,7 +1149,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var presetCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
         foreach (var p in presets) presetCombo.Items.Add(p);
 
-        var currentTemplate = _svc.Settings.WeatherTemplate ?? "{A}{B} {C} {D}";
+        var currentTemplate = _svc.Settings.WeatherTemplate ?? "{icon} {weather} {temp} {greeting}";
         presetCombo.SelectedIndex = currentTemplate switch
         {
             "{D}" => 0,
@@ -1157,6 +1157,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             "{A}{B} {C} {D}" => 2,
             "{A}{C}" => 3,
             "{A}{B} {C} {D} {E}" => 4,
+            "{icon} {weather} {temp} {greeting}" => 2,
             _ => -1
         };
 
@@ -1177,7 +1178,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 2 => "{A}{B} {C} {D}",
                 3 => "{A}{C}",
                 4 => "{A}{B} {C} {D} {E}",
-                _ => _svc.Settings.WeatherTemplate ?? "{A}{B} {C} {D}"
+                _ => _svc.Settings.WeatherTemplate ?? "{icon} {weather} {temp} {greeting}"
             };
             _svc.Settings.WeatherTemplate = newTemplate;
             // 同步到自定义模板输入框
@@ -1615,7 +1616,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             FontWeight = FontWeight.Bold,
             Foreground = new SolidColorBrush(Color.Parse("#FF2196F3"))
         });
-        var versionBlock = new TextBlock { Text = "版本: v1.3.0.0", FontSize = 14, Opacity = 0.7 };
+        var versionBlock = new TextBlock { Text = "版本: v1.3.0.1", FontSize = 14, Opacity = 0.7 };
         BindThemeForeground(versionBlock);
         infoPanel.Children.Add(versionBlock);
         var authorBlock = new TextBlock { Text = "作者: fengjian868", FontSize = 14, Opacity = 0.7 };
@@ -1640,19 +1641,26 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Card(infoPanel));
 
         var changelogPanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
-        var changelogTitle = new TextBlock { Text = "v1.3.0.0 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
+        var changelogTitle = new TextBlock { Text = "v1.3.0.1 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
         BindThemeForeground(changelogTitle);
         changelogPanel.Children.Add(changelogTitle);
         var changelogItems = new[]
         {
-            "- 新增：无课程文案时段自定义 - 按时段自由添加/修改/删除无课程文案",
-            "- 新增：组件与设置页图标统一为 Fluent 风格",
-            "- 优化：组件字体统一改为黑色",
-            "- 优化：设置页 Tab 按钮背景样式与选中高亮",
-            "- 删除：移除\"隐藏实验性功能\"开关",
-            "- 修复：天气问候语不显示问题",
-            "- 修复：组件图标显示异常问题",
-            "- 修改：学习时长统计合并为三选一模式（关闭/总运行时长/仅上课时间）"
+            "— 新增功能 —",
+            "1. 增加了大考倒计时，显示距离下次高考/中考的倒计时[实验中请手动开启]",
+            "2. 增加了比ci更好的天气组件\"智能天气\"，天气图标有颜色内置了有我组件自带的天气提醒，城市是根据ci来读取的[实验中请手动开启]",
+            "3. 增加了世界时钟，可查看每个城市的时间[实验中请手动开启]",
+            "4. 增加了自动化行动\"打开U盘\"\"刷新天气\"\"刷新天气文案\"[实验中请手动开启]",
+            "5. 增加了天气变化提醒组件，模仿windows小组件天气的变化提示例如\"附近有闪电\"\"几点后会下雨\"[实验中请手动开启]",
+            "— 修复功能 —",
+            "1. 修复了课表联动的部分变量不显示问题",
+            "2. 修复了切换不同颜色主题不会根据主题变化颜色",
+            "3. 修复了设置部分内容点击不了的问题",
+            "— 优化 —",
+            "1. 设置的部分变量显示",
+            "2. 部分图标显示",
+            "",
+            "*新增功能会在后续版本逐渐修改优化并上线"
         };
         foreach (var item in changelogItems)
         {
@@ -1660,7 +1668,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             BindThemeForeground(itemBlock);
             changelogPanel.Children.Add(itemBlock);
         }
-        s.Children.Add(Expander("更新日志", "v1.3.0.0 更新内容", changelogPanel, expanded: true));
+        s.Children.Add(Expander("更新日志", "v1.3.0.1 更新内容", changelogPanel, expanded: true));
 
         var featurePanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
         var featureItems = new[]
