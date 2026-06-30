@@ -40,6 +40,13 @@ public class WorldClockComponent : ComponentBase
         _timer.Tick += (s, e) => Update();
         _timer.Start();
 
+        HolidayService.SettingsChanged += OnSettingsChanged;
+        Update();
+    }
+
+    void OnSettingsChanged()
+    {
+        _svc.LoadSettings();
         Dispatcher.UIThread.Post(Update);
     }
 

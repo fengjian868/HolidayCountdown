@@ -27,7 +27,7 @@ public class LightningNearbyRule : IWeatherReminderRule
         }
 
         // 根据小时预报判断未来 2 小时是否有雷阵雨天气代码（通常 10~12 为雷暴/雷阵雨）
-        var hourly = WeatherDataHelper.GetHourlyWeatherCodes(context.HourlyForecasts, 24);
+        var hourly = WeatherDataHelper.GetHourlyWeatherCodes(context.WeatherInfo, 24);
         for (int i = 0; i < hourly.Count && i < 2; i++)
         {
             if (hourly[i] is >= 10 and <= 12)

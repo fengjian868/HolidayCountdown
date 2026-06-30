@@ -27,7 +27,6 @@ public class Plugin : PluginBase
             "ClassIsland", "Plugins", "HolidayCountdown", "experimental_enabled");
         if (System.IO.File.Exists(expFile))
         {
-            services.AddComponent<Views.Components.SmartWeatherComponent>();
             services.AddComponent<Views.Components.ExamCountdownComponent>();
             services.AddComponent<Views.Components.WorldClockComponent>();
             services.AddComponent<Views.Components.WeatherReminderComponent>();

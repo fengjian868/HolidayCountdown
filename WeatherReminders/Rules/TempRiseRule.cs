@@ -13,7 +13,7 @@ public class TempRiseRule : IWeatherReminderRule
 
     public WeatherReminderResult? Evaluate(WeatherReminderContext context)
     {
-        var daily = WeatherDataHelper.GetDailyTemps(context.DailyForecasts, 3);
+        var daily = WeatherDataHelper.GetDailyTemps(context.WeatherInfo, 3);
         if (daily.Count < 3) return null;
 
         var todayHigh = daily[0].High;

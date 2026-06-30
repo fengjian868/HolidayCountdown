@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
@@ -29,7 +30,10 @@ public class LunarDateComponent : ComponentBase
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.85 };
-        panel.Children.Add(new TextBlock { Text = "\u2630", FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 });
+        _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+        var iconBlock = new TextBlock { Text = "\u2630", FontSize = 14, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.7 };
+        iconBlock[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+        panel.Children.Add(iconBlock);
         panel.Children.Add(_txt);
         Content = panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(30) }; _timer.Tick += (s, e) => _ = RefreshAsync(); _timer.Start();
@@ -58,8 +62,12 @@ public class LunarDateComponent : ComponentBase
     string GetStr(JsonElement e, string p) => e.TryGetProperty(p, out var v) ? (v.GetString() ?? "") : "";
     string Format(LunarInfo i)
     {
-        var t = _svc?.Settings.LunarDateTemplate ?? "{gzYear} {IMonthCn}{IDayCn} {Animal}";
-        var result = t.Replace("{gzYear}", i.gzYear).Replace("{IMonthCn}", i.IMonthCn).Replace("{IDayCn}", i.IDayCn).Replace("{Animal}", i.Animal).Replace("{Term}", string.IsNullOrEmpty(i.Term) ? "" : $" · {i.Term}").Replace("{lunarDate}", i.lunarDate);
+        var t = _svc?.Settings.LunarDateTemplate ?? "{A} {B}{C} {D}";
+        var termVal = string.IsNullOrEmpty(i.Term) ? "" : $" · {i.Term}";
+        // 先替换短变量名 {A}-{F}
+        var result = t.Replace("{A}", i.gzYear).Replace("{B}", i.IMonthCn).Replace("{C}", i.IDayCn).Replace("{D}", i.Animal).Replace("{E}", termVal).Replace("{F}", i.lunarDate)
+            // 再替换旧长变量名作为回退兼容
+            .Replace("{gzYear}", i.gzYear).Replace("{IMonthCn}", i.IMonthCn).Replace("{IDayCn}", i.IDayCn).Replace("{Animal}", i.Animal).Replace("{Term}", termVal).Replace("{lunarDate}", i.lunarDate);
         // 清理多余空格，让排版更紧凑
         while (result.Contains("  ")) result = result.Replace("  ", " ");
         return result.Trim();

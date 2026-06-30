@@ -6,6 +6,7 @@ using System.Reflection;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.Threading;
 using ClassIsland.Core.Abstractions.Controls;
@@ -28,6 +29,10 @@ public class WeatherReminderComponent : ComponentBase
     private HolidayService? _svc;
     private WeatherReminderEvaluator? _evaluator;
     private IReadOnlyList<WeatherReminderResult> _lastResults = new List<WeatherReminderResult>();
+    private Random _random = new();
+    private int _lastRefreshMinutes;
+    private bool _lastShowImmediately;
+    private bool _lastEnabled;
 
     public WeatherReminderComponent()
     {
@@ -38,6 +43,7 @@ public class WeatherReminderComponent : ComponentBase
             TextWrapping = TextWrapping.NoWrap,
             Opacity = 0.9
         };
+        _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
         Content = new StackPanel
         {
             Orientation = Orientation.Horizontal,
@@ -46,31 +52,76 @@ public class WeatherReminderComponent : ComponentBase
             Children = { _txt }
         };
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(10) };
-        _timer.Tick += (s, e) => Update();
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
+        _timer.Tick += (s, e) => ScheduleRandomUpdate();
         _timer.Start();
 
         Dispatcher.UIThread.Post(() =>
         {
             _svc = new HolidayService();
             _evaluator = new WeatherReminderEvaluator(_svc);
+            _lastRefreshMinutes = _svc.Settings.WeatherReminderRefreshMinutes;
+            _lastShowImmediately = _svc.Settings.WeatherReminderShowImmediatelyOnChange;
+            _lastEnabled = _svc.Settings.WeatherReminderEnabled;
             HolidayService.SettingsChanged += OnSettingsChanged;
             UpdateTimerInterval();
             Update();
         });
     }
 
+    /// <summary>
+    /// 在随机刷新区间内延迟刷新，模拟随机时间
+    /// </summary>
+    void ScheduleRandomUpdate()
+    {
+        if (_svc == null) { Update(); return; }
+        var minMin = Math.Max(1, _svc.Settings.WeatherReminderRandomMinMinutes);
+        var maxMin = Math.Max(minMin, _svc.Settings.WeatherReminderRandomMaxMinutes);
+        // 随机分钟数转为秒
+        var delayMinutes = _random.Next(minMin, maxMin + 1);
+        var delaySeconds = delayMinutes * 60 + _random.Next(0, 60);
+
+        var delayTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(delaySeconds), IsEnabled = false };
+        delayTimer.Tick += (s, e) =>
+        {
+            delayTimer.Stop();
+            Update();
+        };
+        delayTimer.Start();
+    }
+
     void OnSettingsChanged()
     {
         _svc?.LoadSettings();
-        Dispatcher.UIThread.Post(() => { UpdateTimerInterval(); Update(); });
+        Dispatcher.UIThread.Post(() =>
+        {
+            // 只有核心设置变化时才刷新显示（避免勾选规则时立即刷新）
+            var needUpdate = false;
+            if (_svc.Settings.WeatherReminderEnabled != _lastEnabled)
+            {
+                _lastEnabled = _svc.Settings.WeatherReminderEnabled;
+                needUpdate = true;
+            }
+            if (_svc.Settings.WeatherReminderRefreshMinutes != _lastRefreshMinutes
+                || _svc.Settings.WeatherReminderShowImmediatelyOnChange != _lastShowImmediately)
+            {
+                _lastRefreshMinutes = _svc.Settings.WeatherReminderRefreshMinutes;
+                _lastShowImmediately = _svc.Settings.WeatherReminderShowImmediatelyOnChange;
+                UpdateTimerInterval();
+                needUpdate = true;
+            }
+            // 规则勾选变化不触发立即刷新，等下次定时器触发时生效
+            if (needUpdate) Update();
+        });
     }
 
     void UpdateTimerInterval()
     {
         if (_svc == null) return;
-        var minutes = _svc.Settings.WeatherReminderRefreshMinutes;
-        if (minutes < 1) minutes = 10;
+        var minutes = Math.Max(1, Math.Min(10, _svc.Settings.WeatherReminderRefreshMinutes));
+        // 启用"变化时立即刷新"后，使用 1 分钟间隔快速响应天气变化
+        if (_svc.Settings.WeatherReminderShowImmediatelyOnChange && minutes > 1)
+            minutes = 1;
         _timer.Interval = TimeSpan.FromMinutes(minutes);
     }
 
@@ -112,7 +163,12 @@ public class WeatherReminderComponent : ComponentBase
 
             if (results.Count == 0)
             {
-                _txt.Text = "";
+                // 数据未刷新或不可用时给出占位提示，方便排查
+                if (context.UpdateTime == null || (DateTime.Now - context.UpdateTime.Value).TotalMinutes >= 30)
+                    _txt.Text = "天气未更新";
+                else
+                    _txt.Text = "暂无天气变化提醒";
+                _txt.FontSize = GetClassIslandFontSize();
                 _lastResults = results;
                 return;
             }
@@ -149,8 +205,8 @@ public class WeatherReminderComponent : ComponentBase
                 ?? GetPropertyValue(current, "Text")?.ToString();
         }
 
-        context.HourlyForecasts = GetPropertyValue(data, "ForecastHourly") as IList;
-        context.DailyForecasts = GetPropertyValue(data, "ForecastDaily") as IList;
+        // 传完整 WeatherInfo 对象，规则内部通过反射读取 ForecastHourly / ForecastDaily
+        context.WeatherInfo = data;
         context.Alerts = GetPropertyValue(data, "Alerts") as IList;
         context.UpdateTime = GetDateTimeProperty(data, "UpdateTime")
             ?? GetDateTimeProperty(data, "FetchTime")

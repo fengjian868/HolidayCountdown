@@ -25,13 +25,13 @@ public static class ExamDateData
                 return new DateTime(year, kv.Value.Month, kv.Value.Day);
         }
 
-        // 默认
+        // 高考全国地级市默认 6 月 7 日；中考默认 6 月 20 日
         return examType == 1
             ? new DateTime(year, 6, 20)
             : new DateTime(year, 6, 7);
     }
 
-    public static IReadOnlyCollection<string> SupportedCities => GaoKaoDates.Keys.Concat(ZhongKaoDates.Keys).Distinct().OrderBy(x => x).ToList();
+    public static IReadOnlyCollection<string> SupportedCities => ChinaCities.AllCities;
 
     // 高考日期：绝大多数地区为 6 月 7 日，此处列出特殊或按省份默认
     static readonly Dictionary<string, (int Month, int Day)> GaoKaoDates = new()

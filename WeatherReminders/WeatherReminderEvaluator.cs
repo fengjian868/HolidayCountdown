@@ -25,12 +25,23 @@ public class WeatherReminderEvaluator
     /// </summary>
     void RegisterRules()
     {
+        _rules.Add(new Rules.RainTimingRule());
         _rules.Add(new Rules.RainSoonRule());
+        _rules.Add(new Rules.UmbrellaRule());
         _rules.Add(new Rules.LightningNearbyRule());
+        _rules.Add(new Rules.SnowRule());
+        _rules.Add(new Rules.StrongWindRule());
+        _rules.Add(new Rules.FogRule());
+        _rules.Add(new Rules.ColdWaveRule());
+        _rules.Add(new Rules.FreezeRule());
+        _rules.Add(new Rules.SandStormRule());
         _rules.Add(new Rules.TempDropRule());
         _rules.Add(new Rules.TempRiseRule());
-        _rules.Add(new Rules.StrongWindRule());
         _rules.Add(new Rules.HeatRule());
+        _rules.Add(new Rules.UVRule());
+        _rules.Add(new Rules.HumidityRule());
+        _rules.Add(new Rules.DressRule());
+        _rules.Add(new Rules.ComfortRule());
     }
 
     /// <summary>
@@ -39,7 +50,6 @@ public class WeatherReminderEvaluator
     public IReadOnlyList<WeatherReminderResult> Evaluate(WeatherReminderContext context)
     {
         var enabledIds = _svc.Settings.EnabledWeatherReminderRuleIds;
-        var maxCount = Math.Max(1, Math.Min(5, _svc.Settings.WeatherReminderMaxDisplayCount));
 
         var results = new List<WeatherReminderResult>();
 
@@ -58,13 +68,15 @@ public class WeatherReminderEvaluator
             }
         }
 
-        var ordered = results
-            .OrderBy(r => r.Priority)
-            .ThenBy(r => r.RuleId)
-            .Take(maxCount)
-            .ToList();
+        // 随机刷新区间：从所有匹配结果中随机选一条
+        if (results.Count > 0)
+        {
+            var random = new Random();
+            var index = random.Next(results.Count);
+            return new List<WeatherReminderResult> { results[index] };
+        }
 
-        return ordered;
+        return new List<WeatherReminderResult>();
     }
 
     /// <summary>

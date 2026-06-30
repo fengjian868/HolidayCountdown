@@ -229,10 +229,14 @@ public class GreetingComponent : ComponentBase
 
             if (string.IsNullOrWhiteSpace(template)) return null;
 
+            var stateText = state switch { 1 => "上课中", 2 => "准备上课", 3 => "课间", 4 => "放学", _ => "无课程" };
             return template
+                .Replace("{A}", subjectName)
+                .Replace("{B}", nextName)
+                .Replace("{C}", stateText)
                 .Replace("{subject}", subjectName)
                 .Replace("{next}", nextName)
-                .Replace("{state}", state switch { 1 => "上课中", 2 => "准备上课", 3 => "课间", 4 => "放学", _ => "无课程" })
+                .Replace("{state}", stateText)
                 .Trim();
         }
         catch { return null; }
