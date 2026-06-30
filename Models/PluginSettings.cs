@@ -139,9 +139,9 @@ public class PluginSettings
 
     // 课程联动问候语
     public bool ClassGreetingEnabled { get; set; } = false;
-    public string ClassGreetingOnClassTemplate { get; set; } = "正在上{subject}，加油 📖";
-    public string ClassGreetingBreakTemplate { get; set; } = "课间休息，下节{next} ☕";
-    public string ClassGreetingPrepareTemplate { get; set; } = "准备上{next}，拿好课本 🔔";
+    public string ClassGreetingOnClassTemplate { get; set; } = "正在上{A}，加油 📖";
+    public string ClassGreetingBreakTemplate { get; set; } = "课间休息，下节{B} ☕";
+    public string ClassGreetingPrepareTemplate { get; set; } = "准备上{B}，拿好课本 🔔";
     public string ClassGreetingAfterSchoolTemplate { get; set; } = "放学啦，今天辛苦了 🏠";
     public string ClassGreetingNoClassTemplate { get; set; } = "暂无课程，好好休息 📅";
 
@@ -162,8 +162,8 @@ public class PluginSettings
     public string ExamCountdownBackgroundColor { get; set; } = "#502196F3";
     public int ExamCountdownFontSize { get; set; } = 0;
     public string? ExamCountdownCustomDate { get; set; }
-    public string ExamCountdownCustomText { get; set; } = "距离{exam}还有{days}天";
-    public string ExamCountdownTodayText { get; set; } = "今天就是{exam}，加油！";
+    public string ExamCountdownCustomText { get; set; } = "距离{A}还有{B}天";
+    public string ExamCountdownTodayText { get; set; } = "今天就是{A}，加油！";
     public bool ExamCountdownRepeatYearly { get; set; } = true;
 
     // 世界时钟

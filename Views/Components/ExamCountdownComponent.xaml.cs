@@ -110,6 +110,9 @@ public class ExamCountdownComponent : ComponentBase
                 text = _svc.Settings.ExamCountdownCustomText;
 
             text = text
+                .Replace("{A}", examName)
+                .Replace("{B}", Math.Max(0, days).ToString())
+                .Replace("{C}", examDate.ToString("M月d日", CultureInfo.CurrentCulture))
                 .Replace("{exam}", examName)
                 .Replace("{days}", Math.Max(0, days).ToString())
                 .Replace("{date}", examDate.ToString("M月d日", CultureInfo.CurrentCulture));

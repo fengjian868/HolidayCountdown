@@ -62,8 +62,12 @@ public class LunarDateComponent : ComponentBase
     string GetStr(JsonElement e, string p) => e.TryGetProperty(p, out var v) ? (v.GetString() ?? "") : "";
     string Format(LunarInfo i)
     {
-        var t = _svc?.Settings.LunarDateTemplate ?? "{gzYear} {IMonthCn}{IDayCn} {Animal}";
-        var result = t.Replace("{gzYear}", i.gzYear).Replace("{IMonthCn}", i.IMonthCn).Replace("{IDayCn}", i.IDayCn).Replace("{Animal}", i.Animal).Replace("{Term}", string.IsNullOrEmpty(i.Term) ? "" : $" · {i.Term}").Replace("{lunarDate}", i.lunarDate);
+        var t = _svc?.Settings.LunarDateTemplate ?? "{A} {B}{C} {D}";
+        var termVal = string.IsNullOrEmpty(i.Term) ? "" : $" · {i.Term}";
+        // 先替换短变量名 {A}-{F}
+        var result = t.Replace("{A}", i.gzYear).Replace("{B}", i.IMonthCn).Replace("{C}", i.IDayCn).Replace("{D}", i.Animal).Replace("{E}", termVal).Replace("{F}", i.lunarDate)
+            // 再替换旧长变量名作为回退兼容
+            .Replace("{gzYear}", i.gzYear).Replace("{IMonthCn}", i.IMonthCn).Replace("{IDayCn}", i.IDayCn).Replace("{Animal}", i.Animal).Replace("{Term}", termVal).Replace("{lunarDate}", i.lunarDate);
         // 清理多余空格，让排版更紧凑
         while (result.Contains("  ")) result = result.Replace("  ", " ");
         return result.Trim();

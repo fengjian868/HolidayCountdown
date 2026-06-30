@@ -99,22 +99,27 @@ public class WeatherGreetingComponent : ComponentBase
             var icon = _svc.Settings.WeatherShowIcon ? GetWeatherIcon(actualWeatherText) : "";
             var (coloredIcon, iconColor) = GetWeatherIconAndColor(actualWeatherText, weatherCode);
 
-            var template = _svc.Settings.WeatherTemplate ?? "{icon}{weather} {temp} {greeting}";
+            var template = _svc.Settings.WeatherTemplate ?? "{A}{B} {C} {D}";
 
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["greeting"] = greeting,
-                ["temp"] = (_svc.Settings.WeatherShowTemp && temp.HasValue) ? $"{temp.Value}°C" : "",
-                ["weather"] = actualWeatherText ?? "",
-                ["warning"] = warningText,
+                // 短变量名
+                ["A"] = icon,
+                ["B"] = actualWeatherText ?? "",
+                ["C"] = (_svc.Settings.WeatherShowTemp && temp.HasValue) ? $"{temp.Value}°C" : "",
+                ["D"] = greeting,
+                ["E"] = warningText,
+                ["F"] = rainInfo ?? "",
+                ["G"] = CombineReminder(rainInfo, greeting),
+                ["H"] = GetStaleWarning(updateTime),
+                ["I"] = coloredIcon,
+                // 旧长变量名兼容
                 ["icon"] = icon,
+                ["weather"] = actualWeatherText ?? "",
+                ["temp"] = (_svc.Settings.WeatherShowTemp && temp.HasValue) ? $"{temp.Value}°C" : "",
+                ["greeting"] = greeting,
+                ["warning"] = warningText,
                 ["rain"] = rainInfo ?? "",
-                // 智能天气兼容变量
-                ["A"] = (_svc.Settings.WeatherShowTemp && temp.HasValue) ? $"{temp.Value}°C" : "",
-                ["B"] = coloredIcon,
-                ["C"] = warnings.Length > 0 ? string.Join(" ", warnings) : "",
-                ["D"] = CombineReminder(rainInfo, greeting),
-                ["E"] = GetStaleWarning(updateTime)
             };
 
             var baseFontSize = GetClassIslandFontSize();
@@ -146,13 +151,13 @@ public class WeatherGreetingComponent : ComponentBase
                 {
                     tb.FontFamily = new FontFamily("Segoe UI Emoji,Noto Color Emoji,Apple Color Emoji");
                 }
-                else if (block.Key == "A" && _svc.Settings.SmartWeatherTempColorEnabled)
+                else if (block.Key == "C" && _svc.Settings.SmartWeatherTempColorEnabled)
                 {
                     var color = GetTempBrush(temp);
                     if (color != null) tb.Foreground = color;
                     else tb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
                 }
-                else if (block.Key == "E")
+                else if (block.Key == "H" || block.Key == "E" && block.Text.Contains("未刷新"))
                 {
                     tb.Foreground = Brushes.Gray;
                 }
@@ -260,26 +265,61 @@ public class WeatherGreetingComponent : ComponentBase
             var lastWeatherInfo = GetPropertyValue(settings, "LastWeatherInfo");
             if (lastWeatherInfo == null) return null;
 
-            var hourly = WeatherDataHelper.GetHourlyWeatherTexts(lastWeatherInfo, 24);
-            if (hourly.Count == 0) return null;
-
-            var now = DateTime.Now;
-            bool isRainingNow = WeatherDataHelper.IsPrecipitationText(hourly[0]);
-
-            for (int i = 1; i < hourly.Count; i++)
+            // 优先用天气文本来判断
+            var hourlyTexts = WeatherDataHelper.GetHourlyWeatherTexts(lastWeatherInfo, 24);
+            if (hourlyTexts.Count > 0)
             {
-                bool raining = WeatherDataHelper.IsPrecipitationText(hourly[i]);
-                if (raining != isRainingNow)
-                {
-                    int minutes = i * 60 - now.Minute;
-                    if (minutes < 0) minutes = 0;
-                    return isRainingNow ? $"{minutes}分钟后停雨" : $"{minutes}分钟后下雨";
-                }
+                return ComputeRainInfoFromTexts(hourlyTexts);
             }
 
-            return isRainingNow ? "将持续降雨" : null;
+            // 天气文本获取失败时，用天气代码判断
+            var hourlyCodes = WeatherDataHelper.GetHourlyWeatherCodes(lastWeatherInfo, 24);
+            if (hourlyCodes.Count > 0)
+            {
+                return ComputeRainInfoFromCodes(hourlyCodes);
+            }
+
+            return null;
         }
         catch { return null; }
+    }
+
+    string? ComputeRainInfoFromTexts(List<string> hourlyTexts)
+    {
+        var now = DateTime.Now;
+        bool isRainingNow = WeatherDataHelper.IsPrecipitationText(hourlyTexts[0]);
+
+        for (int i = 1; i < hourlyTexts.Count; i++)
+        {
+            bool raining = WeatherDataHelper.IsPrecipitationText(hourlyTexts[i]);
+            if (raining != isRainingNow)
+            {
+                int minutes = i * 60 - now.Minute;
+                if (minutes < 0) minutes = 0;
+                return isRainingNow ? $"{minutes}分钟后停雨" : $"{minutes}分钟后下雨";
+            }
+        }
+
+        return isRainingNow ? "将持续降雨" : null;
+    }
+
+    string? ComputeRainInfoFromCodes(List<int> hourlyCodes)
+    {
+        var now = DateTime.Now;
+        bool isRainingNow = hourlyCodes.Count > 0 && WeatherDataHelper.IsPrecipitationCode(hourlyCodes[0]);
+
+        for (int i = 1; i < hourlyCodes.Count; i++)
+        {
+            bool raining = WeatherDataHelper.IsPrecipitationCode(hourlyCodes[i]);
+            if (raining != isRainingNow)
+            {
+                int minutes = i * 60 - now.Minute;
+                if (minutes < 0) minutes = 0;
+                return isRainingNow ? $"{minutes}分钟后停雨" : $"{minutes}分钟后下雨";
+            }
+        }
+
+        return isRainingNow ? "将持续降雨" : null;
     }
 
     string[] GetAllAlertTitles(object lastWeatherInfo)
@@ -622,8 +662,9 @@ public class WeatherGreetingComponent : ComponentBase
             }
             var key = template[(open + 1)..close];
             var value = values.TryGetValue(key, out var v) ? v : "";
-            var isIcon = key.Equals("icon", StringComparison.OrdinalIgnoreCase)
-                      || key.Equals("B", StringComparison.OrdinalIgnoreCase);
+            var isIcon = key.Equals("A", StringComparison.OrdinalIgnoreCase)
+                      || key.Equals("I", StringComparison.OrdinalIgnoreCase)
+                      || key.Equals("icon", StringComparison.OrdinalIgnoreCase);
             list.Add((value, isIcon, key));
             i = close + 1;
         }

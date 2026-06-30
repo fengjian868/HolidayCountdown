@@ -339,19 +339,19 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("课间警示", "课间剩余时间较少时高亮显示", warningPanel));
 
         var templatePanel = new StackPanel { Spacing = 0 };
-        templatePanel.Children.Add(SettingItem("上课模板", "{curIcon}=当前学科图标 {curSubject}=当前学科名 {curRemain}=本节课剩余时间 {nextIcon}=下节课图标 {nextSubject}=下节课名",
+        templatePanel.Children.Add(SettingItem("上课模板", "{A}=当前学科图标 {B}=当前学科名 {C}=本节课剩余时间 {D}=下节课图标 {E}=下节课名",
             Text(_svc.Settings.ClassScheduleOnClassTemplate, 320, v => { _svc.Settings.ClassScheduleOnClassTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("课间模板", "{breakIcon}=课间图标 {breakRemain}=课间剩余时间 {nextIcon}=下节课图标 {nextSubject}=下节课名",
+        templatePanel.Children.Add(SettingItem("课间模板", "{F}=课间图标 {G}=课间剩余时间 {D}=下节课图标 {E}=下节课名",
             Text(_svc.Settings.ClassScheduleBreakTemplate, 320, v => { _svc.Settings.ClassScheduleBreakTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("准备上课模板", "{prepIcon}=准备上课图标 {nextIcon}=下节课图标 {nextSubject}=下节课名 {prepRemain}=距上课剩余时间",
+        templatePanel.Children.Add(SettingItem("准备上课模板", "{H}=准备上课图标 {D}=下节课图标 {E}=下节课名 {I}=距上课剩余时间",
             Text(_svc.Settings.ClassSchedulePrepareTemplate, 320, v => { _svc.Settings.ClassSchedulePrepareTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("放学模板", "{afterIcon}=放学图标",
+        templatePanel.Children.Add(SettingItem("放学模板", "{J}=放学图标",
             Text(_svc.Settings.ClassScheduleAfterSchoolTemplate, 320, v => { _svc.Settings.ClassScheduleAfterSchoolTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
-        templatePanel.Children.Add(SettingItem("无课程模板", "{noClassIcon}=无课程图标 {text}=无课程文案",
+        templatePanel.Children.Add(SettingItem("无课程模板", "{K}=无课程图标 {M}=无课程文案",
             Text(_svc.Settings.ClassScheduleNoClassTemplate, 320, v => { _svc.Settings.ClassScheduleNoClassTemplate = v; AutoSave(); })));
         s.Children.Add(Expander("显示模板", "自定义各类状态的显示格式", templatePanel));
 
@@ -457,10 +457,10 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("样式", "圆环、颜色与字体", stylePanel));
 
         var textPanel = new StackPanel { Spacing = 0 };
-        textPanel.Children.Add(SettingItem("倒计时文案", "变量：{exam}=考试名 {days}=剩余天数 {date}=考试日期",
+        textPanel.Children.Add(SettingItem("倒计时文案", "变量：{A}=考试名 {B}=剩余天数 {C}=考试日期（兼容：{exam} {days} {date}）",
             Text(_svc.Settings.ExamCountdownCustomText, 260, v => { _svc.Settings.ExamCountdownCustomText = v; AutoSave(); })));
         textPanel.Children.Add(Separator());
-        textPanel.Children.Add(SettingItem("当天文案", "变量：{exam}=考试名 {date}=考试日期",
+        textPanel.Children.Add(SettingItem("当天文案", "变量：{A}=考试名 {C}=考试日期（兼容：{exam} {date}）",
             Text(_svc.Settings.ExamCountdownTodayText, 260, v => { _svc.Settings.ExamCountdownTodayText = v; AutoSave(); })));
         s.Children.Add(Expander("文案", "自定义显示文字", textPanel));
 
@@ -681,19 +681,19 @@ public class UnifiedSettingsPage : SettingsPageBase
         panel.Children.Add(SettingItem("启用课程联动问候语", "根据ClassIsland课程表（含临时课程）显示对应问候",
             Toggle(_svc.Settings.ClassGreetingEnabled, v => { _svc.Settings.ClassGreetingEnabled = v; AutoSave(); })));
         panel.Children.Add(Separator());
-        panel.Children.Add(SettingItem("上课模板", "{subject}=学科名 {state}=状态",
+        panel.Children.Add(SettingItem("上课模板", "{A}=学科名 {C}=状态（兼容: {subject} {state}）",
             Text(_svc.Settings.ClassGreetingOnClassTemplate, 260, v => { _svc.Settings.ClassGreetingOnClassTemplate = v; AutoSave(); })));
         panel.Children.Add(Separator());
-        panel.Children.Add(SettingItem("课间模板", "{next}=下节课名 {state}=状态",
+        panel.Children.Add(SettingItem("课间模板", "{B}=下节课名 {C}=状态（兼容: {next} {state}）",
             Text(_svc.Settings.ClassGreetingBreakTemplate, 260, v => { _svc.Settings.ClassGreetingBreakTemplate = v; AutoSave(); })));
         panel.Children.Add(Separator());
-        panel.Children.Add(SettingItem("准备上课模板", "{next}=下节课名 {state}=状态",
+        panel.Children.Add(SettingItem("准备上课模板", "{B}=下节课名 {C}=状态（兼容: {next} {state}）",
             Text(_svc.Settings.ClassGreetingPrepareTemplate, 260, v => { _svc.Settings.ClassGreetingPrepareTemplate = v; AutoSave(); })));
         panel.Children.Add(Separator());
-        panel.Children.Add(SettingItem("放学模板", "{state}=状态",
+        panel.Children.Add(SettingItem("放学模板", "{C}=状态（兼容: {state}）",
             Text(_svc.Settings.ClassGreetingAfterSchoolTemplate, 260, v => { _svc.Settings.ClassGreetingAfterSchoolTemplate = v; AutoSave(); })));
         panel.Children.Add(Separator());
-        panel.Children.Add(SettingItem("无课程模板", "{state}=状态",
+        panel.Children.Add(SettingItem("无课程模板", "{C}=状态（兼容: {state}）",
             Text(_svc.Settings.ClassGreetingNoClassTemplate, 260, v => { _svc.Settings.ClassGreetingNoClassTemplate = v; AutoSave(); })));
         return panel;
     }
@@ -925,7 +925,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         displayPanel.Children.Add(SettingItem("自动刷新", "每天自动重新计算农历",
             Toggle(_svc.Settings.LunarAutoRefresh, v => { _svc.Settings.LunarAutoRefresh = v; AutoSave(); })));
         displayPanel.Children.Add(Separator());
-        displayPanel.Children.Add(SettingItem("显示模板", "可用变量: {gzYear} 干支年 | {IMonthCn} 农历月 | {IDayCn} 农历日 | {Animal} 生肖 | {Term} 节气",
+        displayPanel.Children.Add(SettingItem("显示模板", "可用变量: {A} 干支年 | {B} 农历月 | {C} 农历日 | {D} 生肖 | {E} 节气 | {F} 农历日期（兼容旧变量: {gzYear} {IMonthCn} {IDayCn} {Animal} {Term} {lunarDate}）",
             Text(_svc.Settings.LunarDateTemplate, 280, v => { _svc.Settings.LunarDateTemplate = v; AutoSave(); })));
         s.Children.Add(Expander("显示", "农历组件显示选项", displayPanel));
 
@@ -1050,26 +1050,26 @@ public class UnifiedSettingsPage : SettingsPageBase
         var presetCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
         foreach (var p in presets) presetCombo.Items.Add(p);
 
-        var currentTemplate = _svc.Settings.WeatherTemplate ?? "{greeting}";
+        var currentTemplate = _svc.Settings.WeatherTemplate ?? "{A}{B} {C} {D}";
         presetCombo.SelectedIndex = currentTemplate switch
         {
-            "{greeting}" => 0,
-            "{icon} {greeting}" => 1,
-            "{icon}{weather} {temp} {greeting}" => 2,
-            "{icon}{temp}" => 3,
-            "{icon}{weather} {temp} {greeting} {warning}" => 4,
+            "{D}" => 0,
+            "{A} {D}" => 1,
+            "{A}{B} {C} {D}" => 2,
+            "{A}{C}" => 3,
+            "{A}{B} {C} {D} {E}" => 4,
             _ => -1
         };
         presetCombo.SelectionChanged += (a, b) =>
         {
             _svc.Settings.WeatherTemplate = presetCombo.SelectedIndex switch
             {
-                0 => "{greeting}",
-                1 => "{icon} {greeting}",
-                2 => "{icon}{weather} {temp} {greeting}",
-                3 => "{icon}{temp}",
-                4 => "{icon}{weather} {temp} {greeting} {warning}",
-                _ => _svc.Settings.WeatherTemplate ?? "{icon}{weather} {temp} {greeting}"
+                0 => "{D}",
+                1 => "{A} {D}",
+                2 => "{A}{B} {C} {D}",
+                3 => "{A}{C}",
+                4 => "{A}{B} {C} {D} {E}",
+                _ => _svc.Settings.WeatherTemplate ?? "{A}{B} {C} {D}"
             };
             AutoSave();
         };
@@ -1091,7 +1091,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         layoutPanel.Children.Add(SettingItem("预警置顶", "有预警时优先完整显示预警信息",
             Toggle(_svc.Settings.SmartWeatherWarningOverride, v => { _svc.Settings.SmartWeatherWarningOverride = v; AutoSave(); })));
         layoutPanel.Children.Add(Separator());
-        layoutPanel.Children.Add(Info("可用变量: {greeting} 问候语 | {temp} 温度 | {weather} 天气 | {warning} 预警 | {icon} 天气图标 | {rain} 下雨/停雨倒计时\n兼容变量: {A}=温度 {B}=天气图标 {C}=预警 {D}=穿衣提醒+下雨倒计时 {E}=更新状态"));
+        layoutPanel.Children.Add(Info("短变量: {A}=天气图标 {B}=天气文字 {C}=温度 {D}=穿衣问候 {E}=预警文字 {F}=降雨/停雨提示 {G}=问候+下雨提醒 {H}=更新状态 {I}=彩色图标\n兼容旧变量: {icon} {weather} {temp} {greeting} {warning} {rain}"));
         s.Children.Add(Expander("排版", "自定义天气问候的显示格式", layoutPanel));
 
         s.Children.Add(Expander("温度提醒", "自定义各温度区间的穿衣提醒文案", BuildTempPanel()));

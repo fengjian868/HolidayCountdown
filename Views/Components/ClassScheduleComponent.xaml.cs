@@ -178,24 +178,38 @@ public class ClassScheduleComponent : ComponentBase
             }
 
             if (string.IsNullOrWhiteSpace(template))
-                template = "{curIcon}{curSubject} {curRemain} → {nextIcon}{nextSubject}";
+                template = "{A}{B} {C} → {D}{E}";
 
             var result = template
-                // 新变量名
+                // 新短变量名
+                .Replace("{A}", string.IsNullOrEmpty(curIcon) ? "" : $"{curIcon} ")
+                .Replace("{B}", subjectName)
+                .Replace("{C}", countdownText)
+                .Replace("{D}", string.IsNullOrEmpty(nextIcon) ? "" : $"{nextIcon} ")
+                .Replace("{E}", nextName)
+                .Replace("{F}", string.IsNullOrEmpty(breakIcon) ? "" : $"{breakIcon} ")
+                .Replace("{G}", countdownText)
+                .Replace("{H}", string.IsNullOrEmpty(prepIcon) ? "" : $"{prepIcon} ")
+                .Replace("{I}", countdownText)
+                .Replace("{J}", string.IsNullOrEmpty(afterIcon) ? "" : $"{afterIcon} ")
+                .Replace("{K}", string.IsNullOrEmpty(noClassIcon) ? "" : $"{noClassIcon} ")
+                .Replace("{L}", stateText)
+                .Replace("{M}", text)
+                // 旧长变量名兼容
                 .Replace("{curIcon}", string.IsNullOrEmpty(curIcon) ? "" : $"{curIcon} ")
                 .Replace("{curSubject}", subjectName)
                 .Replace("{curRemain}", countdownText)
+                .Replace("{nextIcon}", string.IsNullOrEmpty(nextIcon) ? "" : $"{nextIcon} ")
+                .Replace("{nextSubject}", nextName)
                 .Replace("{breakIcon}", string.IsNullOrEmpty(breakIcon) ? "" : $"{breakIcon} ")
                 .Replace("{breakRemain}", countdownText)
                 .Replace("{prepIcon}", string.IsNullOrEmpty(prepIcon) ? "" : $"{prepIcon} ")
                 .Replace("{prepRemain}", countdownText)
-                .Replace("{nextIcon}", string.IsNullOrEmpty(nextIcon) ? "" : $"{nextIcon} ")
-                .Replace("{nextSubject}", nextName)
                 .Replace("{afterIcon}", string.IsNullOrEmpty(afterIcon) ? "" : $"{afterIcon} ")
                 .Replace("{noClassIcon}", string.IsNullOrEmpty(noClassIcon) ? "" : $"{noClassIcon} ")
                 .Replace("{text}", text)
                 .Replace("{state}", stateText)
-                // 旧变量名兼容
+                // 旧短别名兼容
                 .Replace("{icon}", string.IsNullOrEmpty(curIcon) ? "" : $"{curIcon} ")
                 .Replace("{subject}", subjectName)
                 .Replace("{countdown}", countdownText)
