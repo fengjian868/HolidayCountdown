@@ -6,7 +6,7 @@ namespace HolidayCountdown.Models;
 public class PluginSettings
 {
     // 全局
-    public int Version { get; set; } = 123;
+    public int Version { get; set; } = 124;
     public bool ExperimentalFeaturesEnabled { get; set; } = false;
 
     // 节假日组件
@@ -120,7 +120,7 @@ public class PluginSettings
     public int WeatherReminderRandomMaxMinutes { get; set; } = 60;
 
     // 课程表联动
-    public bool ClassScheduleEnabled { get; set; } = true;
+    public bool ClassScheduleEnabled { get; set; } = false;
     public bool ClassScheduleShowIcon { get; set; } = true;
     public bool ClassScheduleShowSubject { get; set; } = true;
     public int PreClassMinutes { get; set; } = 5;
