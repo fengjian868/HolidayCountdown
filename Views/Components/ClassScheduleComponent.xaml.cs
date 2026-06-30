@@ -88,7 +88,7 @@ public class ClassScheduleComponent : ComponentBase
             // TimeState: 0=None, 1=OnClass, 2=PrepareOnClass, 3=Breaking, 4=AfterSchool
 
             var currentSubject = GetPropertyValue(dataSource, "CurrentSubject");
-            var nextSubject = GetPropertyValue(dataSource, "NextSubject");
+            var nextSubject = GetPropertyValue(dataSource, "NextClassSubject") ?? GetPropertyValue(dataSource, "NextSubject");
             var isClassPlanLoaded = GetPropertyValue(dataSource, "IsClassPlanLoaded");
             var isClassPlanEnabled = GetPropertyValue(dataSource, "IsClassPlanEnabled");
 
@@ -97,7 +97,7 @@ public class ClassScheduleComponent : ComponentBase
             if (lessons != null && !ReferenceEquals(dataSource, lessons))
             {
                 currentSubject = GetPropertyValue(lessons, "CurrentSubject");
-                nextSubject = GetPropertyValue(lessons, "NextSubject");
+                nextSubject = GetPropertyValue(lessons, "NextClassSubject") ?? GetPropertyValue(lessons, "NextSubject");
                 isClassPlanLoaded = GetPropertyValue(lessons, "IsClassPlanLoaded");
                 isClassPlanEnabled = GetPropertyValue(lessons, "IsClassPlanEnabled");
             }
@@ -303,27 +303,45 @@ public class ClassScheduleComponent : ComponentBase
         catch { return ""; }
     }
 
+    /// <summary>
+    /// 判断科目名是否有意义：非空，且不是 ClassIsland 的占位科目（"???"、"课间休息"等）
+    /// </summary>
+    bool IsMeaningfulSubjectName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        var n = name.Trim();
+        // ClassIsland Subject.Fallback.Name = "???"，Subject.Breaking.Name = "课间休息"
+        if (n == "???" || n == "课间休息" || n == "?") return false;
+        return true;
+    }
+
     string GetNextSubjectFromTimeLayout(object dataSource, object? lessons, int currentState)
     {
         try
         {
             var source = lessons ?? dataSource;
 
-            // 优先尝试直接读取 NextSubject / NextTimeLayoutItem
+            // 优先尝试直接读取 NextClassSubject / NextClassTimeLayoutItem
+            // 注意：ClassIsland 的真实属性名是 NextClassSubject / NextClassTimeLayoutItem（带 Class 前缀）
             // MainViewModel（dataSource）是 UI 绑定源，最可靠；LessonsService 作为 fallback
-            var nextSubject = GetPropertyValue(dataSource, "NextSubject")
+            // 同时兼容旧版/别名的 NextSubject / NextTimeLayoutItem
+            var nextSubject = GetPropertyValue(dataSource, "NextClassSubject")
+                           ?? GetPropertyValue(source, "NextClassSubject")
+                           ?? GetPropertyValue(dataSource, "NextSubject")
                            ?? GetPropertyValue(source, "NextSubject");
             if (nextSubject != null)
             {
                 var name = GetSubjectName(nextSubject);
-                if (!string.IsNullOrEmpty(name)) return name;
+                if (IsMeaningfulSubjectName(name)) return name;
             }
-            var nextItem = GetPropertyValue(dataSource, "NextTimeLayoutItem")
+            var nextItem = GetPropertyValue(dataSource, "NextClassTimeLayoutItem")
+                        ?? GetPropertyValue(source, "NextClassTimeLayoutItem")
+                        ?? GetPropertyValue(dataSource, "NextTimeLayoutItem")
                         ?? GetPropertyValue(source, "NextTimeLayoutItem");
             if (nextItem != null)
             {
                 var name = GetSubjectNameFromItem(nextItem);
-                if (!string.IsNullOrEmpty(name)) return name;
+                if (IsMeaningfulSubjectName(name)) return name;
             }
 
             var timeLayout = GetPropertyValue(source, "CurrentTimeLayout")
@@ -407,7 +425,7 @@ public class ClassScheduleComponent : ComponentBase
                 if (!IsLessonTimeLayoutItem(item))
                     continue;
                 var name = GetSubjectNameFromItem(item);
-                if (!string.IsNullOrEmpty(name))
+                if (IsMeaningfulSubjectName(name))
                     return name;
             }
 
