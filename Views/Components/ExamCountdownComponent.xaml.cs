@@ -28,7 +28,7 @@ public class ExamCountdownComponent : ComponentBase
     private TextBlock _txt = null!;
     private Arc _ringTrack = null!;
     private Arc _ringProgress = null!;
-    private HolidayService _svc = new();
+    private HolidayService? _svc;
 
     public ExamCountdownComponent()
     {
@@ -79,11 +79,23 @@ public class ExamCountdownComponent : ComponentBase
         _timer.Tick += (s, e) => Update();
         _timer.Start();
 
+        Dispatcher.UIThread.Post(() =>
+        {
+            _svc = new HolidayService();
+            HolidayService.SettingsChanged += OnSettingsChanged;
+            Update();
+        });
+    }
+
+    void OnSettingsChanged()
+    {
+        _svc?.LoadSettings();
         Dispatcher.UIThread.Post(Update);
     }
 
     void Update()
     {
+        if (_svc == null) return;
         try
         {
             var (examName, examDate) = GetNextExamDate();
@@ -132,7 +144,7 @@ public class ExamCountdownComponent : ComponentBase
     (string examName, DateTime examDate) GetNextExamDate()
     {
         var now = DateTime.Now;
-        var examName = _svc.Settings.ExamType == 1 ? "中考" : "高考";
+        var examName = _svc!.Settings.ExamType == 1 ? "中考" : "高考";
 
         DateTime GetDateForYear(int year)
         {
@@ -167,7 +179,7 @@ public class ExamCountdownComponent : ComponentBase
 
     DateTime ParseRingStartDate(int year)
     {
-        var input = _svc.Settings.ExamCountdownRingStartDate ?? "08-01";
+        var input = _svc!.Settings.ExamCountdownRingStartDate ?? "08-01";
         var parts = input.Split('-', '/', '.');
         int month = 8, day = 1;
         if (parts.Length >= 2 &&

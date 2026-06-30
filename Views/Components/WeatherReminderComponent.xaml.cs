@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -138,6 +137,7 @@ public class WeatherReminderComponent : ComponentBase
             return context;
         }
 
+        context.WeatherData = data;
         context.CurrentTemp = WeatherDataHelper.GetCurrentTemp(data);
 
         var current = GetPropertyValue(data, "Current");
@@ -149,9 +149,7 @@ public class WeatherReminderComponent : ComponentBase
                 ?? GetPropertyValue(current, "Text")?.ToString();
         }
 
-        context.HourlyForecasts = GetPropertyValue(data, "ForecastHourly") as IList;
-        context.DailyForecasts = GetPropertyValue(data, "ForecastDaily") as IList;
-        context.Alerts = GetPropertyValue(data, "Alerts") as IList;
+        context.Alerts = GetPropertyValue(data, "Alerts");
         context.UpdateTime = GetDateTimeProperty(data, "UpdateTime")
             ?? GetDateTimeProperty(data, "FetchTime")
             ?? GetDateTimeProperty(data, "LastUpdateTime")

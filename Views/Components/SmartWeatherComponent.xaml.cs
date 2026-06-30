@@ -88,7 +88,7 @@ public class SmartWeatherComponent : ComponentBase
     }
 
     /// <summary>
-    /// 集中生成所有模板变量 A/B/C/D/E
+    /// 集中生成所有模板变量 A/B/C/D/E/F
     /// </summary>
     SmartWeatherVariables BuildVariables(WeatherData data)
     {
@@ -104,6 +104,12 @@ public class SmartWeatherComponent : ComponentBase
         var (icon, iconColor) = GetWeatherIconAndColor(data.WeatherText, data.WeatherCode);
         vars.B = icon;
         vars.BColor = iconColor;
+
+        // F: 天气状况文本（晴/雨/阴等）
+        var weatherText = data.WeatherText;
+        if (string.IsNullOrEmpty(weatherText))
+            weatherText = GetWeatherTextByCode(data.WeatherCode ?? "");
+        vars.F = weatherText ?? "";
 
         // C: 预警信息（支持同一条标题中包含多个类型，如“雷雨大风”）
         vars.C = data.Warnings.Length > 0
@@ -129,7 +135,7 @@ public class SmartWeatherComponent : ComponentBase
     /// </summary>
     void Render(SmartWeatherVariables vars)
     {
-        var template = _svc?.Settings.SmartWeatherTemplate ?? "{A} {B} {C} {D}";
+        var template = _svc?.Settings.SmartWeatherTemplate ?? "{B} {F} {A} {D}";
         var showMap = new Dictionary<string, bool>
         {
             ["A"] = _svc?.Settings.SmartWeatherShowA ?? true,
@@ -137,6 +143,7 @@ public class SmartWeatherComponent : ComponentBase
             ["C"] = _svc?.Settings.SmartWeatherShowC ?? true,
             ["D"] = _svc?.Settings.SmartWeatherShowD ?? true,
             ["E"] = _svc?.Settings.SmartWeatherShowE ?? false,
+            ["F"] = _svc?.Settings.SmartWeatherShowF ?? true,
         };
 
         // 预警置顶：有预警且开启显示{C}时，把 {C} 放在最前面完整显示
@@ -147,7 +154,7 @@ public class SmartWeatherComponent : ComponentBase
         }
 
         // 按模板顺序渲染其余变量
-        var matches = Regex.Matches(template, @"\{([A-E])\}");
+        var matches = Regex.Matches(template, @"\{([A-F])\}");
         foreach (Match m in matches)
         {
             var key = m.Groups[1].Value;
@@ -161,6 +168,7 @@ public class SmartWeatherComponent : ComponentBase
                 "C" => WarningList(vars.CWarnings),
                 "D" => Badge(vars.D, null, null),
                 "E" => Badge(vars.E, null, Brushes.Gray),
+                "F" => Badge(vars.F, null, null),
                 _ => null
             };
             if (control != null) _root.Children.Add(control);
@@ -576,6 +584,7 @@ public class SmartWeatherVariables
     public List<WarningInfo> CWarnings { get; set; } = new();
     public string D { get; set; } = "";
     public string E { get; set; } = "";
+    public string F { get; set; } = "";
 }
 
 public class WarningInfo

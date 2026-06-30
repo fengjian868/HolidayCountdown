@@ -414,8 +414,18 @@ public class UnifiedSettingsPage : SettingsPageBase
         typeCombo.SelectionChanged += (a, b) => { _svc.Settings.ExamType = typeCombo.SelectedIndex; AutoSave(); };
         basicPanel.Children.Add(SettingItem("考试类型", "选择中考或高考", typeCombo));
         basicPanel.Children.Add(Separator());
-        basicPanel.Children.Add(SettingItem("城市", "输入具体城市名，如 北京、上海、广州",
-            Text(_svc.Settings.ExamCity, 160, v => { _svc.Settings.ExamCity = v; AutoSave(); })));
+
+        var cityCombo = new ComboBox { Width = 160, HorizontalAlignment = HorizontalAlignment.Right };
+        var cityList = ExamDateData.SupportedCities.OrderBy(x => x).ToList();
+        foreach (var city in cityList) cityCombo.Items.Add(city);
+        var cityIdx = cityList.IndexOf(_svc.Settings.ExamCity);
+        cityCombo.SelectedIndex = cityIdx >= 0 ? cityIdx : 0;
+        cityCombo.SelectionChanged += (a, b) =>
+        {
+            _svc.Settings.ExamCity = cityCombo.SelectedItem?.ToString() ?? "北京";
+            AutoSave();
+        };
+        basicPanel.Children.Add(SettingItem("城市", "不同城市考试日期不同，中考尤其明显", cityCombo));
         basicPanel.Children.Add(Separator());
         basicPanel.Children.Add(SettingItem("自定义日期", "留空则使用内置数据，格式 M-d",
             Text(_svc.Settings.ExamCountdownCustomDate ?? "", 120, v => { _svc.Settings.ExamCountdownCustomDate = string.IsNullOrWhiteSpace(v) ? null : v; AutoSave(); })));
@@ -1006,8 +1016,8 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(PageHeader("🌤️ 天气问候设置"));
 
         var layoutPanel = new StackPanel { Spacing = 0 };
-        var presets = new[] { "仅问候", "图标+问候", "温度+问候", "图标+温度", "完整信息" };
-        var presetCombo = new ComboBox { Width = 120, HorizontalAlignment = HorizontalAlignment.Right };
+        var presets = new[] { "仅问候", "图标+问候", "图标+天气+问候", "图标+天气+温度+问候", "完整信息" };
+        var presetCombo = new ComboBox { Width = 150, HorizontalAlignment = HorizontalAlignment.Right };
         foreach (var p in presets) presetCombo.Items.Add(p);
 
         var currentTemplate = _svc.Settings.WeatherTemplate ?? "{greeting}";
@@ -1015,9 +1025,9 @@ public class UnifiedSettingsPage : SettingsPageBase
         {
             "{greeting}" => 0,
             "{icon} {greeting}" => 1,
-            "{temp} {greeting}" => 2,
-            "{icon}{temp}" => 3,
-            "{icon} {temp} {greeting} {warning}" => 4,
+            "{icon} {weather} {greeting}" => 2,
+            "{icon} {weather} {temp} {greeting}" => 3,
+            "{icon} {weather} {temp} {greeting} {warning}" => 4,
             _ => -1
         };
         presetCombo.SelectionChanged += (a, b) =>
@@ -1026,9 +1036,9 @@ public class UnifiedSettingsPage : SettingsPageBase
             {
                 0 => "{greeting}",
                 1 => "{icon} {greeting}",
-                2 => "{temp} {greeting}",
-                3 => "{icon}{temp}",
-                4 => "{icon} {temp} {greeting} {warning}",
+                2 => "{icon} {weather} {greeting}",
+                3 => "{icon} {weather} {temp} {greeting}",
+                4 => "{icon} {weather} {temp} {greeting} {warning}",
                 _ => _svc.Settings.WeatherTemplate ?? "{greeting}"
             };
             AutoSave();
@@ -1050,13 +1060,16 @@ public class UnifiedSettingsPage : SettingsPageBase
 
         var smartPanel = new StackPanel { Spacing = 0 };
         smartPanel.Children.Add(SettingItem("模板", null,
-            Text(_svc.Settings.SmartWeatherTemplate ?? "{A} {B} {C} {D}", 280, v => { _svc.Settings.SmartWeatherTemplate = v; AutoSave(); })));
+            Text(_svc.Settings.SmartWeatherTemplate ?? "{B} {F} {A} {D}", 280, v => { _svc.Settings.SmartWeatherTemplate = v; AutoSave(); })));
         smartPanel.Children.Add(Separator());
         smartPanel.Children.Add(SettingItem("显示温度 {A}", null,
             Toggle(_svc.Settings.SmartWeatherShowA, v => { _svc.Settings.SmartWeatherShowA = v; AutoSave(); })));
         smartPanel.Children.Add(Separator());
         smartPanel.Children.Add(SettingItem("显示天气图标 {B}", null,
             Toggle(_svc.Settings.SmartWeatherShowB, v => { _svc.Settings.SmartWeatherShowB = v; AutoSave(); })));
+        smartPanel.Children.Add(Separator());
+        smartPanel.Children.Add(SettingItem("显示天气状况 {F}", "晴/雨/阴等天气文本",
+            Toggle(_svc.Settings.SmartWeatherShowF, v => { _svc.Settings.SmartWeatherShowF = v; AutoSave(); })));
         smartPanel.Children.Add(Separator());
         smartPanel.Children.Add(SettingItem("显示预警 {C}", null,
             Toggle(_svc.Settings.SmartWeatherShowC, v => { _svc.Settings.SmartWeatherShowC = v; AutoSave(); })));
@@ -1073,8 +1086,8 @@ public class UnifiedSettingsPage : SettingsPageBase
         smartPanel.Children.Add(SettingItem("温度按冷暖变色", "根据温度自动调整温度文本颜色",
             Toggle(_svc.Settings.SmartWeatherTempColorEnabled, v => { _svc.Settings.SmartWeatherTempColorEnabled = v; AutoSave(); })));
         smartPanel.Children.Add(Separator());
-        smartPanel.Children.Add(Info("可用变量: {A} 温度 | {B} 彩色天气图标 | {C} 预警徽章 | {D} 穿衣提醒 | {E} 更新状态"));
-        s.Children.Add(Expander("智能天气", "新版彩色天气组件，含预警与 A/B/C 模板变量", smartPanel));
+        smartPanel.Children.Add(Info("可用变量: {A} 温度 | {B} 彩色天气图标 | {C} 预警徽章 | {D} 穿衣提醒 | {E} 更新状态 | {F} 天气状况"));
+        s.Children.Add(Expander("智能天气", "新版彩色天气组件，含预警与 A/B/C/D/E/F 模板变量", smartPanel));
 
         s.Children.Add(Expander("温度提醒", "自定义各温度区间的穿衣提醒文案", BuildTempPanel()));
         s.Children.Add(Expander("天气关键词", "根据天气关键词匹配显示文案", BuildWeatherGreetingPanel()));
