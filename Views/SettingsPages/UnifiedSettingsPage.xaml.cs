@@ -1260,50 +1260,50 @@ public class UnifiedSettingsPage : SettingsPageBase
         basicPanel.Children.Add(SettingItem("刷新间隔", "拖动设置多久评估一次天气变化（1-10分钟）", refreshPanel));
         basicPanel.Children.Add(Separator());
 
-        // 随机刷新区间输入框（默认30-60秒）
-        var randomMinBox = new NumericUpDown
+        // 随机刷新区间输入框（默认30-60分钟）
+        var randomMinBox = new TextBox
         {
-            Value = _svc.Settings.WeatherReminderRandomMinSeconds,
-            Minimum = 1,
-            Maximum = 999,
-            Increment = 5,
-            Width = 80,
+            Text = _svc.Settings.WeatherReminderRandomMinMinutes.ToString(),
+            Width = 60,
             HorizontalAlignment = HorizontalAlignment.Right,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center
         };
-        var randomMaxBox = new NumericUpDown
+        var randomMaxBox = new TextBox
         {
-            Value = _svc.Settings.WeatherReminderRandomMaxSeconds,
-            Minimum = 1,
-            Maximum = 999,
-            Increment = 5,
-            Width = 80,
+            Text = _svc.Settings.WeatherReminderRandomMaxMinutes.ToString(),
+            Width = 60,
             HorizontalAlignment = HorizontalAlignment.Right,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center
         };
         var dashBlock = new TextBlock { Text = "-", VerticalAlignment = VerticalAlignment.Center, FontSize = 14 };
         BindThemeForeground(dashBlock);
-        var secBlock1 = new TextBlock { Text = "秒", VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Opacity = 0.7 };
-        BindThemeForeground(secBlock1);
-        var secBlock2 = new TextBlock { Text = "秒", VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Opacity = 0.7 };
-        BindThemeForeground(secBlock2);
+        var minBlock = new TextBlock { Text = "分钟", VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Opacity = 0.7 };
+        BindThemeForeground(minBlock);
+        var maxBlock = new TextBlock { Text = "分钟", VerticalAlignment = VerticalAlignment.Center, FontSize = 12, Opacity = 0.7 };
+        BindThemeForeground(maxBlock);
         var randomPanel = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
             Spacing = 4,
-            Children = { randomMinBox, secBlock1, dashBlock, randomMaxBox, secBlock2 }
+            Children = { randomMinBox, minBlock, dashBlock, randomMaxBox, maxBlock }
         };
-        randomMinBox.ValueChanged += (a, b) =>
+        randomMinBox.LostFocus += (a, b) =>
         {
-            _svc.Settings.WeatherReminderRandomMinSeconds = Math.Max(1, (int)(randomMinBox.Value ?? 30));
+            if (int.TryParse(randomMinBox.Text, out var v) && v >= 1)
+                _svc.Settings.WeatherReminderRandomMinMinutes = v;
+            else
+                randomMinBox.Text = _svc.Settings.WeatherReminderRandomMinMinutes.ToString();
             AutoSave();
         };
-        randomMaxBox.ValueChanged += (a, b) =>
+        randomMaxBox.LostFocus += (a, b) =>
         {
-            _svc.Settings.WeatherReminderRandomMaxSeconds = Math.Max(1, (int)(randomMaxBox.Value ?? 60));
+            if (int.TryParse(randomMaxBox.Text, out var v) && v >= 1)
+                _svc.Settings.WeatherReminderRandomMaxMinutes = v;
+            else
+                randomMaxBox.Text = _svc.Settings.WeatherReminderRandomMaxMinutes.ToString();
             AutoSave();
         };
 

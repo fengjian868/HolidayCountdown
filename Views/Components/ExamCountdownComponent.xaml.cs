@@ -27,47 +27,14 @@ public class ExamCountdownComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
     private TextBlock _txt = null!;
-    private Arc _ringTrack = null!;
-    private Arc _ringProgress = null!;
     private Grid _ringGrid = null!;
     private HolidayService _svc = new();
 
     public ExamCountdownComponent()
     {
-        // 圆环大小改为 32x32，类似节假日倒计时
-        const double ringSize = 28;
-        const double ringThickness = 2.5;
-
-        var defaultRingColor = Color.Parse("#FFFF5252");
-
-        _ringTrack = new Arc
-        {
-            Width = ringSize,
-            Height = ringSize,
-            StartAngle = -90,
-            SweepAngle = 360,
-            Stroke = new SolidColorBrush(defaultRingColor) { Opacity = 0.2 },
-            StrokeThickness = ringThickness,
-            StrokeLineCap = PenLineCap.Round,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        _ringProgress = new Arc
-        {
-            Width = ringSize,
-            Height = ringSize,
-            StartAngle = -90,
-            SweepAngle = 0, // 动态设置进度
-            Stroke = new SolidColorBrush(defaultRingColor),
-            StrokeThickness = ringThickness,
-            StrokeLineCap = PenLineCap.Round,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
+        const double ringSize = 32;
 
         _ringGrid = new Grid { Width = ringSize, Height = ringSize, Margin = new Thickness(0, 0, 8, 0) };
-        _ringGrid.Children.Add(_ringTrack);
-        _ringGrid.Children.Add(_ringProgress);
 
         _txt = new TextBlock
         {
@@ -137,20 +104,36 @@ public class ExamCountdownComponent : ComponentBase
                     _txt.Foreground = new SolidColorBrush(fg);
             }
 
-            // 圆环显示
+            // 圆环显示：每次Update重新创建Arc确保渲染正确
             var ringVisible = _svc.Settings.ExamCountdownShowRing;
             _ringGrid.IsVisible = ringVisible;
+            _ringGrid.Children.Clear();
             if (ringVisible)
             {
-                if (Color.TryParse(_svc.Settings.ExamCountdownRingColor, out var ringColor))
-                {
-                    _ringTrack.Stroke = new SolidColorBrush(ringColor) { Opacity = 0.2 };
-                    _ringProgress.Stroke = new SolidColorBrush(ringColor);
-                }
-
+                Color ringColor = Color.TryParse(_svc.Settings.ExamCountdownRingColor, out var rc) ? rc : Color.Parse("#FFFF5252");
                 var progress = ComputeRingProgress(examDate);
                 var sweepAngle = Math.Max(0, Math.Min(360, progress * 360));
-                _ringProgress.SweepAngle = sweepAngle;
+
+                _ringGrid.Children.Add(new Arc
+                {
+                    Width = 28, Height = 28,
+                    StartAngle = -90, SweepAngle = 360,
+                    Stroke = new SolidColorBrush(ringColor) { Opacity = 0.2 },
+                    StrokeThickness = 2.5,
+                    StrokeLineCap = PenLineCap.Round,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                _ringGrid.Children.Add(new Arc
+                {
+                    Width = 28, Height = 28,
+                    StartAngle = -90, SweepAngle = sweepAngle,
+                    Stroke = new SolidColorBrush(ringColor),
+                    StrokeThickness = 2.5,
+                    StrokeLineCap = PenLineCap.Round,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
             }
 
         }
@@ -187,11 +170,14 @@ public class ExamCountdownComponent : ComponentBase
     double ComputeRingProgress(DateTime examDate)
     {
         var now = DateTime.Now;
+        // 圆环开始日期：上次考试结束日（默认6月9日）
+        // 从设置的开始日期的月/日取，应用到examDate所在年份
         var start = ParseRingStartDate(examDate.Year);
-        if (start > examDate) start = start.AddYears(-1);
-        // 若开始日期还在未来（跨年倒计时的空档期），再往前推一年，使圆环始终有进度
-        if (now <= start) start = start.AddYears(-1);
-        if (start > examDate) return 1;
+        // 如果开始日期 >= 考试日期，说明开始日期在上一年
+        if (start >= examDate) start = start.AddYears(-1);
+        // 如果当前时间在开始日期之前，也往前推一年
+        if (now < start) start = start.AddYears(-1);
+
         var total = (examDate - start).TotalDays;
         var passed = (now - start).TotalDays;
         if (total <= 0) return 1;

@@ -69,12 +69,6 @@ public class WeatherReminderEvaluator
         }
 
         // 随机刷新区间：从所有匹配结果中随机选一条
-        var minSec = _svc.Settings.WeatherReminderRandomMinSeconds;
-        var maxSec = _svc.Settings.WeatherReminderRandomMaxSeconds;
-        if (minSec > maxSec) (minSec, maxSec) = (maxSec, minSec);
-        if (minSec < 1) minSec = 1;
-        if (maxSec < 1) maxSec = 60;
-
         if (results.Count > 0)
         {
             var random = new Random();

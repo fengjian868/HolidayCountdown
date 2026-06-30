@@ -30,6 +30,9 @@ public class WeatherReminderComponent : ComponentBase
     private WeatherReminderEvaluator? _evaluator;
     private IReadOnlyList<WeatherReminderResult> _lastResults = new List<WeatherReminderResult>();
     private Random _random = new();
+    private int _lastRefreshMinutes;
+    private bool _lastShowImmediately;
+    private bool _lastEnabled;
 
     public WeatherReminderComponent()
     {
@@ -57,6 +60,9 @@ public class WeatherReminderComponent : ComponentBase
         {
             _svc = new HolidayService();
             _evaluator = new WeatherReminderEvaluator(_svc);
+            _lastRefreshMinutes = _svc.Settings.WeatherReminderRefreshMinutes;
+            _lastShowImmediately = _svc.Settings.WeatherReminderShowImmediatelyOnChange;
+            _lastEnabled = _svc.Settings.WeatherReminderEnabled;
             HolidayService.SettingsChanged += OnSettingsChanged;
             UpdateTimerInterval();
             Update();
@@ -69,11 +75,13 @@ public class WeatherReminderComponent : ComponentBase
     void ScheduleRandomUpdate()
     {
         if (_svc == null) { Update(); return; }
-        var minSec = Math.Max(1, _svc.Settings.WeatherReminderRandomMinSeconds);
-        var maxSec = Math.Max(minSec, _svc.Settings.WeatherReminderRandomMaxSeconds);
-        var delay = _random.Next(minSec, maxSec + 1);
+        var minMin = Math.Max(1, _svc.Settings.WeatherReminderRandomMinMinutes);
+        var maxMin = Math.Max(minMin, _svc.Settings.WeatherReminderRandomMaxMinutes);
+        // 随机分钟数转为秒
+        var delayMinutes = _random.Next(minMin, maxMin + 1);
+        var delaySeconds = delayMinutes * 60 + _random.Next(0, 60);
 
-        var delayTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(delay), IsEnabled = false };
+        var delayTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(delaySeconds), IsEnabled = false };
         delayTimer.Tick += (s, e) =>
         {
             delayTimer.Stop();
@@ -85,7 +93,26 @@ public class WeatherReminderComponent : ComponentBase
     void OnSettingsChanged()
     {
         _svc?.LoadSettings();
-        Dispatcher.UIThread.Post(() => { UpdateTimerInterval(); Update(); });
+        Dispatcher.UIThread.Post(() =>
+        {
+            // 只有核心设置变化时才刷新显示（避免勾选规则时立即刷新）
+            var needUpdate = false;
+            if (_svc.Settings.WeatherReminderEnabled != _lastEnabled)
+            {
+                _lastEnabled = _svc.Settings.WeatherReminderEnabled;
+                needUpdate = true;
+            }
+            if (_svc.Settings.WeatherReminderRefreshMinutes != _lastRefreshMinutes
+                || _svc.Settings.WeatherReminderShowImmediatelyOnChange != _lastShowImmediately)
+            {
+                _lastRefreshMinutes = _svc.Settings.WeatherReminderRefreshMinutes;
+                _lastShowImmediately = _svc.Settings.WeatherReminderShowImmediatelyOnChange;
+                UpdateTimerInterval();
+                needUpdate = true;
+            }
+            // 规则勾选变化不触发立即刷新，等下次定时器触发时生效
+            if (needUpdate) Update();
+        });
     }
 
     void UpdateTimerInterval()

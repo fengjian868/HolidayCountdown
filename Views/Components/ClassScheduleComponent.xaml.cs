@@ -103,10 +103,10 @@ public class ClassScheduleComponent : ComponentBase
             }
 
             // 读取倒计时：尝试多种属性名，优先 LessonsService，其次 MainViewModel
-            var onClassLeftTime = ReadTimeSpanMulti(lessons, "OnClassLeftTime", "OnClassTimeLeft", "CurrentLessonLeftTime")
-                               ?? ReadTimeSpanMulti(dataSource, "OnClassLeftTime", "OnClassTimeLeft", "CurrentLessonLeftTime");
-            var onBreakingTimeLeftTime = ReadTimeSpanMulti(lessons, "OnBreakingTimeLeftTime", "OnBreakingTimeLeft", "BreakTimeLeft")
-                                      ?? ReadTimeSpanMulti(dataSource, "OnBreakingTimeLeftTime", "OnBreakingTimeLeft", "BreakTimeLeft");
+            var onClassLeftTime = ReadTimeSpanMulti(lessons, "OnClassLeftTime", "OnClassTimeLeft", "CurrentLessonLeftTime", "LeftTimeOnClass", "CurrentTimeLeft", "TimeLeft")
+                               ?? ReadTimeSpanMulti(dataSource, "OnClassLeftTime", "OnClassTimeLeft", "CurrentLessonLeftTime", "LeftTimeOnClass", "CurrentTimeLeft", "TimeLeft");
+            var onBreakingTimeLeftTime = ReadTimeSpanMulti(lessons, "OnBreakingTimeLeftTime", "OnBreakingTimeLeft", "BreakTimeLeft", "BreakingTimeLeft", "BreakLeftTime")
+                                      ?? ReadTimeSpanMulti(dataSource, "OnBreakingTimeLeftTime", "OnBreakingTimeLeft", "BreakTimeLeft", "BreakingTimeLeft", "BreakLeftTime");
 
             if (isClassPlanEnabled is bool enabled && !enabled) { _txt.Text = GetFallbackNoClassText(); _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush"); return; }
             if (isClassPlanLoaded is bool loaded && !loaded)
@@ -118,8 +118,23 @@ public class ClassScheduleComponent : ComponentBase
 
             var leftTimeOnClass = onClassLeftTime ?? TimeSpan.Zero;
             var leftTimeBreaking = onBreakingTimeLeftTime ?? TimeSpan.Zero;
+
+            // 如果倒计时为0，尝试从时间布局项的 EndSecond 推算
+            if (leftTimeOnClass.TotalSeconds <= 0 && leftTimeBreaking.TotalSeconds <= 0)
+            {
+                var estimatedLeft = EstimateTimeLeftFromLayout(dataSource, lessons);
+                if (estimatedLeft.HasValue && estimatedLeft.Value.TotalSeconds > 0)
+                {
+                    if (state == 1 || state == 2)
+                        leftTimeOnClass = estimatedLeft.Value;
+                    else if (state == 3)
+                        leftTimeBreaking = estimatedLeft.Value;
+                }
+            }
             var subjectName = _svc.Settings.ClassScheduleShowSubject ? GetSubjectName(currentSubject) : "";
-            var nextName = GetNextSubjectName(dataSource!, currentSubject, nextSubject);
+
+            // 下节课：完全从时间布局遍历获取，不依赖CL的NextSubject
+            var nextName = GetNextSubjectFromTimeLayout(dataSource, lessons, state);
 
             string template;
             string stateText;
@@ -278,96 +293,137 @@ public class ClassScheduleComponent : ComponentBase
         catch { return ""; }
     }
 
-    string GetNextSubjectName(object dataSource, object? currentSubject, object? nextSubject)
+    string GetNextSubjectFromTimeLayout(object dataSource, object? lessons, int currentState)
     {
-        var lessons = GetLessonsService();
-        var currentName = GetSubjectName(currentSubject);
-
-        // 方案 A：从时间布局直接遍历找下一节课（最可靠）
-        var fromLayout = FindNextFromTimeLayout(lessons, dataSource, currentSubject);
-        if (!string.IsNullOrEmpty(fromLayout))
-            return fromLayout;
-
-        // 方案 B：尝试 CL 提供的 NextClassSubject
-        var nextClassSubject = GetPropertyValue(lessons, "NextClassSubject")
-                            ?? GetPropertyValue(dataSource, "NextClassSubject");
-        if (nextClassSubject != null)
+        try
         {
-            var name = GetSubjectName(nextClassSubject);
-            if (!string.IsNullOrEmpty(name)) return name;
-        }
+            var source = lessons ?? dataSource;
+            var timeLayout = GetPropertyValue(source, "CurrentTimeLayout")
+                          ?? GetPropertyValue(dataSource, "CurrentTimeLayout")
+                          ?? GetPropertyValue(source, "TimeLayout")
+                          ?? GetPropertyValue(dataSource, "TimeLayout");
+            if (timeLayout == null) return "已无课程";
 
-        // 方案 C：尝试 NextSubject（CL 的 NextSubject 可能不准确）
-        if (nextSubject != null)
-        {
-            var name = GetSubjectName(nextSubject);
-            if (!string.IsNullOrEmpty(name)) return name;
-        }
+            var itemsProp = timeLayout.GetType().GetProperty("Items", BindingFlags.Public | BindingFlags.Instance)
+                          ?? timeLayout.GetType().GetProperty("LayoutItems", BindingFlags.Public | BindingFlags.Instance)
+                          ?? timeLayout.GetType().GetProperty("Layouts", BindingFlags.Public | BindingFlags.Instance);
+            if (itemsProp?.GetValue(timeLayout) is not System.Collections.IEnumerable items) return "已无课程";
 
-        // 没有下节课
-        return "已无课程";
-    }
+            var itemList = items.Cast<object>().ToList();
+            if (itemList.Count == 0) return "已无课程";
 
-    string? FindNextFromTimeLayout(object? lessons, object dataSource, object? currentSubject)
-    {
-        var currentItem = GetPropertyValue(lessons, "CurrentTimeLayoutItem")
-                       ?? GetPropertyValue(dataSource, "CurrentTimeLayoutItem");
-        if (currentItem == null) return null;
+            // 找到当前时间布局项的索引
+            var currentItem = GetPropertyValue(source, "CurrentTimeLayoutItem")
+                           ?? GetPropertyValue(dataSource, "CurrentTimeLayoutItem");
 
-        var timeLayout = GetPropertyValue(lessons, "CurrentTimeLayout")
-                      ?? GetPropertyValue(dataSource, "CurrentTimeLayout")
-                      ?? GetPropertyValue(lessons, "TimeLayout")
-                      ?? GetPropertyValue(dataSource, "TimeLayout");
-        if (timeLayout == null) return null;
-
-        var itemsProp = timeLayout.GetType().GetProperty("Items", BindingFlags.Public | BindingFlags.Instance)
-                      ?? timeLayout.GetType().GetProperty("LayoutItems", BindingFlags.Public | BindingFlags.Instance)
-                      ?? timeLayout.GetType().GetProperty("Layouts", BindingFlags.Public | BindingFlags.Instance);
-        if (itemsProp?.GetValue(timeLayout) is not System.Collections.IEnumerable items) return null;
-
-        var itemList = items.Cast<object>().ToList();
-        int currentIdx = -1;
-
-        // 方式1：通过 StartSecond 匹配
-        var currentStart = GetPropertyValue(currentItem, "StartSecond");
-        for (int i = 0; i < itemList.Count; i++)
-        {
-            var itemStart = GetPropertyValue(itemList[i], "StartSecond");
-            if (itemStart != null && itemStart.Equals(currentStart))
+            int currentIdx = -1;
+            if (currentItem != null)
             {
-                currentIdx = i;
-                break;
-            }
-        }
-
-        // 方式2：引用比较
-        if (currentIdx < 0)
-        {
-            for (int i = 0; i < itemList.Count; i++)
-            {
-                if (ReferenceEquals(itemList[i], currentItem))
+                // 方式1：通过引用比较
+                for (int i = 0; i < itemList.Count; i++)
                 {
-                    currentIdx = i;
-                    break;
+                    if (ReferenceEquals(itemList[i], currentItem))
+                    {
+                        currentIdx = i;
+                        break;
+                    }
+                }
+
+                // 方式2：通过 StartSecond 匹配
+                if (currentIdx < 0)
+                {
+                    var currentStart = GetPropertyValue(currentItem, "StartSecond");
+                    if (currentStart != null)
+                    {
+                        for (int i = 0; i < itemList.Count; i++)
+                        {
+                            var itemStart = GetPropertyValue(itemList[i], "StartSecond");
+                            if (itemStart != null && itemStart.Equals(currentStart))
+                            {
+                                currentIdx = i;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
+
+            // 如果找不到当前项，用当前时间推算
+            if (currentIdx < 0)
+            {
+                var now = DateTime.Now;
+                var nowSeconds = now.Hour * 3600 + now.Minute * 60 + now.Second;
+                for (int i = 0; i < itemList.Count; i++)
+                {
+                    var start = GetPropertyValue(itemList[i], "StartSecond");
+                    var end = GetPropertyValue(itemList[i], "EndSecond");
+                    if (start != null && end != null)
+                    {
+                        var s = Convert.ToInt64(start);
+                        var e = Convert.ToInt64(end);
+                        if (nowSeconds >= s && nowSeconds < e)
+                        {
+                            currentIdx = i;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (currentIdx < 0) return "已无课程";
+
+            // 从当前项之后找第一个上课类型的项（跳过课间/休息）
+            for (int i = currentIdx + 1; i < itemList.Count; i++)
+            {
+                var item = itemList[i];
+                if (!IsLessonTimeLayoutItem(item))
+                    continue;
+                var name = GetSubjectNameFromItem(item);
+                if (!string.IsNullOrEmpty(name))
+                    return name;
+            }
+
+            return "已无课程";
         }
-
-        if (currentIdx < 0) return null;
-
-        // 从当前项之后找第一个上课类型的项（跳过课间/午休）
-        for (int i = currentIdx + 1; i < itemList.Count; i++)
+        catch
         {
-            var item = itemList[i];
-            if (!IsLessonTimeLayoutItem(item))
-                continue;
-            var subj = GetPropertyValue(item, "Subject");
-            var name = subj != null ? GetSubjectName(subj) : GetSubjectName(item);
-            if (!string.IsNullOrEmpty(name))
-                return name;
+            return "已无课程";
         }
+    }
 
-        return null;
+    string GetSubjectNameFromItem(object item)
+    {
+        // 优先读取 Subject 属性
+        var subject = GetPropertyValue(item, "Subject");
+        if (subject != null)
+        {
+            var name = GetSubjectName(subject);
+            if (!string.IsNullOrEmpty(name)) return name;
+        }
+        // 其次直接读取 Name
+        return GetSubjectName(item);
+    }
+
+    TimeSpan? EstimateTimeLeftFromLayout(object dataSource, object? lessons)
+    {
+        try
+        {
+            var source = lessons ?? dataSource;
+            var currentItem = GetPropertyValue(source, "CurrentTimeLayoutItem")
+                           ?? GetPropertyValue(dataSource, "CurrentTimeLayoutItem");
+            if (currentItem == null) return null;
+
+            var endSecond = GetPropertyValue(currentItem, "EndSecond");
+            if (endSecond == null) return null;
+
+            var endSec = Convert.ToInt64(endSecond);
+            var now = DateTime.Now;
+            var nowSec = now.Hour * 3600 + now.Minute * 60 + now.Second;
+            var diff = endSec - nowSec;
+            if (diff > 0) return TimeSpan.FromSeconds(diff);
+            return null;
+        }
+        catch { return null; }
     }
 
     bool IsLessonTimeLayoutItem(object? item)

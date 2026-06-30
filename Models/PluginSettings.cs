@@ -115,8 +115,8 @@ public class PluginSettings
     public int WeatherReminderRefreshMinutes { get; set; } = 5;
     public bool WeatherReminderShowImmediatelyOnChange { get; set; } = true;
     public List<string> EnabledWeatherReminderRuleIds { get; set; } = new();
-    public int WeatherReminderRandomMinSeconds { get; set; } = 30;
-    public int WeatherReminderRandomMaxSeconds { get; set; } = 60;
+    public int WeatherReminderRandomMinMinutes { get; set; } = 30;
+    public int WeatherReminderRandomMaxMinutes { get; set; } = 60;
 
     // 课程表联动
     public bool ClassScheduleEnabled { get; set; } = true;
