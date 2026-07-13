@@ -119,13 +119,19 @@ public class ClassScheduleComponent : ComponentBase
             var leftTimeOnClass = onClassLeftTime ?? TimeSpan.Zero;
             var leftTimeBreaking = onBreakingTimeLeftTime ?? TimeSpan.Zero;
 
-            // 如果倒计时为0，尝试从时间布局项的 EndSecond 推算
+            // 如果倒计时为0，尝试从时间布局项的结束时间推算
+            // ClassIsland 语义：
+            //   state==1 (OnClass):       估算的是"距下课"，应填入 leftTimeBreaking
+            //   state==2 (PrepareOnClass):估算的是"距上课"，应填入 leftTimeOnClass (预留分支,实际不会进入)
+            //   state==3 (Breaking):     估算的是"距课间结束"，数值上等于"距下节课开始"，应填入 leftTimeBreaking
             if (leftTimeOnClass.TotalSeconds <= 0 && leftTimeBreaking.TotalSeconds <= 0)
             {
                 var estimatedLeft = EstimateTimeLeftFromLayout(dataSource, lessons);
                 if (estimatedLeft.HasValue && estimatedLeft.Value.TotalSeconds > 0)
                 {
-                    if (state == 1 || state == 2)
+                    if (state == 1)
+                        leftTimeBreaking = estimatedLeft.Value;
+                    else if (state == 2)
                         leftTimeOnClass = estimatedLeft.Value;
                     else if (state == 3)
                         leftTimeBreaking = estimatedLeft.Value;
@@ -153,12 +159,15 @@ public class ClassScheduleComponent : ComponentBase
             switch (state)
             {
                 case 1: // OnClass
+                    // ClassIsland 在 OnClass 状态下：OnClassLeftTime=0, OnBreakingTimeLeftTime=距下课
                     stateText = "上课中";
-                    countdownText = leftTimeOnClass.TotalSeconds > 0 ? FormatTime(leftTimeOnClass) : "";
+                    countdownText = leftTimeBreaking.TotalSeconds > 0 ? FormatTime(leftTimeBreaking) : "";
                     template = _svc.Settings.ClassScheduleOnClassTemplate;
                     break;
                 case 3: // Breaking
                     stateText = "课间";
+                    // ClassIsland 在非 OnClass 状态下：OnClassLeftTime=距下节课开始, OnBreakingTimeLeftTime=0
+                    // 课间"距下课"数值上等于"距下节课开始"
                     var breakLeft = leftTimeBreaking.TotalSeconds > 0 ? leftTimeBreaking : leftTimeOnClass;
                     countdownText = breakLeft.TotalSeconds > 0 ? FormatTime(breakLeft) : "";
                     // 当课间剩余时间 <= 警示分钟数时切换为准备上课模板
@@ -179,7 +188,7 @@ public class ClassScheduleComponent : ComponentBase
                     countdownText = "";
                     template = _svc.Settings.ClassScheduleAfterSchoolTemplate;
                     break;
-                case 2: // PrepareOnClass
+                case 2: // PrepareOnClass (预留,ClassIsland 不会主动设置)
                     stateText = "准备上课";
                     countdownText = leftTimeOnClass.TotalSeconds > 0 ? FormatTime(leftTimeOnClass) : "";
                     template = _svc.Settings.ClassSchedulePrepareTemplate;
@@ -459,14 +468,24 @@ public class ClassScheduleComponent : ComponentBase
                            ?? GetPropertyValue(dataSource, "CurrentTimeLayoutItem");
             if (currentItem == null) return null;
 
+            // 优先读 EndTime (TimeSpan) — ClassIsland 推荐字段
+            var endTime = GetPropertyValue(currentItem, "EndTime");
+            if (endTime is TimeSpan ts)
+            {
+                var now = DateTime.Now.TimeOfDay;
+                var diff = ts - now;
+                if (diff.TotalSeconds > 0) return diff;
+                return null;
+            }
+
+            // 兜底读 EndSecond (int/秒数,ClassIsland 已标 [Obsolete])
             var endSecond = GetPropertyValue(currentItem, "EndSecond");
             if (endSecond == null) return null;
-
             var endSec = Convert.ToInt64(endSecond);
-            var now = DateTime.Now;
-            var nowSec = now.Hour * 3600 + now.Minute * 60 + now.Second;
-            var diff = endSec - nowSec;
-            if (diff > 0) return TimeSpan.FromSeconds(diff);
+            var now2 = DateTime.Now;
+            var nowSec = now2.Hour * 3600 + now2.Minute * 60 + now2.Second;
+            var diff2 = endSec - nowSec;
+            if (diff2 > 0) return TimeSpan.FromSeconds(diff2);
             return null;
         }
         catch { return null; }
@@ -596,14 +615,9 @@ public class ClassScheduleComponent : ComponentBase
         if (source == null) return null;
         var value = GetPropertyValue(source, propName);
         if (value == null) return null;
+        // ClassIsland 的 OnClassLeftTime / OnBreakingTimeLeftTime 是 TimeSpan 类型
         if (value is TimeSpan ts) return ts;
-        // ClassIsland 的 OnClassLeftTime 等属性可能是 DateTime（表示结束时刻）
-        if (value is DateTime dt)
-        {
-            if (dt == default) return null;
-            var diff = dt - DateTime.Now;
-            return diff.TotalSeconds > 0 ? diff : TimeSpan.Zero;
-        }
+        // 兜底: 解析字符串(用于反射读老式 EndSecond 字段等)
         try
         {
             return TimeSpan.Parse(value.ToString()!);

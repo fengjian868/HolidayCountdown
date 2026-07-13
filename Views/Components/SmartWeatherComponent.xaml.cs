@@ -308,23 +308,21 @@ public class SmartWeatherComponent : ComponentBase
         var current = GetPropertyValue(lastWeatherInfo, "Current");
         if (current != null)
         {
+            // CurrentWeather.Temperature 是 ValueUnitPair,Value 是 string
             var temperature = GetPropertyValue(current, "Temperature");
             if (temperature != null)
             {
                 var tempValue = GetPropertyValue(temperature, "Value")?.ToString();
                 if (double.TryParse(tempValue, out var t)) temp = t;
             }
+            // CurrentWeather 只有 Weather 字段(天气代码 string),没有 WeatherText/Description/Text
+            // 文字由 IWeatherService.GetWeatherTextByCode(code) 提供
             weatherCode = GetPropertyValue(current, "Weather")?.ToString();
-            weatherText = GetPropertyValue(current, "WeatherText")?.ToString()
-                ?? GetPropertyValue(current, "WeatherDescription")?.ToString()
-                ?? GetPropertyValue(current, "Text")?.ToString();
         }
 
         var warnings = GetAllAlertTitles(lastWeatherInfo);
-        var updateTime = GetDateTimeProperty(lastWeatherInfo, "UpdateTime")
-            ?? GetDateTimeProperty(lastWeatherInfo, "FetchTime")
-            ?? GetDateTimeProperty(lastWeatherInfo, "LastUpdateTime")
-            ?? GetDateTimeProperty(lastWeatherInfo, "UpdatedTime");
+        // WeatherInfo 仅提供解析属性 UpdateTime (由 UpdateTimeUnix 转换),无其他时间字段
+        var updateTime = GetDateTimeProperty(lastWeatherInfo, "UpdateTime");
 
         return new WeatherData(temp, weatherCode, weatherText, warnings, updateTime);
     }
@@ -469,7 +467,8 @@ public class SmartWeatherComponent : ComponentBase
         if (t.Contains("雷阵雨")) return ("⛈️", new SolidColorBrush(Color.Parse("#5C6BC0")));
         if (t.Contains("雨")) return ("🌧️", new SolidColorBrush(Color.Parse("#2196F3")));
 
-        if (t.Contains("晴") || t.Contains("高温")) return ("☀️", new SolidColorBrush(Color.Parse("#FFA500")));
+        if (t.Contains("高温")) return ("🥵", new SolidColorBrush(Color.Parse("#F44336")));
+        if (t.Contains("晴")) return ("☀️", new SolidColorBrush(Color.Parse("#FFA500")));
         if (t.Contains("多云")) return ("⛅", new SolidColorBrush(Color.Parse("#FFD700")));
         if (t.Contains("阴")) return ("☁️", new SolidColorBrush(Color.Parse("#90A4AE")));
         if (t.Contains("雪") || t.Contains("冰雹")) return ("❄️", new SolidColorBrush(Color.Parse("#81D4FA")));
