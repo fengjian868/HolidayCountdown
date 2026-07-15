@@ -339,7 +339,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("课间警示", "课间剩余时间较少时高亮显示", warningPanel));
 
         var templatePanel = new StackPanel { Spacing = 0 };
-        templatePanel.Children.Add(SettingItem("上课模板", "{A}=当前学科图标 {B}=当前学科名 {C}=本节课剩余时间 {D}=下节课图标 {E}=下节课名",
+        templatePanel.Children.Add(SettingItem("上课模板", "{A}=当前学科图标 {B}=当前学科名 {C}=距下课剩余时间 {D}=下节课图标 {E}=下节课名 (建议加 {C} 显示倒计时)",
             Text(_svc.Settings.ClassScheduleOnClassTemplate, 320, v => { _svc.Settings.ClassScheduleOnClassTemplate = v; AutoSave(); })));
         templatePanel.Children.Add(Separator());
         templatePanel.Children.Add(SettingItem("课间模板", "{F}=课间图标 {G}=课间剩余时间 {D}=下节课图标 {E}=下节课名",
