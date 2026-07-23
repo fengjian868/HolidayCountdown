@@ -83,8 +83,11 @@ jobs:
       - name: Upload CIPX Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.artifactName }}
+          # artifact name 用简洁名（不含点号），避免 nightly.link 路由解析歧义。
+          # 下载得到的总是 zip（upload-artifact v4 机制），解压后即为 .cipx 文件。
+          name: HolidayCountdown-cipx
           path: ./${{ env.artifactName }}
+          if-no-files-found: error
 
       - name: Upload to Release (on tag)
         if: startsWith(github.ref, 'refs/tags/v')
@@ -101,7 +104,8 @@ jobs:
           $repo = "${{ github.repository }}"
           $version = "${{ steps.version.outputs.version }}"
           $artifactName = "${{ env.artifactName }}"
-          $nightlyLink = "https://nightly.link/$repo/actions/runs/$runId/$artifactName"
+          # nightly.link 的 URL 必须以 .zip 结尾（upload-artifact v4 总是把内容打包成 zip）
+          $nightlyLink = "https://nightly.link/$repo/actions/runs/$runId/HolidayCountdown-cipx.zip"
           $ghproxyLink = "https://ghproxy.com/$nightlyLink"
           $mirrorLink = "https://mirror.ghproxy.com/$nightlyLink"
 
@@ -110,9 +114,9 @@ jobs:
           echo "- **版本:** $version" >> $env:GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ github.sha }}" >> $env:GITHUB_STEP_SUMMARY
           echo "- **Run:** #${{ github.run_number }}" >> $env:GITHUB_STEP_SUMMARY
-          echo "- **产物:** \`$artifactName\`" >> $env:GITHUB_STEP_SUMMARY
+          echo "- **产物文件:** \`$artifactName\`" >> $env:GITHUB_STEP_SUMMARY
           echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "### 下载" >> $env:GITHUB_STEP_SUMMARY
+          echo "### 下载（得到 .zip，解压后即为 .cipx）" >> $env:GITHUB_STEP_SUMMARY
           echo "" >> $env:GITHUB_STEP_SUMMARY
           echo "- [GitHub Actions 下载](https://github.com/$repo/actions/runs/$runId)" >> $env:GITHUB_STEP_SUMMARY
           echo "- [Nightly.link 下载]($nightlyLink)" >> $env:GITHUB_STEP_SUMMARY
@@ -121,6 +125,7 @@ jobs:
           echo "" >> $env:GITHUB_STEP_SUMMARY
           echo "### 安装方法" >> $env:GITHUB_STEP_SUMMARY
           echo "" >> $env:GITHUB_STEP_SUMMARY
-          echo "1. 下载 \`.cipx\` 文件" >> $env:GITHUB_STEP_SUMMARY
-          echo "2. 在 ClassIsland 中：设置 → 插件 → 从文件安装 → 选择 \`.cipx\` 文件" >> $env:GITHUB_STEP_SUMMARY
-          echo "_cipx 本质是 zip 包，由 ClassIsland 插件系统识别_" >> $env:GITHUB_STEP_SUMMARY
+          echo "1. 点击上方链接下载 \`.zip\` 文件" >> $env:GITHUB_STEP_SUMMARY
+          echo "2. **解压** zip，得到 \`.cipx\` 文件（不要直接用 zip 安装）" >> $env:GITHUB_STEP_SUMMARY
+          echo "3. 在 ClassIsland 中：设置 → 插件 → 从文件安装 → 选择 \`.cipx\` 文件" >> $env:GITHUB_STEP_SUMMARY
+          echo "_注：GitHub Actions artifact 总是以 zip 形式提供，需先解压取出 cipx_" >> $env:GITHUB_STEP_SUMMARY
