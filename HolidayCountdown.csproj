@@ -9,8 +9,9 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- 显式引用 Avalonia 使 XAMLIl 编译 targets 导入，支持 .axaml 代码后置。
+         版本与 ClassIsland 主程序保持一致（11.3.17），避免 ToggleSwitch 等控件模板不匹配。
          运行时由 ClassIsland 主程序提供，故 ExcludeAssets=runtime。 -->
-    <PackageReference Include="Avalonia" Version="11.3.13">
+    <PackageReference Include="Avalonia" Version="11.3.17">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
     <PackageReference Include="ClassIsland.PluginSdk" Version="2.0.0.2">
