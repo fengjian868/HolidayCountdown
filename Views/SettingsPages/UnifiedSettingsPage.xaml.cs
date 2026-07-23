@@ -37,6 +37,11 @@ public class UnifiedSettingsPage : SettingsPageBase
     private readonly (string Icon, string Label, Func<Control> Build)[] _tabs;
     private int _currentIndex = -1;
 
+    // 性能优化：缓存已构建的 tab 面板，切换 tab 时复用而非每次重建
+    private readonly Dictionary<int, Control> _builtPanels = new();
+    // RebalanceTabRows 防抖，避免 SizeChanged 频繁触发布局重算导致卡顿
+    private readonly DispatcherTimer _rebalanceTimer;
+
     /// <summary>
     /// 将文本前景色绑定到主题资源，自动适配明暗主题
     /// </summary>
@@ -50,6 +55,8 @@ public class UnifiedSettingsPage : SettingsPageBase
         _svc = new HolidayService();
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _svc.SaveSettings(); };
+        _rebalanceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        _rebalanceTimer.Tick += (s, e) => { _rebalanceTimer.Stop(); RebalanceTabRowsCore(); };
 
         var expEnabled = _svc.Settings.ExperimentalFeaturesEnabled;
         var tabList = new List<(string, string, Func<Control>)>
@@ -69,7 +76,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         if (expEnabled)
         {
             tabList.Add(("\uE7BE", "课表", BuildClassSchedulePanel));
-            tabList.Add(("\uE7ED", "天气提醒", BuildWeatherReminderPanel));
+            // 天气提醒已融合进「天气」Tab，不再单独显示
             tabList.Add(("\uE921", "大考", BuildExamCountdownPanel));
             tabList.Add(("\uE823", "时钟", BuildWorldClockPanel));
         }
@@ -184,7 +191,14 @@ public class UnifiedSettingsPage : SettingsPageBase
         return root;
     }
 
+    // 防抖入口：SizeChanged 频繁触发时合并为一次重算，避免卡顿
     void RebalanceTabRows()
+    {
+        _rebalanceTimer.Stop();
+        _rebalanceTimer.Start();
+    }
+
+    void RebalanceTabRowsCore()
     {
         if (_tabBarGrid == null || _tabRow0 == null || _tabRow1 == null) return;
 
@@ -238,9 +252,21 @@ public class UnifiedSettingsPage : SettingsPageBase
         _contentPanel.Children.Clear();
         if (index >= 0 && index < _tabs.Length)
         {
-            var control = _tabs[index].Build();
+            // 性能优化：优先复用已缓存的面板，避免每次切换都重建大量控件
+            if (!_builtPanels.TryGetValue(index, out var control))
+            {
+                control = _tabs[index].Build();
+                _builtPanels[index] = control;
+            }
             _contentPanel.Children.Add(control);
         }
+    }
+
+    // 清除当前 tab 的缓存并立即重建（用于列表增删后刷新当前面板）
+    void RefreshCurrentTab()
+    {
+        if (_currentIndex >= 0) _builtPanels.Remove(_currentIndex);
+        SwitchTab(_currentIndex);
     }
 
     // ===== Tab Builders =====
@@ -1069,7 +1095,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             var h = new Models.CustomHoliday { Name = "新节日", Date = DateTime.Now.AddDays(1) };
             _svc.Settings.CustomHolidays.Add(h);
             AutoSave();
-            SwitchTab(5);
+            RefreshCurrentTab();
         };
         p.Children.Add(btn);
         return p;
@@ -1103,7 +1129,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         Grid.SetColumn(r, 3);
 
         var del = new Button { Content = "删除", Width = 50 };
-        del.Click += (a, b) => { _svc.Settings.CustomHolidays.Remove(h); AutoSave(); SwitchTab(5); };
+        del.Click += (a, b) => { _svc.Settings.CustomHolidays.Remove(h); AutoSave(); RefreshCurrentTab(); };
         Grid.SetColumn(del, 4);
 
         g.Children.Add(n); g.Children.Add(dateText); g.Children.Add(d); g.Children.Add(r); g.Children.Add(del);
@@ -1208,6 +1234,9 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("温度提醒", "自定义各温度区间的穿衣提醒文案", BuildTempPanel()));
         s.Children.Add(Expander("天气关键词", "根据天气关键词匹配显示文案", BuildWeatherGreetingPanel()));
 
+        // 天气提醒设置融合至此
+        s.Children.Add(Expander("天气变化提醒[测试版]", "天气变化提醒设置", BuildWeatherReminderPanel()));
+
         s.Children.Add(Info("天气数据来自ClassIsland内置天气服务，每分钟自动刷新一次。"));
         return s;
     }
@@ -1215,7 +1244,6 @@ public class UnifiedSettingsPage : SettingsPageBase
     Control BuildWeatherReminderPanel()
     {
         var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("\uE7ED 天气变化提醒设置[测试版]"));
 
         var basicPanel = new StackPanel { Spacing = 0 };
         basicPanel.Children.Add(SettingItem("启用天气变化提醒", "关闭后组件不显示任何内容",
