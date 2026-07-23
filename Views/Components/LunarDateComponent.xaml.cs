@@ -35,6 +35,7 @@ public class LunarDateComponent : ComponentBase
         iconBlock[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
         panel.Children.Add(iconBlock);
         panel.Children.Add(_txt);
+        panel.Children.Add(ComponentSettingsOpener.CreateSettingsEntry("lunar", "农历日期设置"));
         Content = panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(30) }; _timer.Tick += (s, e) => _ = RefreshAsync(); _timer.Start();
         Dispatcher.UIThread.Post(() => { _svc = new HolidayService(); HolidayService.SettingsChanged += OnSettingsChanged; _ = RefreshAsync(); });

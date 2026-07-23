@@ -27,7 +27,15 @@ public class CustomHolidayComponent : ComponentBase
     public CustomHolidayComponent()
     {
         _main = new StackPanel { Orientation = Orientation.Vertical, Spacing = 3, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        Content = _main;
+        // 外层横向包裹：内容 + 设置入口（设置入口不被 Update 清空）
+        Content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Children = { _main, ComponentSettingsOpener.CreateSettingsEntry("custom", "自定义节日设置") }
+        };
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) }; _timer.Tick += (s, e) => Update(); _timer.Start();
         Dispatcher.UIThread.Post(() => { _svc = new HolidayService(); HolidayService.SettingsChanged += OnSettingsChanged; Update(); });
     }

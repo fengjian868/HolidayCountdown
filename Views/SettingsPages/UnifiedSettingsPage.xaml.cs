@@ -41,6 +41,8 @@ public class UnifiedSettingsPage : SettingsPageBase
     private readonly Dictionary<int, Control> _builtPanels = new();
     // RebalanceTabRows 防抖，避免 SizeChanged 频繁触发布局重算导致卡顿
     private readonly DispatcherTimer _rebalanceTimer;
+    // standalone 模式：组件设置弹窗只显示单个面板，不构建 tab 栏
+    private string? _standaloneKey;
 
     /// <summary>
     /// 将文本前景色绑定到主题资源，自动适配明暗主题
@@ -50,13 +52,29 @@ public class UnifiedSettingsPage : SettingsPageBase
         textBlock[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
     }
 
-    public UnifiedSettingsPage()
+    public UnifiedSettingsPage() : this(standalone: false) { }
+
+    // standalone=true: 供组件设置弹窗使用，只初始化服务与内容容器，不构建 tab 栏
+    internal UnifiedSettingsPage(bool standalone)
     {
         _svc = new HolidayService();
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _svc.SaveSettings(); };
         _rebalanceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
         _rebalanceTimer.Tick += (s, e) => { _rebalanceTimer.Stop(); RebalanceTabRowsCore(); };
+
+        if (standalone)
+        {
+            _contentPanel = new StackPanel { Spacing = 0, Margin = new Thickness(20, 8, 20, 16) };
+            _scrollViewer = new ScrollViewer
+            {
+                Content = _contentPanel,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+            };
+            Content = _scrollViewer;
+            return;
+        }
 
         var expEnabled = _svc.Settings.ExperimentalFeaturesEnabled;
         var tabList = new List<(string, string, Func<Control>)>
@@ -65,11 +83,8 @@ public class UnifiedSettingsPage : SettingsPageBase
             ("\uE8F5", "节假日", BuildHolidayPanel),
             ("\uE8BD", "问候语", BuildGreetingPanel),
             ("\uE9CA", "24节气", BuildSolarTermPanel),
-            ("\uE8C0", "农历", BuildLunarPanel),
-            ("\uE70F", "自定义", BuildCustomHolidayPanel),
-            ("\uE8F3", "寒暑假", BuildVacationPanel),
             ("\uE753", "天气", BuildWeatherPanel),
-            ("\uE9D1", "学习", BuildStudyTimePanel),
+            // 农历/自定义/寒暑假/学习 已移至对应组件的组件设置入口
         };
 
         // 实验性功能 Tab
@@ -77,8 +92,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         {
             tabList.Add(("\uE7BE", "课表", BuildClassSchedulePanel));
             // 天气提醒已融合进「天气」Tab，不再单独显示
-            tabList.Add(("\uE921", "大考", BuildExamCountdownPanel));
-            tabList.Add(("\uE823", "时钟", BuildWorldClockPanel));
+            // 大考/时钟 已移至对应组件的组件设置入口
         }
 
         _tabs = tabList.ToArray();
@@ -265,8 +279,36 @@ public class UnifiedSettingsPage : SettingsPageBase
     // 清除当前 tab 的缓存并立即重建（用于列表增删后刷新当前面板）
     void RefreshCurrentTab()
     {
+        // standalone 模式：组件设置弹窗只显示单个面板，重建当前面板即可
+        if (_standaloneKey != null)
+        {
+            _contentPanel.Children.Clear();
+            _contentPanel.Children.Add(BuildStandalonePanel(_standaloneKey));
+            return;
+        }
         if (_currentIndex >= 0) _builtPanels.Remove(_currentIndex);
         SwitchTab(_currentIndex);
+    }
+
+    // standalone 模式下按 key 构建对应组件的设置面板
+    Control BuildStandalonePanel(string key) => key switch
+    {
+        "lunar" => BuildLunarPanel(),
+        "custom" => BuildCustomHolidayPanel(),
+        "vacation" => BuildVacationPanel(),
+        "study" => BuildStudyTimePanel(),
+        "exam" => BuildExamCountdownPanel(),
+        "clock" => BuildWorldClockPanel(),
+        _ => BuildAboutPanel()
+    };
+
+    // 供组件设置弹窗调用：返回单个组件设置面板所在的滚动容器
+    internal Control GetStandalonePanel(string key)
+    {
+        _standaloneKey = key;
+        _contentPanel.Children.Clear();
+        _contentPanel.Children.Add(BuildStandalonePanel(key));
+        return _scrollViewer;
     }
 
     // ===== Tab Builders =====

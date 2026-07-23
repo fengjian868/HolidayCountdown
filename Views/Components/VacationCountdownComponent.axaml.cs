@@ -25,6 +25,19 @@ public partial class VacationCountdownComponent : ComponentBase
     public VacationCountdownComponent()
     {
         InitializeComponent();
+        // Main 是 axaml 中的纵向容器，Update() 会清空它。
+        // 用横向外层包裹：Main 内容 + 设置入口（设置入口不被清空）
+        var wrapper = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        // 先把 wrapper 设为 Content，使 Main 从 UserControl 分离，再安全挂到 wrapper 下
+        Content = wrapper;
+        wrapper.Children.Add(Main);
+        wrapper.Children.Add(ComponentSettingsOpener.CreateSettingsEntry("vacation", "寒暑假倒计时设置"));
         _timer = new DispatcherTimer { Interval = TimeSpan.FromHours(1) };
         _timer.Tick += (s, e) => Update();
         _timer.Start();

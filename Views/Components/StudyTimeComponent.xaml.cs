@@ -44,6 +44,7 @@ public class StudyTimeComponent : ComponentBase
         _txt = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
         _txt[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
         panel.Children.Add(_txt);
+        panel.Children.Add(ComponentSettingsOpener.CreateSettingsEntry("study", "学习时长设置"));
         Content = panel;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
         _timer.Tick += (s, e) => Update();
