@@ -1782,10 +1782,9 @@ public class UnifiedSettingsPage : SettingsPageBase
         expPanel.Children.Add(expDesc);
 
         var expEnabled = _svc.Settings.ExperimentalFeaturesEnabled;
-        var expToggle = new ToggleSwitch { IsChecked = expEnabled };
-        expToggle.IsCheckedChanged += (a, b) =>
+        var expToggle = new CheckBox { IsChecked = expEnabled };
+        void OnExpChanged(bool enable)
         {
-            var enable = expToggle.IsChecked == true;
             _svc.Settings.ExperimentalFeaturesEnabled = enable;
             AutoSave();
 
@@ -1843,7 +1842,9 @@ public class UnifiedSettingsPage : SettingsPageBase
                 }
             }
             catch { }
-        };
+        }
+        expToggle.Checked += (a, b) => OnExpChanged(true);
+        expToggle.Unchecked += (a, b) => OnExpChanged(false);
         expPanel.Children.Add(SettingItem("开启实验性功能", "需重启 ClassIsland 后生效", expToggle));
 
         s.Children.Add(Expander("实验性功能", "测试版功能，默认关闭", expPanel));
@@ -1937,11 +1938,15 @@ public class UnifiedSettingsPage : SettingsPageBase
         _svc.SaveSettings();
     }
 
-    static ToggleSwitch Toggle(bool value, Action<bool> onChanged)
+    // 用 CheckBox 代替 ToggleSwitch：ToggleSwitch 在组件设置抽屉中会因 PART_MovingKnobs
+    // 模板部件缺失（ClassIsland 主题/FluentAvalonia 与 Avalonia 运行时版本错位）而崩溃。
+    // CheckBox 的控件模板跨版本稳定，不会触发此问题。
+    static CheckBox Toggle(bool value, Action<bool> onChanged)
     {
-        var t = new ToggleSwitch { IsChecked = value };
-        t.IsCheckedChanged += (s, e) => onChanged(t.IsChecked == true);
-        return t;
+        var c = new CheckBox { IsChecked = value };
+        c.Checked += (s, e) => onChanged(true);
+        c.Unchecked += (s, e) => onChanged(false);
+        return c;
     }
 
     static NumericUpDown Number(int value, int min, int max, Action<int> onChanged)
