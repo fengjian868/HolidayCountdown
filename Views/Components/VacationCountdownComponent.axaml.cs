@@ -1,6 +1,5 @@
 using System;
 using System.Linq;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
@@ -18,18 +17,23 @@ namespace HolidayCountdown.Views.Components;
     "fluent(\uE8F3)",
     "显示距离寒暑假的剩余周数和天数"
 )]
-public class VacationCountdownComponent : ComponentBase
+public partial class VacationCountdownComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
-    private StackPanel _main = null!;
     private HolidayService? _svc;
 
     public VacationCountdownComponent()
     {
-        _main = new StackPanel { Orientation = Orientation.Vertical, Spacing = 2, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        Content = _main;
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromHours(1) }; _timer.Tick += (s, e) => Update(); _timer.Start();
-        Dispatcher.UIThread.Post(() => { _svc = new HolidayService(); HolidayService.SettingsChanged += OnSettingsChanged; Update(); });
+        InitializeComponent();
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromHours(1) };
+        _timer.Tick += (s, e) => Update();
+        _timer.Start();
+        Dispatcher.UIThread.Post(() =>
+        {
+            _svc = new HolidayService();
+            HolidayService.SettingsChanged += OnSettingsChanged;
+            Update();
+        });
     }
 
     void OnSettingsChanged()
@@ -55,11 +59,12 @@ public class VacationCountdownComponent : ComponentBase
 
     void Update()
     {
-        _main.Children.Clear();
+        Main.Children.Clear();
         if (_svc == null) return;
-        var now = DateTime.Now; var s = _svc.Settings;
+        var now = DateTime.Now;
+        var s = _svc.Settings;
         var targets = new[] { ("暑假", s.SummerStart, s.SummerEnd), ("寒假", s.WinterStart, s.WinterEnd) };
-        
+
         // 找出最近的一个假期
         var nearest = targets
             .Select(t =>
@@ -78,23 +83,30 @@ public class VacationCountdownComponent : ComponentBase
 
         if (nearest != null)
         {
-            var weeks = nearest.Days / 7; var days = nearest.Days % 7;
+            var weeks = nearest.Days / 7;
+            var days = nearest.Days % 7;
             if (nearest.IsActive)
             {
-                _main.Children.Add(ThemedText($"{nearest.Name}进行中", weight: FontWeight.SemiBold));
-                _main.Children.Add(ThemedText($"剩余 {weeks} 周 {days} 天"));
+                Main.Children.Add(ThemedText($"{nearest.Name}进行中", weight: FontWeight.SemiBold));
+                Main.Children.Add(ThemedText($"剩余 {weeks} 周 {days} 天"));
             }
             else
             {
-                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+                var row = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    Spacing = 4,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
                 row.Children.Add(ThemedText($"距离{nearest.Name}还有", weight: FontWeight.SemiBold, hAlign: HorizontalAlignment.Left));
                 row.Children.Add(ThemedText($"{weeks} 周 {days} 天", hAlign: HorizontalAlignment.Left));
-                _main.Children.Add(row);
+                Main.Children.Add(row);
             }
         }
         else
         {
-            _main.Children.Add(ThemedText("暂无寒暑假安排"));
+            Main.Children.Add(ThemedText("暂无寒暑假安排"));
         }
     }
 }

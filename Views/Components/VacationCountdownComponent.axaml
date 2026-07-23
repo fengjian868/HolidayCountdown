@@ -1,0 +1,11 @@
+<local:VacationCountdownComponent xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:HolidayCountdown.Views.Components"
+        x:Class="HolidayCountdown.Views.Components.VacationCountdownComponent">
+    <!-- 前端：根容器结构。动态内容由后端 Update() 填充。 -->
+    <StackPanel x:Name="Main"
+                Orientation="Vertical"
+                Spacing="2"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center" />
+</local:VacationCountdownComponent>
