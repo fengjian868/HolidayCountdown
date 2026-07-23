@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 using Avalonia.VisualTree;
@@ -43,7 +44,7 @@ internal static class ComponentSettingsOpener
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
             CanResize = true
         };
-        var owner = anchor.VisualRoot as Window;
+        var owner = anchor.GetVisualRoot() as Window;
         if (owner != null) win.ShowDialog(owner);
         else win.Show();
     }

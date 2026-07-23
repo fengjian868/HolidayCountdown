@@ -95,6 +95,7 @@ public class WeatherReminderComponent : ComponentBase
         _svc?.LoadSettings();
         Dispatcher.UIThread.Post(() =>
         {
+            if (_svc == null) return;
             // 只有核心设置变化时才刷新显示（避免勾选规则时立即刷新）
             var needUpdate = false;
             if (_svc.Settings.WeatherReminderEnabled != _lastEnabled)

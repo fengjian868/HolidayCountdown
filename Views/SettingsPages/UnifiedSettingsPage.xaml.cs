@@ -34,7 +34,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     private StackPanel _tabRow0 = null!;
     private StackPanel _tabRow1 = null!;
 
-    private readonly (string Icon, string Label, Func<Control> Build)[] _tabs;
+    private readonly (string Icon, string Label, Func<Control> Build)[] _tabs = null!;
     private int _currentIndex = -1;
 
     // 性能优化：缓存已构建的 tab 面板，切换 tab 时复用而非每次重建
