@@ -44,16 +44,13 @@ public class ExamCountdownComponent : ComponentBase
             FontWeight = FontWeight.SemiBold
         };
 
-        var panel = new StackPanel
+        Content = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Children = { _ringGrid, _txt }
         };
-        panel.Children.Add(_ringGrid);
-        panel.Children.Add(_txt);
-        panel.Children.Add(ComponentSettingsOpener.CreateSettingsEntry("exam", "大考倒计时设置"));
-        Content = panel;
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
         _timer.Tick += (s, e) => Update();

@@ -34,15 +34,7 @@ public class WorldClockComponent : ComponentBase
             VerticalAlignment = VerticalAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        // 外层横向包裹：城市时钟列表 + 设置入口（设置入口不被 Update 清空）
-        Content = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8,
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Children = { _root, ComponentSettingsOpener.CreateSettingsEntry("clock", "世界时钟设置") }
-        };
+        Content = _root;
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (s, e) => Update();
