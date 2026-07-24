@@ -1795,7 +1795,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             _svc.Settings.ExperimentalFeaturesEnabled = enable;
             AutoSave();
 
-            // 写入/删除标记文件
+            // 写入/删除标记文件，供插件加载阶段读取本次启动的实验功能状态
             var expFile = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "ClassIsland", "Plugins", "HolidayCountdown", "experimental_enabled");
@@ -1814,41 +1814,11 @@ public class UnifiedSettingsPage : SettingsPageBase
             }
             catch { }
 
-            // 提示需要重启
-            try
-            {
-                var appHostType = Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Shared")
-                    ?? Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Core")
-                    ?? AppDomain.CurrentDomain.GetAssemblies()
-                        .SelectMany(asm => asm.GetTypes())
-                        .FirstOrDefault(t => t.Name == "IAppHost");
-                if (appHostType != null)
-                {
-                    var tryGetService = appHostType.GetMethod("TryGetService", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                    if (tryGetService != null && tryGetService.IsGenericMethodDefinition)
-                    {
-                        var notifType = Type.GetType("ClassIsland.Core.Abstractions.Services.INotificationHostService, ClassIsland.Core")
-                            ?? AppDomain.CurrentDomain.GetAssemblies()
-                                .SelectMany(asm => asm.GetTypes())
-                                .FirstOrDefault(t => t.Name == "INotificationHostService");
-                        if (notifType != null)
-                        {
-                            var genericMethod = tryGetService.MakeGenericMethod(notifType);
-                            var notifService = genericMethod.Invoke(null, null);
-                            if (notifService != null)
-                            {
-                                var showMethod = notifService.GetType().GetMethod("ShowNotification", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                                if (showMethod != null)
-                                {
-                                    // 尝试调用重启提示
-                                    showMethod.Invoke(notifService, new object[] { "实验性功能设置已更改", "请重启 ClassIsland 以使更改生效。", 5000 });
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch { }
+            // 复用 SettingsPageBase.RequestRestart()，与 SystemTools 等插件一致：
+            // 触发设置窗口内置的重启确认弹窗（立即重启 / 稍后），主程序实际重启由
+            // IAppHost.GetService<IApplicationService>().RestartAsync() 完成。
+            // 当前实验功能依赖 Settings 中转字段，启动时才会被读取，因此必须重启生效。
+            RequestRestart();
         }
         expToggle.Checked += (a, b) => OnExpChanged(true);
         expToggle.Unchecked += (a, b) => OnExpChanged(false);
