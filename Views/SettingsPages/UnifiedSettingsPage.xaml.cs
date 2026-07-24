@@ -22,7 +22,7 @@ using HolidayCountdown.WeatherReminders;
 
 namespace HolidayCountdown.Views.SettingsPages;
 
-[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE3A2", "\uE3A2")]
+[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE34A", "\uE34A")]
 public class UnifiedSettingsPage : SettingsPageBase
 {
     private readonly HolidayService _svc;
@@ -83,18 +83,18 @@ public class UnifiedSettingsPage : SettingsPageBase
         var expEnabled = _svc.Settings.ExperimentalFeaturesEnabled;
         var tabList = new List<(string, string, Func<Control>)>
         {
-            ("\uE946", "关于", BuildAboutPanel),
-            ("\uE8F5", "节假日", BuildHolidayPanel),
+            ("\uE9DF", "关于", BuildAboutPanel),
+            ("\uE34A", "节假日", BuildHolidayPanel),
             ("\uE8BD", "问候语", BuildGreetingPanel),
-            ("\uE9CA", "24节气", BuildSolarTermPanel),
-            ("\uE753", "天气", BuildWeatherPanel),
+            ("\uEA7E", "24节气", BuildSolarTermPanel),
+            ("\uE4DB", "天气", BuildWeatherPanel),
             // 农历/自定义/寒暑假/学习 已移至对应组件的组件设置入口
         };
 
         // 实验性功能 Tab
         if (expEnabled)
         {
-            tabList.Add(("\uE7BE", "课表", BuildClassSchedulePanel));
+            tabList.Add(("\uE7A9", "课表", BuildClassSchedulePanel));
             // 天气提醒已融合进「天气」Tab，不再单独显示
             // 大考/时钟 已移至对应组件的组件设置入口
         }
@@ -122,7 +122,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         // 顶部导航栏左侧显示设置页图标
         var navIconBlock = new TextBlock
         {
-            Text = "\uE3A2",
+            Text = "\uE34A",
             FontFamily = new FontFamily("Segoe MDL2 Assets"),
             FontSize = 22,
             VerticalAlignment = VerticalAlignment.Center,
@@ -332,7 +332,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     Control BuildClassSchedulePanel()
     {
         var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("\uE7BE 课程表联动设置"));
+        s.Children.Add(PageHeader("\uE7A9 课程表联动设置"));
 
         var schedulePanel = new StackPanel { Spacing = 0 };
         schedulePanel.Children.Add(SettingItem("启用课程表联动", "关闭后组件不显示任何内容",
@@ -445,7 +445,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     Control BuildStudyTimePanel()
     {
         var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("\uE9D1 学习时长统计设置"));
+        s.Children.Add(PageHeader("\uE021 学习时长统计设置"));
 
         var studyPanel = new StackPanel { Spacing = 0 };
         var modeCombo = new ComboBox { Width = 160, HorizontalAlignment = HorizontalAlignment.Right };
@@ -1102,7 +1102,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     Control BuildLunarPanel()
     {
         var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("\uE8C0 农历日期设置"));
+        s.Children.Add(PageHeader("\uE320 农历日期设置"));
 
         var displayPanel = new StackPanel { Spacing = 0 };
         displayPanel.Children.Add(SettingItem("自动刷新", "每天自动重新计算农历",

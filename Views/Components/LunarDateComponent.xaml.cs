@@ -17,7 +17,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "D4E5F6A7-B8C9-0123-DEF0-123456789013",
     "农历日期",
-    "fluent(\uE8C0)",
+    "\uE320",
     "显示当前农历日期，支持自定义模板，有网络时自动刷新"
 )]
 public class LunarDateComponent : ComponentBase
