@@ -13,11 +13,14 @@ public class RainSoonRule : IWeatherReminderRule
 
     public WeatherReminderResult? Evaluate(WeatherReminderContext context)
     {
-        if (string.IsNullOrEmpty(context.WeatherCode) && string.IsNullOrEmpty(context.WeatherText))
+        if (string.IsNullOrEmpty(context.WeatherCode) && context.HourlyWeatherTexts.Count == 0)
             return null;
 
-        // 当前已有降水则不提醒
-        if (WeatherDataHelper.IsPrecipitationText(context.WeatherText)) return null;
+        // 当前已有降水则不提醒。
+        // 旧实现用 IsPrecipitationText(WeatherText) 早出，但 BuildContext 之前根本没填充 WeatherText，
+        // 导致"当前正在下雨"时仍可能误报"未来1小时内开始降雨"。
+        // 改用代码 + 文本双路校验：当前 code 在降水区间或当前文本含"雨/雪/冰雹"就退出。
+        if (IsCurrentRaining(context)) return null;
 
         var hourly = WeatherDataHelper.GetHourlyWeatherCodes(context.WeatherInfo, 24);
         if (hourly.Count == 0) return null;
@@ -40,5 +43,14 @@ public class RainSoonRule : IWeatherReminderRule
         }
 
         return null;
+    }
+
+    static bool IsCurrentRaining(WeatherReminderContext context)
+    {
+        if (int.TryParse(context.WeatherCode, out var code) && WeatherDataHelper.IsPrecipitationCode(code))
+            return true;
+        if (!string.IsNullOrEmpty(context.WeatherText) && WeatherDataHelper.IsPrecipitationText(context.WeatherText))
+            return true;
+        return false;
     }
 }

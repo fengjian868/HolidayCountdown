@@ -200,15 +200,24 @@ public class WeatherReminderComponent : ComponentBase
         var current = GetPropertyValue(data, "Current");
         if (current != null)
         {
+            // CurrentWeather 只有 Weather 字段（小米天气代码 string），没有 WeatherText/Description/Text。
+            // 旧实现曾尝试读取不存在的字段，导致 context.WeatherText 永远为 null，
+            // 进而使 FogRule/SandStormRule/StrongWindRule/SnowRule 等基于"当前文本"的规则完全不触发。
             context.WeatherCode = GetPropertyValue(current, "Weather")?.ToString();
-            context.WeatherText = GetPropertyValue(current, "WeatherText")?.ToString()
-                ?? GetPropertyValue(current, "WeatherDescription")?.ToString()
-                ?? GetPropertyValue(current, "Text")?.ToString();
+            context.WeatherText = WeatherDataHelper.GetWeatherTextByCode(context.WeatherCode);
         }
 
         // 传完整 WeatherInfo 对象，规则内部通过反射读取 ForecastHourly / ForecastDaily
         context.WeatherInfo = data;
         context.Alerts = GetPropertyValue(data, "Alerts") as IList;
+
+        // 预解析逐小时天气代码→文本，避免每条规则各自反射解析 IWeatherService
+        var hourlyCodes = WeatherDataHelper.GetHourlyWeatherCodes(data, 24);
+        var hourlyTexts = new string[hourlyCodes.Count];
+        for (int i = 0; i < hourlyCodes.Count; i++)
+            hourlyTexts[i] = WeatherDataHelper.GetWeatherTextByCode(hourlyCodes[i].ToString());
+        context.HourlyWeatherTexts = hourlyTexts;
+
         context.UpdateTime = GetDateTimeProperty(data, "UpdateTime")
             ?? GetDateTimeProperty(data, "FetchTime")
             ?? GetDateTimeProperty(data, "LastUpdateTime")
