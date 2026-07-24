@@ -11,7 +11,7 @@ namespace HolidayCountdown.Automation.Actions;
 [ActionInfo(
     "holidaycountdown.action.refreshWeatherText",
     "刷新天气文案",
-    "fluent(\ue70a)",
+    "fluent(\ue72c)",
     defaultGroupToMenu: "HolidayCountdown"
 )]
 public class RefreshWeatherTextAction : ActionBase

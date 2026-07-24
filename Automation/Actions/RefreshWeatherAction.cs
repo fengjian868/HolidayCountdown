@@ -12,7 +12,7 @@ namespace HolidayCountdown.Automation.Actions;
 [ActionInfo(
     "holidaycountdown.action.refreshWeather",
     "刷新天气",
-    "fluent(\ue753)",
+    "fluent(\ue895)",
     defaultGroupToMenu: "HolidayCountdown"
 )]
 public class RefreshWeatherAction : ActionBase
