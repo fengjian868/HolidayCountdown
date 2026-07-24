@@ -43,6 +43,10 @@ public class UnifiedSettingsPage : SettingsPageBase
     private readonly DispatcherTimer _rebalanceTimer;
     // standalone 模式：组件设置弹窗只显示单个面板，不构建 tab 栏
     private string? _standaloneKey;
+    // standalone 模式下返回给组件设置控件的临时面板引用。
+    // 不能复用 _contentPanel（它已属于 _scrollViewer，重复挂载会破坏 visual tree），
+    // 必须新建独立 StackPanel，并由 RefreshCurrentTab 通过此引用刷新其子元素。
+    private StackPanel? _standalonePanel;
 
     /// <summary>
     /// 将文本前景色绑定到主题资源，自动适配明暗主题
@@ -279,11 +283,12 @@ public class UnifiedSettingsPage : SettingsPageBase
     // 清除当前 tab 的缓存并立即重建（用于列表增删后刷新当前面板）
     void RefreshCurrentTab()
     {
-        // standalone 模式：组件设置弹窗只显示单个面板，重建当前面板即可
-        if (_standaloneKey != null)
+        // standalone 模式：刷新返回给组件设置控件的那个临时面板，而非 _contentPanel
+        // （_contentPanel 属于 _scrollViewer，组件设置控件显示的是 _standalonePanel）
+        if (_standaloneKey != null && _standalonePanel != null)
         {
-            _contentPanel.Children.Clear();
-            _contentPanel.Children.Add(BuildStandalonePanel(_standaloneKey));
+            _standalonePanel.Children.Clear();
+            _standalonePanel.Children.Add(BuildStandalonePanel(_standaloneKey));
             return;
         }
         if (_currentIndex >= 0) _builtPanels.Remove(_currentIndex);
@@ -311,15 +316,15 @@ public class UnifiedSettingsPage : SettingsPageBase
         return _scrollViewer;
     }
 
-    // 供组件原生设置入口调用：只返回面板内容（Panel），避免外层嵌套 SettingsPageBase 导致样式/资源冲突。
-    // 必须返回 _contentPanel 本身（而非新建临时 StackPanel），否则 RefreshCurrentTab 重建 _contentPanel
-    // 子元素时，显示的是另一个实例，添加/删除节日后 UI 不会刷新。
+    // 供组件原生设置入口调用：只返回面板内容（独立 StackPanel），避免外层嵌套 SettingsPageBase 导致样式/资源冲突。
+    // 必须新建独立 StackPanel（不能复用 _contentPanel，它已属于 _scrollViewer，重复挂载会破坏 visual tree）。
+    // 同时保存到 _standalonePanel，让 RefreshCurrentTab 能刷新这个实例，解决添加/删除项后列表不刷新的问题。
     internal Control GetStandalonePanelContent(string key)
     {
         _standaloneKey = key;
-        _contentPanel.Children.Clear();
-        _contentPanel.Children.Add(BuildStandalonePanel(key));
-        return _contentPanel;
+        _standalonePanel = new StackPanel { Spacing = 0, Margin = new Thickness(20, 8, 20, 16) };
+        _standalonePanel.Children.Add(BuildStandalonePanel(key));
+        return _standalonePanel;
     }
 
     // ===== Tab Builders =====
