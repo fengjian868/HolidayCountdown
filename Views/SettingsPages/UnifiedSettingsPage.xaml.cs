@@ -311,13 +311,15 @@ public class UnifiedSettingsPage : SettingsPageBase
         return _scrollViewer;
     }
 
-    // 供组件原生设置入口调用：只返回面板内容（Panel），避免外层嵌套 SettingsPageBase 导致样式/资源冲突
+    // 供组件原生设置入口调用：只返回面板内容（Panel），避免外层嵌套 SettingsPageBase 导致样式/资源冲突。
+    // 必须返回 _contentPanel 本身（而非新建临时 StackPanel），否则 RefreshCurrentTab 重建 _contentPanel
+    // 子元素时，显示的是另一个实例，添加/删除节日后 UI 不会刷新。
     internal Control GetStandalonePanelContent(string key)
     {
         _standaloneKey = key;
-        var panel = new StackPanel { Spacing = 0, Margin = new Thickness(20, 8, 20, 16) };
-        panel.Children.Add(BuildStandalonePanel(key));
-        return panel;
+        _contentPanel.Children.Clear();
+        _contentPanel.Children.Add(BuildStandalonePanel(key));
+        return _contentPanel;
     }
 
     // ===== Tab Builders =====
