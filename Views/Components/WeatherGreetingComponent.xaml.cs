@@ -21,7 +21,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "B2C3D4E5-F6A7-8901-BCDE-F23456789012",
     "天气问候",
-    "fluent(\uE753)",
+    "\uE4DB",
     "读取ClassIsland天气，1分钟刷新，含温度问候、预警、下雨/停雨倒计时"
 )]
 public class WeatherGreetingComponent : ComponentBase

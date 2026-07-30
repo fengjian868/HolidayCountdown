@@ -18,7 +18,8 @@ public class RainTimingRule : IWeatherReminderRule
         if (context.WeatherInfo == null) return null;
 
         var hourlyCodes = WeatherDataHelper.GetHourlyWeatherCodes(context.WeatherInfo, 24);
-        var hourlyTexts = WeatherDataHelper.GetHourlyWeatherTexts(context.WeatherInfo, 24);
+        // 直接使用 BuildContext 预解析的文本（避免调用永远返回空列表的 GetHourlyWeatherTexts）
+        var hourlyTexts = context.HourlyWeatherTexts;
         var maxHours = Math.Max(hourlyCodes.Count, hourlyTexts.Count);
         if (maxHours == 0) return null;
 

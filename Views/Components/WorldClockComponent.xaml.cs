@@ -15,8 +15,8 @@ namespace HolidayCountdown.Views.Components;
 
 [ComponentInfo(
     "E7F8A9B0-C1D2-3456-7890-ABCDEF123456",
-    "世界时钟[测试版]",
-    "fluent(\uE823)",
+    "世界时钟",
+    "\uF1B2",
     "显示多个国家/城市的时间，默认北京时间，最多5个城市"
 )]
 public class WorldClockComponent : ComponentBase

@@ -14,26 +14,27 @@ public class Plugin : PluginBase
         services.AddComponent<Views.Components.HolidayCountdownComponent>();
         services.AddComponent<Views.Components.GreetingComponent>();
         services.AddComponent<Views.Components.SolarTermComponent>();
-        services.AddComponent<Views.Components.LunarDateComponent>();
-        services.AddComponent<Views.Components.CustomHolidayComponent>();
-        services.AddComponent<Views.Components.VacationCountdownComponent>();
-        services.AddComponent<Views.Components.StudyTimeComponent>();
+        services.AddComponent<Views.Components.LunarDateComponent, Views.ComponentSettings.LunarDateComponentSettings>();
+        services.AddComponent<Views.Components.CustomHolidayComponent, Views.ComponentSettings.CustomHolidayComponentSettings>();
+        services.AddComponent<Views.Components.VacationCountdownComponent, Views.ComponentSettings.VacationCountdownComponentSettings>();
+        services.AddComponent<Views.Components.StudyTimeComponent, Views.ComponentSettings.StudyTimeComponentSettings>();
         services.AddComponent<Views.Components.WeatherGreetingComponent>();
-        services.AddComponent<Views.Components.ClassScheduleComponent>();
+        services.AddComponent<Views.Components.SmartWeatherComponent>();
+        services.AddComponent<Views.Components.ExamCountdownComponent, Views.ComponentSettings.ExamCountdownComponentSettings>();
+        services.AddComponent<Views.Components.WorldClockComponent, Views.ComponentSettings.WorldClockComponentSettings>();
 
-        // 实验性功能（需要在关于页开启后重启生效）
+        services.AddAction<Automation.Actions.OpenUsbDriveAction>();
+        services.AddAction<Automation.Actions.RefreshWeatherAction>();
+        services.AddAction<Automation.Actions.RefreshWeatherTextAction>();
+
+        // 测试版功能（需要在关于页开启实验性功能后重启生效）
         var expFile = System.IO.Path.Combine(
             System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData),
             "ClassIsland", "Plugins", "HolidayCountdown", "experimental_enabled");
         if (System.IO.File.Exists(expFile))
         {
-            services.AddComponent<Views.Components.ExamCountdownComponent>();
-            services.AddComponent<Views.Components.WorldClockComponent>();
+            services.AddComponent<Views.Components.ClassScheduleComponent>();
             services.AddComponent<Views.Components.WeatherReminderComponent>();
-
-            services.AddAction<Automation.Actions.OpenUsbDriveAction>();
-            services.AddAction<Automation.Actions.RefreshWeatherAction>();
-            services.AddAction<Automation.Actions.RefreshWeatherTextAction>();
         }
 
         services.AddSettingsPage<Views.SettingsPages.UnifiedSettingsPage>();

@@ -22,7 +22,7 @@ using HolidayCountdown.WeatherReminders;
 
 namespace HolidayCountdown.Views.SettingsPages;
 
-[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE3A2", "\uE3A2")]
+[SettingsPageInfo("holidaycountdown.settings", "节假日倒计时设置", "\uE34A", "\uE34A")]
 public class UnifiedSettingsPage : SettingsPageBase
 {
     private readonly HolidayService _svc;
@@ -34,8 +34,19 @@ public class UnifiedSettingsPage : SettingsPageBase
     private StackPanel _tabRow0 = null!;
     private StackPanel _tabRow1 = null!;
 
-    private readonly (string Icon, string Label, Func<Control> Build)[] _tabs;
+    private readonly (string Icon, string Label, Func<Control> Build)[] _tabs = null!;
     private int _currentIndex = -1;
+
+    // 性能优化：缓存已构建的 tab 面板，切换 tab 时复用而非每次重建
+    private readonly Dictionary<int, Control> _builtPanels = new();
+    // RebalanceTabRows 防抖，避免 SizeChanged 频繁触发布局重算导致卡顿
+    private readonly DispatcherTimer _rebalanceTimer;
+    // standalone 模式：组件设置弹窗只显示单个面板，不构建 tab 栏
+    private string? _standaloneKey;
+    // standalone 模式下返回给组件设置控件的临时面板引用。
+    // 不能复用 _contentPanel（它已属于 _scrollViewer，重复挂载会破坏 visual tree），
+    // 必须新建独立 StackPanel，并由 RefreshCurrentTab 通过此引用刷新其子元素。
+    private StackPanel? _standalonePanel;
 
     /// <summary>
     /// 将文本前景色绑定到主题资源，自动适配明暗主题
@@ -45,33 +56,47 @@ public class UnifiedSettingsPage : SettingsPageBase
         textBlock[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
     }
 
-    public UnifiedSettingsPage()
+    public UnifiedSettingsPage() : this(standalone: false) { }
+
+    // standalone=true: 供组件设置弹窗使用，只初始化服务与内容容器，不构建 tab 栏
+    internal UnifiedSettingsPage(bool standalone)
     {
         _svc = new HolidayService();
         _saveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _saveTimer.Tick += (s, e) => { _saveTimer.Stop(); _svc.SaveSettings(); };
+        _rebalanceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        _rebalanceTimer.Tick += (s, e) => { _rebalanceTimer.Stop(); RebalanceTabRowsCore(); };
+
+        if (standalone)
+        {
+            _contentPanel = new StackPanel { Spacing = 0, Margin = new Thickness(20, 8, 20, 16) };
+            _scrollViewer = new ScrollViewer
+            {
+                Content = _contentPanel,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+            };
+            Content = _scrollViewer;
+            return;
+        }
 
         var expEnabled = _svc.Settings.ExperimentalFeaturesEnabled;
         var tabList = new List<(string, string, Func<Control>)>
         {
-            ("\uE946", "关于", BuildAboutPanel),
-            ("\uE8F5", "节假日", BuildHolidayPanel),
+            ("\uE9DF", "关于", BuildAboutPanel),
+            ("\uE34A", "节假日", BuildHolidayPanel),
             ("\uE8BD", "问候语", BuildGreetingPanel),
-            ("\uE9CA", "24节气", BuildSolarTermPanel),
-            ("\uE8C0", "农历", BuildLunarPanel),
-            ("\uE70F", "自定义", BuildCustomHolidayPanel),
-            ("\uE8F3", "寒暑假", BuildVacationPanel),
-            ("\uE753", "天气", BuildWeatherPanel),
-            ("\uE9D1", "学习", BuildStudyTimePanel),
+            ("\uEA7E", "24节气", BuildSolarTermPanel),
+            ("\uE4DB", "天气", BuildWeatherPanel),
+            // 农历/自定义/寒暑假/学习 已移至对应组件的组件设置入口
         };
 
         // 实验性功能 Tab
         if (expEnabled)
         {
-            tabList.Add(("\uE7BE", "课表", BuildClassSchedulePanel));
-            tabList.Add(("\uE7ED", "天气提醒", BuildWeatherReminderPanel));
-            tabList.Add(("\uE921", "大考", BuildExamCountdownPanel));
-            tabList.Add(("\uE823", "时钟", BuildWorldClockPanel));
+            tabList.Add(("\uE7A9", "课表", BuildClassSchedulePanel));
+            // 天气提醒已融合进「天气」Tab，不再单独显示
+            // 大考/时钟 已移至对应组件的组件设置入口
         }
 
         _tabs = tabList.ToArray();
@@ -97,7 +122,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         // 顶部导航栏左侧显示设置页图标
         var navIconBlock = new TextBlock
         {
-            Text = "\uE3A2",
+            Text = "\uE34A",
             FontFamily = new FontFamily("Segoe MDL2 Assets"),
             FontSize = 22,
             VerticalAlignment = VerticalAlignment.Center,
@@ -184,7 +209,14 @@ public class UnifiedSettingsPage : SettingsPageBase
         return root;
     }
 
+    // 防抖入口：SizeChanged 频繁触发时合并为一次重算，避免卡顿
     void RebalanceTabRows()
+    {
+        _rebalanceTimer.Stop();
+        _rebalanceTimer.Start();
+    }
+
+    void RebalanceTabRowsCore()
     {
         if (_tabBarGrid == null || _tabRow0 == null || _tabRow1 == null) return;
 
@@ -238,9 +270,61 @@ public class UnifiedSettingsPage : SettingsPageBase
         _contentPanel.Children.Clear();
         if (index >= 0 && index < _tabs.Length)
         {
-            var control = _tabs[index].Build();
+            // 性能优化：优先复用已缓存的面板，避免每次切换都重建大量控件
+            if (!_builtPanels.TryGetValue(index, out var control))
+            {
+                control = _tabs[index].Build();
+                _builtPanels[index] = control;
+            }
             _contentPanel.Children.Add(control);
         }
+    }
+
+    // 清除当前 tab 的缓存并立即重建（用于列表增删后刷新当前面板）
+    void RefreshCurrentTab()
+    {
+        // standalone 模式：刷新返回给组件设置控件的那个临时面板，而非 _contentPanel
+        // （_contentPanel 属于 _scrollViewer，组件设置控件显示的是 _standalonePanel）
+        if (_standaloneKey != null && _standalonePanel != null)
+        {
+            _standalonePanel.Children.Clear();
+            _standalonePanel.Children.Add(BuildStandalonePanel(_standaloneKey));
+            return;
+        }
+        if (_currentIndex >= 0) _builtPanels.Remove(_currentIndex);
+        SwitchTab(_currentIndex);
+    }
+
+    // standalone 模式下按 key 构建对应组件的设置面板
+    Control BuildStandalonePanel(string key) => key switch
+    {
+        "lunar" => BuildLunarPanel(),
+        "custom" => BuildCustomHolidayPanel(),
+        "vacation" => BuildVacationPanel(),
+        "study" => BuildStudyTimePanel(),
+        "exam" => BuildExamCountdownPanel(),
+        "clock" => BuildWorldClockPanel(),
+        _ => BuildAboutPanel()
+    };
+
+    // 供组件设置弹窗调用：返回单个组件设置面板所在的滚动容器
+    internal Control GetStandalonePanel(string key)
+    {
+        _standaloneKey = key;
+        _contentPanel.Children.Clear();
+        _contentPanel.Children.Add(BuildStandalonePanel(key));
+        return _scrollViewer;
+    }
+
+    // 供组件原生设置入口调用：只返回面板内容（独立 StackPanel），避免外层嵌套 SettingsPageBase 导致样式/资源冲突。
+    // 必须新建独立 StackPanel（不能复用 _contentPanel，它已属于 _scrollViewer，重复挂载会破坏 visual tree）。
+    // 同时保存到 _standalonePanel，让 RefreshCurrentTab 能刷新这个实例，解决添加/删除项后列表不刷新的问题。
+    internal Control GetStandalonePanelContent(string key)
+    {
+        _standaloneKey = key;
+        _standalonePanel = new StackPanel { Spacing = 0, Margin = new Thickness(20, 8, 20, 16) };
+        _standalonePanel.Children.Add(BuildStandalonePanel(key));
+        return _standalonePanel;
     }
 
     // ===== Tab Builders =====
@@ -248,7 +332,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     Control BuildClassSchedulePanel()
     {
         var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("\uE7BE 课程表联动设置"));
+        s.Children.Add(PageHeader("\uE7A9 课程表联动设置"));
 
         var schedulePanel = new StackPanel { Spacing = 0 };
         schedulePanel.Children.Add(SettingItem("启用课程表联动", "关闭后组件不显示任何内容",
@@ -361,7 +445,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     Control BuildStudyTimePanel()
     {
         var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("\uE9D1 学习时长统计设置"));
+        s.Children.Add(PageHeader("\uE021 学习时长统计设置"));
 
         var studyPanel = new StackPanel { Spacing = 0 };
         var modeCombo = new ComboBox { Width = 160, HorizontalAlignment = HorizontalAlignment.Right };
@@ -1018,7 +1102,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     Control BuildLunarPanel()
     {
         var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("\uE8C0 农历日期设置"));
+        s.Children.Add(PageHeader("\uE320 农历日期设置"));
 
         var displayPanel = new StackPanel { Spacing = 0 };
         displayPanel.Children.Add(SettingItem("自动刷新", "每天自动重新计算农历",
@@ -1069,7 +1153,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             var h = new Models.CustomHoliday { Name = "新节日", Date = DateTime.Now.AddDays(1) };
             _svc.Settings.CustomHolidays.Add(h);
             AutoSave();
-            SwitchTab(5);
+            RefreshCurrentTab();
         };
         p.Children.Add(btn);
         return p;
@@ -1103,7 +1187,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         Grid.SetColumn(r, 3);
 
         var del = new Button { Content = "删除", Width = 50 };
-        del.Click += (a, b) => { _svc.Settings.CustomHolidays.Remove(h); AutoSave(); SwitchTab(5); };
+        del.Click += (a, b) => { _svc.Settings.CustomHolidays.Remove(h); AutoSave(); RefreshCurrentTab(); };
         Grid.SetColumn(del, 4);
 
         g.Children.Add(n); g.Children.Add(dateText); g.Children.Add(d); g.Children.Add(r); g.Children.Add(del);
@@ -1208,6 +1292,9 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Expander("温度提醒", "自定义各温度区间的穿衣提醒文案", BuildTempPanel()));
         s.Children.Add(Expander("天气关键词", "根据天气关键词匹配显示文案", BuildWeatherGreetingPanel()));
 
+        // 天气提醒设置融合至此
+        s.Children.Add(Expander("天气变化提醒[测试版]", "天气变化提醒设置", BuildWeatherReminderPanel()));
+
         s.Children.Add(Info("天气数据来自ClassIsland内置天气服务，每分钟自动刷新一次。"));
         return s;
     }
@@ -1215,7 +1302,6 @@ public class UnifiedSettingsPage : SettingsPageBase
     Control BuildWeatherReminderPanel()
     {
         var s = new StackPanel { Spacing = 0 };
-        s.Children.Add(PageHeader("\uE7ED 天气变化提醒设置[测试版]"));
 
         var basicPanel = new StackPanel { Spacing = 0 };
         basicPanel.Children.Add(SettingItem("启用天气变化提醒", "关闭后组件不显示任何内容",
@@ -1616,7 +1702,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             FontWeight = FontWeight.Bold,
             Foreground = new SolidColorBrush(Color.Parse("#FF2196F3"))
         });
-        var versionBlock = new TextBlock { Text = "版本: v1.3.0.1", FontSize = 14, Opacity = 0.7 };
+        var versionBlock = new TextBlock { Text = "版本: v1.3.1.0", FontSize = 14, Opacity = 0.7 };
         BindThemeForeground(versionBlock);
         infoPanel.Children.Add(versionBlock);
         var authorBlock = new TextBlock { Text = "作者: fengjian868", FontSize = 14, Opacity = 0.7 };
@@ -1641,26 +1727,24 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Card(infoPanel));
 
         var changelogPanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
-        var changelogTitle = new TextBlock { Text = "v1.3.0.1 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
+        var changelogTitle = new TextBlock { Text = "v1.3.1.0 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
         BindThemeForeground(changelogTitle);
         changelogPanel.Children.Add(changelogTitle);
         var changelogItems = new[]
         {
-            "— 新增功能 —",
-            "1. 增加了大考倒计时，显示距离下次高考/中考的倒计时[实验中请手动开启]",
-            "2. 增加了比ci更好的天气组件\"智能天气\"，天气图标有颜色内置了有我组件自带的天气提醒，城市是根据ci来读取的[实验中请手动开启]",
-            "3. 增加了世界时钟，可查看每个城市的时间[实验中请手动开启]",
-            "4. 增加了自动化行动\"打开U盘\"\"刷新天气\"\"刷新天气文案\"[实验中请手动开启]",
-            "5. 增加了天气变化提醒组件，模仿windows小组件天气的变化提示例如\"附近有闪电\"\"几点后会下雨\"[实验中请手动开启]",
-            "— 修复功能 —",
-            "1. 修复了课表联动的部分变量不显示问题",
-            "2. 修复了切换不同颜色主题不会根据主题变化颜色",
-            "3. 修复了设置部分内容点击不了的问题",
-            "— 优化 —",
-            "1. 设置的部分变量显示",
-            "2. 部分图标显示",
+            "本版本修复了大量东西",
             "",
-            "*新增功能会在后续版本逐渐修改优化并上线"
+            "— 小改动 —",
+            "1. 融合了天气提醒和天气问候为一个组件",
+            "2. 将部分设置页移动到ci的组件-组件设置里",
+            "3. 修复了显示问题",
+            "4. 组件图标统一",
+            "5. 修复了已知问题",
+            "",
+            "— 以下转为正式版 —",
+            "1. 智能天气组件",
+            "2. 世界时钟组件",
+            "3. 大考倒计时"
         };
         foreach (var item in changelogItems)
         {
@@ -1668,20 +1752,24 @@ public class UnifiedSettingsPage : SettingsPageBase
             BindThemeForeground(itemBlock);
             changelogPanel.Children.Add(itemBlock);
         }
-        s.Children.Add(Expander("更新日志", "v1.3.0.1 更新内容", changelogPanel, expanded: true));
+        s.Children.Add(Expander("更新日志", "v1.3.1.0 更新内容", changelogPanel, expanded: true));
 
         var featurePanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
         var featureItems = new[]
         {
-            "- 节假日倒计时（调休提醒、进度环、放假天数）",
-            "- 24节气倒计时（网络自动刷新）",
-            "- 农历日期显示（自定义模板）",
-            "- 自定义节日倒计时",
+            "- 节假日倒计时（距离最近节假日、弧形进度环）",
+            "- 24节气（当前节气倒计时）",
+            "- 农历日期（自定义模板，联网刷新）",
+            "- 自定义节日倒计时（仅显示你添加的节日）",
             "- 寒暑假倒计时（周+天）",
-            "- 时段问候语（早中晚+放学+晚修）",
-            "- 天气问候（根据温度提醒穿衣）",
-            "- 课程表联动（当前课程/课间倒计时）",
-            "- 学习时长统计（今日学习时长）"
+            "- 问候语（时段问候、放学提醒、特殊日期问候）",
+            "- 天气问候（温度穿衣提醒、预警、下雨/停雨倒计时）",
+            "- 智能天气（彩色图标与预警）",
+            "- 大考倒计时（中考/高考倒计时）",
+            "- 世界时钟（多城市时间）",
+            "- 学习时长统计（今日学习时长）",
+            "- 课程表联动[测试版]（当前课程/课间倒计时）",
+            "- 天气变化提醒[测试版]（降雨/闪电等变化提示）"
         };
         foreach (var item in featureItems)
         {
@@ -1695,7 +1783,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var expPanel = new StackPanel { Spacing = 8, Margin = new Thickness(16, 12, 16, 12) };
         var expDesc = new TextBlock
         {
-            Text = "实验性功能包含：智能天气、大考倒计时、世界时钟、天气变化提醒、自动化行动（打开U盘/刷新天气/刷新天气文案）。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
+            Text = "测试版功能包含：天气变化提醒、课程表联动。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
             FontSize = 12,
             Opacity = 0.7
         };
@@ -1703,14 +1791,13 @@ public class UnifiedSettingsPage : SettingsPageBase
         expPanel.Children.Add(expDesc);
 
         var expEnabled = _svc.Settings.ExperimentalFeaturesEnabled;
-        var expToggle = new ToggleSwitch { IsChecked = expEnabled };
-        expToggle.IsCheckedChanged += (a, b) =>
+        var expToggle = new CheckBox { IsChecked = expEnabled };
+        void OnExpChanged(bool enable)
         {
-            var enable = expToggle.IsChecked == true;
             _svc.Settings.ExperimentalFeaturesEnabled = enable;
             AutoSave();
 
-            // 写入/删除标记文件
+            // 写入/删除标记文件，供插件加载阶段读取本次启动的实验功能状态
             var expFile = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "ClassIsland", "Plugins", "HolidayCountdown", "experimental_enabled");
@@ -1729,42 +1816,14 @@ public class UnifiedSettingsPage : SettingsPageBase
             }
             catch { }
 
-            // 提示需要重启
-            try
-            {
-                var appHostType = Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Shared")
-                    ?? Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Core")
-                    ?? AppDomain.CurrentDomain.GetAssemblies()
-                        .SelectMany(asm => asm.GetTypes())
-                        .FirstOrDefault(t => t.Name == "IAppHost");
-                if (appHostType != null)
-                {
-                    var tryGetService = appHostType.GetMethod("TryGetService", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                    if (tryGetService != null && tryGetService.IsGenericMethodDefinition)
-                    {
-                        var notifType = Type.GetType("ClassIsland.Core.Abstractions.Services.INotificationHostService, ClassIsland.Core")
-                            ?? AppDomain.CurrentDomain.GetAssemblies()
-                                .SelectMany(asm => asm.GetTypes())
-                                .FirstOrDefault(t => t.Name == "INotificationHostService");
-                        if (notifType != null)
-                        {
-                            var genericMethod = tryGetService.MakeGenericMethod(notifType);
-                            var notifService = genericMethod.Invoke(null, null);
-                            if (notifService != null)
-                            {
-                                var showMethod = notifService.GetType().GetMethod("ShowNotification", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                                if (showMethod != null)
-                                {
-                                    // 尝试调用重启提示
-                                    showMethod.Invoke(notifService, new object[] { "实验性功能设置已更改", "请重启 ClassIsland 以使更改生效。", 5000 });
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch { }
-        };
+            // 复用 SettingsPageBase.RequestRestart()，与 SystemTools 等插件一致：
+            // 触发设置窗口内置的重启确认弹窗（立即重启 / 稍后），主程序实际重启由
+            // IAppHost.GetService<IApplicationService>().RestartAsync() 完成。
+            // 当前实验功能依赖 Settings 中转字段，启动时才会被读取，因此必须重启生效。
+            RequestRestart();
+        }
+        expToggle.Checked += (a, b) => OnExpChanged(true);
+        expToggle.Unchecked += (a, b) => OnExpChanged(false);
         expPanel.Children.Add(SettingItem("开启实验性功能", "需重启 ClassIsland 后生效", expToggle));
 
         s.Children.Add(Expander("实验性功能", "测试版功能，默认关闭", expPanel));
@@ -1858,11 +1917,15 @@ public class UnifiedSettingsPage : SettingsPageBase
         _svc.SaveSettings();
     }
 
-    static ToggleSwitch Toggle(bool value, Action<bool> onChanged)
+    // 用 CheckBox 代替 ToggleSwitch：ToggleSwitch 在组件设置抽屉中会因 PART_MovingKnobs
+    // 模板部件缺失（ClassIsland 主题/FluentAvalonia 与 Avalonia 运行时版本错位）而崩溃。
+    // CheckBox 的控件模板跨版本稳定，不会触发此问题。
+    static CheckBox Toggle(bool value, Action<bool> onChanged)
     {
-        var t = new ToggleSwitch { IsChecked = value };
-        t.IsCheckedChanged += (s, e) => onChanged(t.IsChecked == true);
-        return t;
+        var c = new CheckBox { IsChecked = value };
+        c.Checked += (s, e) => onChanged(true);
+        c.Unchecked += (s, e) => onChanged(false);
+        return c;
     }
 
     static NumericUpDown Number(int value, int min, int max, Action<int> onChanged)

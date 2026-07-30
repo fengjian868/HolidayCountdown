@@ -19,8 +19,8 @@ namespace HolidayCountdown.Views.Components;
 
 [ComponentInfo(
     "F1A2B3C4-D5E6-7890-1234-567890ABCDEF",
-    "大考倒计时[测试版]",
-    "fluent(\uE921)",
+    "大考倒计时",
+    "\uEDF3",
     "显示中考/高考倒计时，内置全国各地考试时间，每年自动刷新"
 )]
 public class ExamCountdownComponent : ComponentBase

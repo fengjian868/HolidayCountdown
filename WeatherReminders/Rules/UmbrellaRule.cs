@@ -19,9 +19,10 @@ public class UmbrellaRule : IWeatherReminderRule
         var hourlyCodes = WeatherDataHelper.GetHourlyWeatherCodes(context.WeatherInfo, 6);
         bool rainInCodes = hourlyCodes.Any(c => WeatherDataHelper.IsPrecipitationCode(c));
 
-        // 检查未来 6 小时的天气文本是否包含降水
-        var hourlyTexts = WeatherDataHelper.GetHourlyWeatherTexts(context.WeatherInfo, 6);
-        bool rainInTexts = hourlyTexts.Any(t => WeatherDataHelper.IsPrecipitationText(t));
+        // 直接使用 BuildContext 预解析的文本，避免调用永远返回空列表的 GetHourlyWeatherTexts
+        bool rainInTexts = context.HourlyWeatherTexts
+            .Take(6)
+            .Any(t => WeatherDataHelper.IsPrecipitationText(t));
 
         if (rainInCodes || rainInTexts)
         {

@@ -278,18 +278,15 @@ public static class SettingsUI
     };
 
     /// <summary>
-    /// 开关控件
+    /// 开关控件（用 CheckBox 代替 ToggleSwitch：ToggleSwitch 在组件设置抽屉中会因
+    /// PART_MovingKnobs 模板部件缺失而崩溃，CheckBox 控件模板跨版本稳定）
     /// </summary>
-    public static ToggleSwitch Toggle(bool value, Action<bool> onChanged)
+    public static CheckBox Toggle(bool value, Action<bool> onChanged)
     {
-        var t = new ToggleSwitch
-        {
-            IsChecked = value,
-            OnContent = "",
-            OffContent = ""
-        };
-        t.IsCheckedChanged += (s, e) => onChanged(t.IsChecked == true);
-        return t;
+        var c = new CheckBox { IsChecked = value };
+        c.Checked += (s, e) => onChanged(true);
+        c.Unchecked += (s, e) => onChanged(false);
+        return c;
     }
 
     /// <summary>
