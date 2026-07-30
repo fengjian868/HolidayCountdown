@@ -1702,7 +1702,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             FontWeight = FontWeight.Bold,
             Foreground = new SolidColorBrush(Color.Parse("#FF2196F3"))
         });
-        var versionBlock = new TextBlock { Text = "版本: v1.3.0.1", FontSize = 14, Opacity = 0.7 };
+        var versionBlock = new TextBlock { Text = "版本: v1.3.1.0", FontSize = 14, Opacity = 0.7 };
         BindThemeForeground(versionBlock);
         infoPanel.Children.Add(versionBlock);
         var authorBlock = new TextBlock { Text = "作者: fengjian868", FontSize = 14, Opacity = 0.7 };
@@ -1727,26 +1727,24 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Card(infoPanel));
 
         var changelogPanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
-        var changelogTitle = new TextBlock { Text = "v1.3.0.1 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
+        var changelogTitle = new TextBlock { Text = "v1.3.1.0 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
         BindThemeForeground(changelogTitle);
         changelogPanel.Children.Add(changelogTitle);
         var changelogItems = new[]
         {
-            "— 新增功能 —",
-            "1. 增加了大考倒计时，显示距离下次高考/中考的倒计时[实验中请手动开启]",
-            "2. 增加了比ci更好的天气组件\"智能天气\"，天气图标有颜色内置了有我组件自带的天气提醒，城市是根据ci来读取的[实验中请手动开启]",
-            "3. 增加了世界时钟，可查看每个城市的时间[实验中请手动开启]",
-            "4. 增加了自动化行动\"打开U盘\"\"刷新天气\"\"刷新天气文案\"[实验中请手动开启]",
-            "5. 增加了天气变化提醒组件，模仿windows小组件天气的变化提示例如\"附近有闪电\"\"几点后会下雨\"[实验中请手动开启]",
-            "— 修复功能 —",
-            "1. 修复了课表联动的部分变量不显示问题",
-            "2. 修复了切换不同颜色主题不会根据主题变化颜色",
-            "3. 修复了设置部分内容点击不了的问题",
-            "— 优化 —",
-            "1. 设置的部分变量显示",
-            "2. 部分图标显示",
+            "本版本修复了大量东西",
             "",
-            "*新增功能会在后续版本逐渐修改优化并上线"
+            "— 小改动 —",
+            "1. 融合了天气提醒和天气问候为一个组件",
+            "2. 将部分设置页移动到ci的组件-组件设置里",
+            "3. 修复了显示问题",
+            "4. 组件图标统一",
+            "5. 修复了已知问题",
+            "",
+            "— 以下转为正式版 —",
+            "1. 智能天气组件",
+            "2. 世界时钟组件",
+            "3. 大考倒计时"
         };
         foreach (var item in changelogItems)
         {
@@ -1754,7 +1752,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             BindThemeForeground(itemBlock);
             changelogPanel.Children.Add(itemBlock);
         }
-        s.Children.Add(Expander("更新日志", "v1.3.0.1 更新内容", changelogPanel, expanded: true));
+        s.Children.Add(Expander("更新日志", "v1.3.1.0 更新内容", changelogPanel, expanded: true));
 
         var featurePanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
         var featureItems = new[]
