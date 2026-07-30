@@ -1766,8 +1766,12 @@ public class UnifiedSettingsPage : SettingsPageBase
             "- 寒暑假倒计时（周+天）",
             "- 时段问候语（早中晚+放学+晚修）",
             "- 天气问候（根据温度提醒穿衣）",
-            "- 课程表联动（当前课程/课间倒计时）",
-            "- 学习时长统计（今日学习时长）"
+            "- 智能天气（彩色图标与预警）",
+            "- 大考倒计时（中考/高考倒计时）",
+            "- 世界时钟（多城市时间）",
+            "- 学习时长统计（今日学习时长）",
+            "- 课程表联动[测试版]（当前课程/课间倒计时）",
+            "- 天气变化提醒[测试版]（降雨/闪电等变化提示）"
         };
         foreach (var item in featureItems)
         {
@@ -1781,7 +1785,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var expPanel = new StackPanel { Spacing = 8, Margin = new Thickness(16, 12, 16, 12) };
         var expDesc = new TextBlock
         {
-            Text = "实验性功能包含：智能天气、大考倒计时、世界时钟、天气变化提醒、自动化行动（打开U盘/刷新天气/刷新天气文案）。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
+            Text = "测试版功能包含：天气变化提醒、课程表联动。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
             FontSize = 12,
             Opacity = 0.7
         };

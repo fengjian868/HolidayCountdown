@@ -16,7 +16,7 @@ namespace HolidayCountdown.Views.Components;
 
 [ComponentInfo(
     "A1B2C3D4-E5F6-7890-1234-567890ABCDEF",
-    "智能天气[测试版]",
+    "智能天气",
     "\uE4FB",
     "比原版更美观的天气组件，含彩色图标与预警"
 )]
