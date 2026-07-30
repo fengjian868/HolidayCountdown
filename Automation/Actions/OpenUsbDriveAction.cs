@@ -13,7 +13,7 @@ namespace HolidayCountdown.Automation.Actions;
 [ActionInfo(
     "holidaycountdown.action.openUsbDrive",
     "打开U盘",
-    "fluent(\ue8a7)",
+    "\ue88e",
     defaultGroupToMenu: "HolidayCountdown"
 )]
 public class OpenUsbDriveAction : ActionBase

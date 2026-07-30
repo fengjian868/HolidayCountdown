@@ -179,6 +179,48 @@ public static class WeatherDataHelper
     }
 
     /// <summary>
+    /// 通过反射调用 ClassIsland IWeatherService.GetWeatherTextByCode(code)，
+    /// 把小米天气代码解析为"晴/小雨"等可读文本。
+    /// </summary>
+    /// <remarks>
+    /// 旧实现曾尝试直接从 CurrentWeather / ForecastHourly 上读取 WeatherText 字段，
+    /// 但这两个类根本不存在该字段——天气仅以 code 提供，文本只能由 IWeatherService 翻译。
+    /// 解析失败时返回空字符串，不抛异常，确保规则链不会因解析错误而中断。
+    /// </remarks>
+    public static string GetWeatherTextByCode(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return "";
+        try
+        {
+            var appHostType = Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Shared")
+                ?? Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Core")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .FirstOrDefault(t => t.Name == "IAppHost");
+            if (appHostType == null) return "";
+
+            var tryGetService = appHostType.GetMethod("TryGetService", BindingFlags.Public | BindingFlags.Static);
+            if (tryGetService == null || !tryGetService.IsGenericMethodDefinition) return "";
+
+            var weatherServiceType = Type.GetType("ClassIsland.Core.Abstractions.Services.IWeatherService, ClassIsland.Core")
+                ?? AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .FirstOrDefault(t => t.Name == "IWeatherService");
+            if (weatherServiceType == null) return "";
+
+            var genericMethod = tryGetService.MakeGenericMethod(weatherServiceType);
+            var weatherService = genericMethod.Invoke(null, null);
+            if (weatherService == null) return "";
+
+            var method = weatherServiceType.GetMethod("GetWeatherTextByCode", BindingFlags.Public | BindingFlags.Instance);
+            if (method == null) return "";
+
+            return method.Invoke(weatherService, new object[] { code })?.ToString() ?? "";
+        }
+        catch { return ""; }
+    }
+
+    /// <summary>
     /// 通用反射获取属性值。
     /// </summary>
     public static object? GetPropertyValue(object? obj, string propName)

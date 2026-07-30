@@ -17,7 +17,7 @@ namespace HolidayCountdown.Views.Components;
 [ComponentInfo(
     "B2C3D4E5-F6A7-8901-BCDE-F23456789013",
     "问候语",
-    "fluent(\uE8BD)",
+    "\uE8BD",
     "显示时段问候语、放学提醒、特殊日期问候等"
 )]
 public class GreetingComponent : ComponentBase
