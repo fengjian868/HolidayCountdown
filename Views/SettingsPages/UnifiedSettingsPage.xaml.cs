@@ -1506,7 +1506,7 @@ public class UnifiedSettingsPage : SettingsPageBase
                 // 下限由上一区间上限自动推导，只读
                 var minBox = new TextBox { Text = item.MinTemp.ToString(), Width = 45, IsReadOnly = true, Opacity = 0.6 };
 
-                var maxBox = new TextBox { Text = item.MaxTemp == 999 ? "" : item.MaxTemp.ToString(), Width = 45, Watermark = "∞" };
+                var maxBox = new TextBox { Text = item.MaxTemp == 999 ? "" : item.MaxTemp.ToString(), Width = 45, PlaceholderText = "∞" };
                 maxBox.LostFocus += (a, b) =>
                 {
                     if (string.IsNullOrEmpty(maxBox.Text)) item.MaxTemp = 999;
@@ -1822,8 +1822,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             // 当前实验功能依赖 Settings 中转字段，启动时才会被读取，因此必须重启生效。
             RequestRestart();
         }
-        expToggle.Checked += (a, b) => OnExpChanged(true);
-        expToggle.Unchecked += (a, b) => OnExpChanged(false);
+        expToggle.IsCheckedChanged += (a, b) => OnExpChanged(expToggle.IsChecked == true);
         expPanel.Children.Add(SettingItem("开启实验性功能", "需重启 ClassIsland 后生效", expToggle));
 
         s.Children.Add(Expander("实验性功能", "测试版功能，默认关闭", expPanel));
@@ -1923,8 +1922,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     static CheckBox Toggle(bool value, Action<bool> onChanged)
     {
         var c = new CheckBox { IsChecked = value };
-        c.Checked += (s, e) => onChanged(true);
-        c.Unchecked += (s, e) => onChanged(false);
+        c.IsCheckedChanged += (s, e) => onChanged(c.IsChecked == true);
         return c;
     }
 
@@ -1975,7 +1973,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     static Control SearchableCityPicker(IReadOnlyList<string> allItems, string selectedItem, string watermark, int width, Action<string> onSelected)
     {
         var filtered = new ObservableCollection<string>(allItems);
-        var textBox = new TextBox { Text = selectedItem, Width = width, Watermark = watermark };
+        var textBox = new TextBox { Text = selectedItem, Width = width, PlaceholderText = watermark };
         var listBox = new ListBox
         {
             Width = width,
