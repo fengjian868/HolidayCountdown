@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <NoWarn>NU1701</NoWarn>
+    <!-- 启用 ClassIsland.PluginSdk 内置的 CreateCipx target：
+         dotnet build 后自动把 $(OutputPath) 打包为 .cipx，不含 runtime。 -->
+    <CreateCipx>true</CreateCipx>
+    <CipxPackageOutputName>HolidayCountdown.cipx</CipxPackageOutputName>
   </PropertyGroup>
   <ItemGroup>
     <!-- 显式引用 Avalonia 使 XAMLIl 编译 targets 导入，支持 .axaml 代码后置。
@@ -17,6 +21,13 @@
     <PackageReference Include="ClassIsland.PluginSdk" Version="2.0.0.2">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 插件元数据与资源文件复制到输出目录（CreateCipx 会打包整个输出目录） -->
+    <None Include="manifest.yml" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="icon.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Plugin.cs" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="README.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <AvaloniaResource Include="icon.png" />
