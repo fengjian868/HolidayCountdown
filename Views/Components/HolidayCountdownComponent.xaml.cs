@@ -76,12 +76,7 @@ public class HolidayCountdownComponent : ComponentBase
 
                 // 第一行：进度环/图标 + 节日名称和天数
                 var firstRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
-                if (_svc.Settings.ShowProgressRing && i == 0)
-                {
-                    var prev = _svc.GetPrevHoliday();
-                    firstRow.Children.Add(CreateArc(days, prev, h, color));
-                }
-                else firstRow.Children.Add(new TextBlock { Text = h.IsCustom ? "🎂" : "📅", VerticalAlignment = VerticalAlignment.Center, FontSize = 12 });
+                firstRow.Children.Add(new TextBlock { Text = h.IsCustom ? "🎂" : "📅", VerticalAlignment = VerticalAlignment.Center, FontSize = 12 });
 
                 var nameDaysRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center };
                 nameDaysRow.Children.Add(new TextBlock { Text = h.Name, Foreground = new SolidColorBrush(color), FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
