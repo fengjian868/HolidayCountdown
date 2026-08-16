@@ -1,10 +1,10 @@
 id: com.fengjian868.holidaycountdown
 name: 节假日倒计时
 apiVersion: 2.0.0.0
-description: 多功能节假日倒计时套件 v1.3.1.0，含节气、农历、天气、寒暑假、自定义节日、课程表联动、学习时长统计等
+description: 多功能节假日倒计时套件 v1.3.1.1，含节气、农历、天气、寒暑假、自定义节日、课程表联动、学习时长统计等
 entranceAssembly: HolidayCountdown.dll
 url: https://github.com/fengjian868/HolidayCountdown
 author: fengjian868
-version: 1.3.1.0
+version: 1.3.1.1
 icon: icon.png
 readme: README.md
