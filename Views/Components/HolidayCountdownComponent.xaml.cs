@@ -86,8 +86,6 @@ public class HolidayCountdownComponent : ComponentBase
                 var nameDaysRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center };
                 nameDaysRow.Children.Add(new TextBlock { Text = h.Name, Foreground = new SolidColorBrush(color), FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
                 var daysText = days == 0 ? "今天" : $"还有{days}天";
-                // 第一个节日不显示放假天数后缀，保持与后续节日统一的简洁样式
-                if (_svc.Settings.ShowDaysOff && h.DaysOff > 1 && days >= 0 && i != 0) daysText += $"(放{h.DaysOff}天)";
                 var daysTb = new TextBlock { Text = daysText, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8 };
                 daysTb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
                 nameDaysRow.Children.Add(daysTb);
