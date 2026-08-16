@@ -185,7 +185,7 @@ public class HolidayService
                 var ds = item.GetProperty("date").GetString() ?? "";
                 var isH = item.GetProperty("holiday").GetBoolean();
                 if (DateTime.TryParseExact(ds, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var d))
-                    list.Add(new Holiday { Name = name, Date = d, IsWorkday = !isH, DaysOff = isH ? 1 : 0 });
+                    list.Add(new Holiday { Name = StripYearPrefix(name), Date = d, IsWorkday = !isH, DaysOff = isH ? 1 : 0 });
             }
         }
         catch { }
@@ -203,9 +203,22 @@ public class HolidayService
         try
         {
             var json = File.ReadAllText(_cachePath);
-            return JsonSerializer.Deserialize<List<Holiday>>(json) ?? new List<Holiday>();
+            var list = JsonSerializer.Deserialize<List<Holiday>>(json) ?? new List<Holiday>();
+            // 兼容旧缓存：去除节日名称开头的"XXXX年"前缀（如"2026年元旦"→"元旦"）
+            foreach (var h in list) h.Name = StripYearPrefix(h.Name);
+            return list;
         }
         catch { return new List<Holiday>(); }
+    }
+
+    // 去除节日名称开头的"XXXX年"前缀
+    static string StripYearPrefix(string name)
+    {
+        if (string.IsNullOrEmpty(name) || name.Length < 5) return name;
+        // 格式：4位数字+"年"+剩余，如"2026年元旦"
+        if (name.Length >= 5 && name[4] == '年' && int.TryParse(name.Substring(0, 4), out _))
+            return name.Substring(5);
+        return name;
     }
 
     List<Holiday> LoadBuiltIn()
@@ -219,16 +232,16 @@ public class HolidayService
     List<Holiday> GetYear(int y)
     {
         var list = new List<Holiday>();
-        list.Add(new Holiday { Name = $"{y}年元旦", Date = new DateTime(y, 1, 1), DaysOff = 1 });
+        list.Add(new Holiday { Name = "元旦", Date = new DateTime(y, 1, 1), DaysOff = 1 });
         var sd = new Dictionary<int, DateTime> { [2025] = new(2025, 1, 29), [2026] = new(2026, 2, 17), [2027] = new(2027, 2, 6), [2028] = new(2028, 1, 26), [2029] = new(2029, 2, 13), [2030] = new(2030, 2, 3) };
-        if (sd.TryGetValue(y, out var d)) list.Add(new Holiday { Name = $"{y}年春节", Date = d, DaysOff = 7 });
-        list.Add(new Holiday { Name = $"{y}年清明节", Date = new DateTime(y, 4, 4), DaysOff = 3 });
-        list.Add(new Holiday { Name = $"{y}年劳动节", Date = new DateTime(y, 5, 1), DaysOff = 5 });
+        if (sd.TryGetValue(y, out var d)) list.Add(new Holiday { Name = "春节", Date = d, DaysOff = 7 });
+        list.Add(new Holiday { Name = "清明节", Date = new DateTime(y, 4, 4), DaysOff = 3 });
+        list.Add(new Holiday { Name = "劳动节", Date = new DateTime(y, 5, 1), DaysOff = 5 });
         var dd = new Dictionary<int, DateTime> { [2025] = new(2025, 5, 31), [2026] = new(2026, 6, 19), [2027] = new(2027, 6, 9), [2028] = new(2028, 5, 28), [2029] = new(2029, 6, 16), [2030] = new(2030, 6, 5) };
-        if (dd.TryGetValue(y, out var d2)) list.Add(new Holiday { Name = $"{y}年端午节", Date = d2, DaysOff = 3 });
+        if (dd.TryGetValue(y, out var d2)) list.Add(new Holiday { Name = "端午节", Date = d2, DaysOff = 3 });
         var md = new Dictionary<int, DateTime> { [2025] = new(2025, 10, 6), [2026] = new(2026, 9, 25), [2027] = new(2027, 9, 15), [2028] = new(2028, 10, 3), [2029] = new(2029, 9, 22), [2030] = new(2030, 10, 12) };
-        if (md.TryGetValue(y, out var d3)) list.Add(new Holiday { Name = $"{y}年中秋节", Date = d3, DaysOff = 3 });
-        list.Add(new Holiday { Name = $"{y}年国庆节", Date = new DateTime(y, 10, 1), DaysOff = 7 });
+        if (md.TryGetValue(y, out var d3)) list.Add(new Holiday { Name = "中秋节", Date = d3, DaysOff = 3 });
+        list.Add(new Holiday { Name = "国庆节", Date = new DateTime(y, 10, 1), DaysOff = 7 });
         return list;
     }
 
