@@ -1,7 +1,8 @@
 name: Build CIPX
 
-# 专门生成 ClassIsland 插件包 (.cipx) 的工作流
-# cipx 本质是 zip 包，包含编译产物 + manifest.yml + icon.png + 入口 dll
+# 使用 ClassIsland.PluginSdk 内置的 CreateCipx target 打包
+# CreateCipx 会在 dotnet build 后自动把 $(OutputPath) 打包为 .cipx
+# 不使用 dotnet publish，因此不会带出 runtime 和多余的依赖 dll
 
 on:
   push:
@@ -25,38 +26,13 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Build
+      - name: Build (CreateCipx target 自动打包)
         run: dotnet build --no-restore --configuration Release
-
-      - name: Publish
-        run: dotnet publish --no-build --configuration Release --output ./publish
-
-      - name: Copy plugin files to publish
-        run: |
-          # 复制插件元数据与资源文件到 publish 目录
-          Copy-Item -Path ./HolidayCountdown.csproj -Destination ./publish/ -ErrorAction SilentlyContinue
-          Copy-Item -Path ./icon.png -Destination ./publish/ -ErrorAction SilentlyContinue
-          Copy-Item -Path ./manifest.yml -Destination ./publish/ -ErrorAction SilentlyContinue
-          Copy-Item -Path ./Plugin.cs -Destination ./publish/ -ErrorAction SilentlyContinue
-          Copy-Item -Path ./README.md -Destination ./publish/ -ErrorAction SilentlyContinue
-          Copy-Item -Path ./.gitignore -Destination ./publish/ -ErrorAction SilentlyContinue
-          # 清理不需要的运行时文件（仅保留 Windows x64）
-          Remove-Item -Recurse -Force ./publish/runtimes/linux-* -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force ./publish/runtimes/osx-* -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force ./publish/runtimes/freebsd-* -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force ./publish/runtimes/android-* -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force ./publish/runtimes/ios-* -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force ./publish/runtimes/unix-* -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force ./publish/runtimes/browser-* -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force ./publish/runtimes/maccatalyst-* -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force ./publish/runtimes/tvos-* -ErrorAction SilentlyContinue
-          Remove-Item -Recurse -Force ./publish/runtimes/watchos-* -ErrorAction SilentlyContinue
 
       - name: Read version from manifest
         id: version
         shell: pwsh
         run: |
-          # 从 manifest.yml 读取版本号，用于命名 cipx 文件
           $content = Get-Content ./manifest.yml -Raw
           if ($content -match 'version:\s*(.+)') {
             $ver = $matches[1].Trim()
@@ -66,25 +42,28 @@ jobs:
             echo "version=unknown" >> $env:GITHUB_OUTPUT
           }
 
-      - name: Pack CIPX
+      - name: Rename CIPX with version
+        shell: pwsh
         run: |
-          # 生成 .cipx 插件包（本质是 zip，改后缀为 .cipx）
           $version = "${{ steps.version.outputs.version }}"
           $sha = "${{ github.sha }}".Substring(0, 7)
-          # tag 触发用 tag 名，其他用 版本-sha
           $refName = "${{ github.ref_name }}"
+          # tag 触发用版本名，其他用 版本-sha
           $artifactName = if ($refName -like 'v*') { "HolidayCountdown-$version.cipx" } else { "HolidayCountdown-$version-$sha.cipx" }
+          # CreateCipx 生成在 cipx/HolidayCountdown.cipx
+          $src = "./cipx/HolidayCountdown.cipx"
+          if (-not (Test-Path $src)) {
+            Write-Error "CIPX not found at $src"
+            exit 1
+          }
+          Copy-Item $src ./$artifactName
           echo "artifactName=$artifactName" >> $env:GITHUB_ENV
-          if (Test-Path ./$artifactName) { Remove-Item -Force ./$artifactName }
-          Compress-Archive -Path ./publish/* -DestinationPath ./$artifactName
           Write-Host "Generated: $artifactName"
           Get-Item ./$artifactName | Format-List Name,Length,FullName
 
       - name: Upload CIPX Artifact
         uses: actions/upload-artifact@v4
         with:
-          # artifact name 用简洁名（不含点号），避免 nightly.link 路由解析歧义。
-          # 下载得到的总是 zip（upload-artifact v4 机制），解压后即为 .cipx 文件。
           name: HolidayCountdown-cipx
           path: ./${{ env.artifactName }}
           if-no-files-found: error
@@ -104,7 +83,6 @@ jobs:
           $repo = "${{ github.repository }}"
           $version = "${{ steps.version.outputs.version }}"
           $artifactName = "${{ env.artifactName }}"
-          # nightly.link 的 URL 必须以 .zip 结尾（upload-artifact v4 总是把内容打包成 zip）
           $nightlyLink = "https://nightly.link/$repo/actions/runs/$runId/HolidayCountdown-cipx.zip"
           $ghproxyLink = "https://ghproxy.com/$nightlyLink"
           $mirrorLink = "https://mirror.ghproxy.com/$nightlyLink"
