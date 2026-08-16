@@ -6,7 +6,7 @@ name: Build CIPX
 
 on:
   push:
-    branches: [main, master, refactor/axaml-split, adapt/classisland-2.2]
+    branches: [main, master, refactor/axaml-split]
     tags: ['v*']
   workflow_dispatch:
 
@@ -21,7 +21,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '8.0.x'
 
       - name: Restore
         run: dotnet restore

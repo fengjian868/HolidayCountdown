@@ -284,7 +284,8 @@ public static class SettingsUI
     public static CheckBox Toggle(bool value, Action<bool> onChanged)
     {
         var c = new CheckBox { IsChecked = value };
-        c.IsCheckedChanged += (s, e) => onChanged(c.IsChecked == true);
+        c.Checked += (s, e) => onChanged(true);
+        c.Unchecked += (s, e) => onChanged(false);
         return c;
     }
 
