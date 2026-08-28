@@ -1702,7 +1702,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             FontWeight = FontWeight.Bold,
             Foreground = new SolidColorBrush(Color.Parse("#FF2196F3"))
         });
-        var versionBlock = new TextBlock { Text = "版本: v1.3.1.1", FontSize = 14, Opacity = 0.7 };
+        var versionBlock = new TextBlock { Text = "版本: v1.3.1.2", FontSize = 14, Opacity = 0.7 };
         BindThemeForeground(versionBlock);
         infoPanel.Children.Add(versionBlock);
         var authorBlock = new TextBlock { Text = "作者: fengjian868", FontSize = 14, Opacity = 0.7 };
@@ -1727,12 +1727,12 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Card(infoPanel));
 
         var changelogPanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
-        var changelogTitle = new TextBlock { Text = "v1.3.1.1 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
+        var changelogTitle = new TextBlock { Text = "v1.3.1.2 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
         BindThemeForeground(changelogTitle);
         changelogPanel.Children.Add(changelogTitle);
         var changelogItems = new[]
         {
-            "1. 优化了cipx的打包体积"
+            "1. 修复MD5值"
         };
         foreach (var item in changelogItems)
         {
@@ -1740,7 +1740,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             BindThemeForeground(itemBlock);
             changelogPanel.Children.Add(itemBlock);
         }
-        s.Children.Add(Expander("更新日志", "v1.3.1.1 更新内容", changelogPanel, expanded: true));
+        s.Children.Add(Expander("更新日志", "v1.3.1.2 更新内容", changelogPanel, expanded: true));
 
         var featurePanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
         var featureItems = new[]
