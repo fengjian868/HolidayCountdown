@@ -255,6 +255,36 @@ public class HolidayService
             if (sat >= now.Date) all.Add(new Holiday { Name = "周六", Date = sat, IsCustom = true });
             if (sun >= now.Date) all.Add(new Holiday { Name = "周日", Date = sun, IsCustom = true });
         }
+
+        // 仅显示法定节假日模式：排除周末和自定义节日
+        if (Settings.ShowHolidaysOnly)
+            all = all.Where(h => !h.IsCustom).ToList();
+
+        return all.Where(h => h.Date.Date >= now.Date && !h.IsWorkday && h.IsEnabled && !Settings.DisabledHolidays.Contains(h.Name))
+                  .OrderBy(h => h.Date).Take(count).ToList();
+    }
+
+    /// <summary>
+    /// 获取包含明年的节日列表。
+    /// </summary>
+    public List<Holiday> GetNextHolidaysWithNextYear(int count)
+    {
+        var now = DateTime.Now;
+        var all = new List<Holiday>(_holidays);
+        // 追加明年的节日
+        var nextYear = now.Year + 1;
+        all.AddRange(GetYear(nextYear).Where(h => h.Date.Year == nextYear));
+
+        if (Settings.ShowWeekendCountdown)
+        {
+            var sat = NextWeekend(DayOfWeek.Saturday); var sun = NextWeekend(DayOfWeek.Sunday);
+            if (sat >= now.Date) all.Add(new Holiday { Name = "周六", Date = sat, IsCustom = true });
+            if (sun >= now.Date) all.Add(new Holiday { Name = "周日", Date = sun, IsCustom = true });
+        }
+
+        if (Settings.ShowHolidaysOnly)
+            all = all.Where(h => !h.IsCustom).ToList();
+
         return all.Where(h => h.Date.Date >= now.Date && !h.IsWorkday && h.IsEnabled && !Settings.DisabledHolidays.Contains(h.Name))
                   .OrderBy(h => h.Date).Take(count).ToList();
     }

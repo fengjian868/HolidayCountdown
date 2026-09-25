@@ -152,6 +152,19 @@ public class PluginSettings
     public bool StudyTimeShowIcon { get; set; } = true;
     public bool StudyTimeCountClassTimeOnly { get; set; } = false;
     public bool StudyTimeWeeklyReset { get; set; } = false;
+    public List<ExcludeTimeRange> StudyTimeExcludeRanges { get; set; } = new();
+
+    // 节假日倒计时额外设置
+    public bool ShowHolidaysOnly { get; set; } = false;
+    public bool ShowNextYearHolidays { get; set; } = true;
+    public int HolidayReminderLessonNumber { get; set; } = 0; // 0=不提醒，>0=每天第N节课下课时提醒
+
+    // 下课自动还原（测试版）
+    public bool ClassResetEnabled { get; set; } = false;
+    public int ClassResetTriggerDelay { get; set; } = 15;
+    public int ClassResetCountdown { get; set; } = 5;
+    public List<string> ClassResetProcessWhitelist { get; set; } = new() { "ICC-CE", "ClassIsland" };
+    public List<string> ClassResetKeywords { get; set; } = new() { "Hite", "WPS", "Seewo" };
 
     // 大考倒计时
     public int ExamType { get; set; } = 0; // 0 高考, 1 中考
@@ -229,4 +242,12 @@ public class WorldClockCity
 {
     public string Name { get; set; } = "";
     public string TimeZoneId { get; set; } = "";
+}
+
+public class ExcludeTimeRange
+{
+    public int StartHour { get; set; }
+    public int StartMinute { get; set; }
+    public int EndHour { get; set; }
+    public int EndMinute { get; set; }
 }

@@ -67,6 +67,12 @@ public class StudyTimeComponent : ComponentBase
             var elapsedMinutes = (now - _lastUpdate).TotalMinutes;
             _lastUpdate = now;
 
+            // 排除时间段：当前时间落在排除区间内则不统计
+            if (IsInExcludeRange(now))
+            {
+                elapsedMinutes = 0;
+            }
+
             // 若只统计已上课时长，则仅在上课状态时累加
             if (_svc.Settings.StudyTimeCountClassTimeOnly)
             {
@@ -93,6 +99,28 @@ public class StudyTimeComponent : ComponentBase
             }
         }
         catch { _txt.Text = ""; }
+    }
+
+    bool IsInExcludeRange(DateTime now)
+    {
+        if (_svc?.Settings.StudyTimeExcludeRanges == null || _svc.Settings.StudyTimeExcludeRanges.Count == 0)
+            return false;
+        var nowMins = now.Hour * 60 + now.Minute;
+        foreach (var r in _svc.Settings.StudyTimeExcludeRanges)
+        {
+            var startMins = r.StartHour * 60 + r.StartMinute;
+            var endMins = r.EndHour * 60 + r.EndMinute;
+            if (startMins <= endMins)
+            {
+                if (nowMins >= startMins && nowMins < endMins) return true;
+            }
+            else
+            {
+                // 跨午夜的区间，如 22:00-06:00
+                if (nowMins >= startMins || nowMins < endMins) return true;
+            }
+        }
+        return false;
     }
 
     string GetCurrentKey()

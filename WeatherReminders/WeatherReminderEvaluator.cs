@@ -68,12 +68,13 @@ public class WeatherReminderEvaluator
             }
         }
 
-        // 随机刷新区间：从所有匹配结果中随机选一条
+        // 按优先级排序：灾害预警 > 降雪/降雨 > 今天日出日落 > 未来天气
+        // 使用 Category 字段映射到显示优先级
         if (results.Count > 0)
         {
-            var random = new Random();
-            var index = random.Next(results.Count);
-            return new List<WeatherReminderResult> { results[index] };
+            // 按显示优先级排序：数字小的排前面
+            var ordered = results.OrderBy(r => GetDisplayPriority(r)).ThenBy(r => r.Priority).ToList();
+            return ordered;
         }
 
         return new List<WeatherReminderResult>();
@@ -112,5 +113,20 @@ public class WeatherReminderEvaluator
     public IReadOnlyList<IWeatherReminderRule> GetAllRules()
     {
         return _rules.OrderBy(r => r.Priority).ThenBy(r => r.Name).ToList();
+    }
+
+    /// <summary>
+    /// 根据规则分类映射到显示优先级（数字越小越优先）：
+    /// 0=灾害预警, 1=降雪/降雨, 2=日出日落, 3=未来天气, 4=其他
+    /// </summary>
+    static int GetDisplayPriority(WeatherReminderResult r)
+    {
+        if (string.IsNullOrEmpty(r.Category)) return 4;
+        var cat = r.Category;
+        if (cat.Contains("预警") || cat.Contains("灾害") || cat.Contains("雷电") || cat.Contains("台风")) return 0;
+        if (cat.Contains("雪") || cat.Contains("雨")) return 1;
+        if (cat.Contains("日出") || cat.Contains("日落")) return 2;
+        if (cat.Contains("未来") || cat.Contains("预报")) return 3;
+        return 4;
     }
 }

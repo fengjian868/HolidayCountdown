@@ -41,7 +41,7 @@ public class WeatherGreetingComponent : ComponentBase
         };
         Content = _panel;
 
-        // 每分钟刷新一次：先调用 CL 刷新天气，再读取数据
+        // 每分钟读取一次已有天气数据（不主动调用 QueryWeatherAsync 刷新）
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
         _timer.Tick += (s, e) => Dispatcher.UIThread.Post(() => Update());
         _timer.Start();
@@ -64,9 +64,7 @@ public class WeatherGreetingComponent : ComponentBase
     {
         if (_svc == null) return;
 
-        // 先调用 ClassIsland 天气服务刷新天气（CL 默认 5 分钟，这里每分钟强制刷新）
-        await RefreshClassIslandWeatherAsync();
-
+        // 不再主动调用 QueryWeatherAsync 刷新天气，只读取已有数据
         _panel.Children.Clear();
 
         try
