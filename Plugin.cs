@@ -22,10 +22,16 @@ public class Plugin : PluginBase
         services.AddComponent<Views.Components.SmartWeatherComponent>();
         services.AddComponent<Views.Components.ExamCountdownComponent, Views.ComponentSettings.ExamCountdownComponentSettings>();
         services.AddComponent<Views.Components.WorldClockComponent, Views.ComponentSettings.WorldClockComponentSettings>();
+        services.AddComponent<Views.Components.WeatherSummaryComponent>();
+        services.AddComponent<Views.Components.MinorHolidayCountdownComponent>();
 
         services.AddAction<Automation.Actions.OpenUsbDriveAction>();
         services.AddAction<Automation.Actions.RefreshWeatherAction>();
         services.AddAction<Automation.Actions.RefreshWeatherTextAction>();
+        services.AddAction<Automation.Actions.RandomDelayAction>();
+
+        services.AddTrigger<Automation.Triggers.ForegroundWindowChangedTrigger>();
+        services.AddTrigger<Automation.Triggers.WeatherAlertTrigger>();
 
         // 测试版功能（需要在关于页开启实验性功能后重启生效）
         var expFile = System.IO.Path.Combine(
@@ -35,6 +41,7 @@ public class Plugin : PluginBase
         {
             services.AddComponent<Views.Components.ClassScheduleComponent>();
             services.AddComponent<Views.Components.WeatherReminderComponent>();
+            services.AddComponent<Views.Components.ClassResetComponent>();
         }
 
         services.AddSettingsPage<Views.SettingsPages.UnifiedSettingsPage>();

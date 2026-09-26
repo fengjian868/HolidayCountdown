@@ -14,29 +14,13 @@ namespace HolidayCountdown.Automation.Actions;
     "\uE9F5",
     defaultGroupToMenu: "HolidayCountdown"
 )]
-public class RandomDelayAction : ActionBase
+public class RandomDelayAction : ActionBase<RandomDelaySettings>
 {
-    public override object? Settings
-    {
-        get => new RandomDelaySettings { MinSeconds = MinSec, MaxSeconds = MaxSec };
-        set
-        {
-            if (value is RandomDelaySettings s)
-            {
-                MinSec = s.MinSeconds;
-                MaxSec = s.MaxSeconds;
-            }
-        }
-    }
-
-    public int MinSec { get; set; } = 1;
-    public int MaxSec { get; set; } = 10;
-
     protected override async Task OnInvoke()
     {
         await base.OnInvoke();
-        var min = Math.Max(0, MinSec);
-        var max = Math.Max(min, MaxSec);
+        var min = Math.Max(0, Settings.MinSeconds);
+        var max = Math.Max(min, Settings.MaxSeconds);
         var delaySec = new Random().Next(min, max + 1);
         await Task.Delay(TimeSpan.FromSeconds(delaySec));
     }
