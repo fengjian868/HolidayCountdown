@@ -1702,7 +1702,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             FontWeight = FontWeight.Bold,
             Foreground = new SolidColorBrush(Color.Parse("#FF2196F3"))
         });
-        var versionBlock = new TextBlock { Text = "版本: v1.3.1.2", FontSize = 14, Opacity = 0.7 };
+        var versionBlock = new TextBlock { Text = "版本: v1.4.0.0", FontSize = 14, Opacity = 0.7 };
         BindThemeForeground(versionBlock);
         infoPanel.Children.Add(versionBlock);
         var authorBlock = new TextBlock { Text = "作者: fengjian868", FontSize = 14, Opacity = 0.7 };
@@ -1727,12 +1727,26 @@ public class UnifiedSettingsPage : SettingsPageBase
         s.Children.Add(Card(infoPanel));
 
         var changelogPanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
-        var changelogTitle = new TextBlock { Text = "v1.3.1.2 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
+        var changelogTitle = new TextBlock { Text = "v1.4.0.0 更新日志", FontSize = 16, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 8) };
         BindThemeForeground(changelogTitle);
         changelogPanel.Children.Add(changelogTitle);
         var changelogItems = new[]
         {
-            "1. 修复MD5值"
+            "新增功能：",
+            "1. 天气总结组件（今日天气概要+穿衣建议）",
+            "2. 小节日倒计时组件（儿童节、母亲节等18个非法定节日）",
+            "3. 下课自动还原组件[测试版]（含进程白名单）",
+            "4. 自动化行动：区间随机等待",
+            "5. 自动化触发器：前台窗口变化、天气预警信号",
+            "6. 学习时长统计支持每日排除时间段",
+            "7. 节假日倒计时支持显示今年+明年节日",
+            "8. 节假日倒计时支持仅显示法定节假日",
+            "9. 节假日倒计时支持CI原生提醒倒计时",
+            "",
+            "优化：",
+            "1. 天气变化提醒显示优先级优化",
+            "2. 天气问候不再后台自动刷新",
+            "3. 优化卡顿，减少内存占用"
         };
         foreach (var item in changelogItems)
         {
@@ -1740,12 +1754,14 @@ public class UnifiedSettingsPage : SettingsPageBase
             BindThemeForeground(itemBlock);
             changelogPanel.Children.Add(itemBlock);
         }
-        s.Children.Add(Expander("更新日志", "v1.3.1.2 更新内容", changelogPanel, expanded: true));
+        s.Children.Add(Expander("更新日志", "v1.4.0.0 更新内容", changelogPanel, expanded: true));
 
         var featurePanel = new StackPanel { Spacing = 6, Margin = new Thickness(16, 12, 16, 12) };
         var featureItems = new[]
         {
-            "- 节假日倒计时（距离最近节假日、弧形进度环）",
+            "- 节假日倒计时（距离最近节假日、弧形进度环、今年+明年）",
+            "- 小节日倒计时（儿童节、母亲节、教师节等）",
+            "- 天气总结（今日天气概要、穿衣建议）",
             "- 24节气（当前节气倒计时）",
             "- 农历日期（自定义模板，联网刷新）",
             "- 自定义节日倒计时（仅显示你添加的节日）",
@@ -1755,9 +1771,10 @@ public class UnifiedSettingsPage : SettingsPageBase
             "- 智能天气（彩色图标与预警）",
             "- 大考倒计时（中考/高考倒计时）",
             "- 世界时钟（多城市时间）",
-            "- 学习时长统计（今日学习时长）",
+            "- 学习时长统计（今日学习时长、排除时间段）",
             "- 课程表联动[测试版]（当前课程/课间倒计时）",
-            "- 天气变化提醒[测试版]（降雨/闪电等变化提示）"
+            "- 天气变化提醒[测试版]（降雨/闪电等变化提示）",
+            "- 下课自动还原[测试版]（关闭非白名单进程窗口）"
         };
         foreach (var item in featureItems)
         {
@@ -1771,7 +1788,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var expPanel = new StackPanel { Spacing = 8, Margin = new Thickness(16, 12, 16, 12) };
         var expDesc = new TextBlock
         {
-            Text = "测试版功能包含：天气变化提醒、课程表联动。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
+            Text = "测试版功能包含：天气变化提醒、课程表联动、下课自动还原。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
             FontSize = 12,
             Opacity = 0.7
         };

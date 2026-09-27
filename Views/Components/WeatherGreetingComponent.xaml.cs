@@ -189,26 +189,6 @@ public class WeatherGreetingComponent : ComponentBase
         return string.Join("，", parts);
     }
 
-    #region ClassIsland 天气刷新
-
-    async Task RefreshClassIslandWeatherAsync()
-    {
-        try
-        {
-            var weatherService = GetClassIslandService("IWeatherService");
-            if (weatherService == null) return;
-
-            var queryMethod = weatherService.GetType().GetMethod("QueryWeatherAsync", BindingFlags.Public | BindingFlags.Instance);
-            if (queryMethod == null) return;
-
-            var task = queryMethod.Invoke(weatherService, null) as Task;
-            if (task != null) await task;
-        }
-        catch { }
-    }
-
-    #endregion
-
     #region 天气数据获取
 
     (double? temp, string? weatherCode, string? weatherText, string[] warnings, DateTime? updateTime) GetWeatherData()
