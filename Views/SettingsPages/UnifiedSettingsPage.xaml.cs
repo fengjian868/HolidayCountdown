@@ -95,6 +95,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         if (expEnabled)
         {
             tabList.Add(("\uE7A9", "课表", BuildClassSchedulePanel));
+            tabList.Add(("\uE74E", "下课还原", BuildClassResetPanel));
             // 天气提醒已融合进「天气」Tab，不再单独显示
             // 大考/时钟 已移至对应组件的组件设置入口
         }
@@ -1889,12 +1890,6 @@ public class UnifiedSettingsPage : SettingsPageBase
         expPanel.Children.Add(SettingItem("开启实验性功能", "需重启 ClassIsland 后生效", expToggle));
 
         s.Children.Add(Expander("实验性功能", "测试版功能，默认关闭", expPanel));
-
-        // 下课自动还原设置（仅实验性功能开启时显示）
-        if (expEnabled)
-        {
-            s.Children.Add(BuildClassResetPanel());
-        }
 
         var footerBlock = new TextBlock { Text = "Made with love for ClassIsland", FontSize = 12, Opacity = 0.5, Margin = new Thickness(0, 8, 0, 0) };
         BindThemeForeground(footerBlock);
