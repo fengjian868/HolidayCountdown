@@ -1793,7 +1793,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             "新增功能：",
             "1. 天气总结组件（今日天气概要+穿衣建议）",
             "2. 小节日倒计时组件（儿童节、母亲节等18个非法定节日）",
-            "3. 下课自动还原组件[测试版]（含进程白名单）",
+            "3. 下课自动还原[测试版]（下课后自动关闭非白名单窗口，设置中开启）",
             "4. 自动化行动：区间随机等待",
             "5. 自动化触发器：前台窗口变化、天气预警信号",
             "6. 学习时长统计支持每日排除时间段",
@@ -1832,7 +1832,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             "- 学习时长统计（今日学习时长、排除时间段）",
             "- 课程表联动[测试版]（当前课程/课间倒计时）",
             "- 天气变化提醒[测试版]（降雨/闪电等变化提示）",
-            "- 下课自动还原[测试版]（关闭非白名单进程窗口）"
+            "- 下课自动还原[测试版]（下课后自动关闭非白名单进程窗口，设置中开启）"
         };
         foreach (var item in featureItems)
         {
@@ -1846,7 +1846,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var expPanel = new StackPanel { Spacing = 8, Margin = new Thickness(16, 12, 16, 12) };
         var expDesc = new TextBlock
         {
-            Text = "测试版功能包含：天气变化提醒、课程表联动、下课自动还原、前台窗口变化触发器、天气预警触发器。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
+            Text = "测试版功能包含：天气变化提醒、课程表联动、下课自动还原、前台窗口变化触发器、天气预警触发器。\n下课自动还原为设置功能，开启后在设置页配置即可生效，无需添加组件。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
             FontSize = 12,
             Opacity = 0.7
         };
@@ -1890,9 +1890,90 @@ public class UnifiedSettingsPage : SettingsPageBase
 
         s.Children.Add(Expander("实验性功能", "测试版功能，默认关闭", expPanel));
 
+        // 下课自动还原设置（仅实验性功能开启时显示）
+        if (expEnabled)
+        {
+            s.Children.Add(BuildClassResetPanel());
+        }
+
         var footerBlock = new TextBlock { Text = "Made with love for ClassIsland", FontSize = 12, Opacity = 0.5, Margin = new Thickness(0, 8, 0, 0) };
         BindThemeForeground(footerBlock);
         s.Children.Add(footerBlock);
+        return s;
+    }
+
+    /// <summary>
+    /// 下课自动还原设置面板（实验性功能）。
+    /// 该功能为后台服务，无需在布局中添加组件，开启后下课后自动关闭非白名单窗口。
+    /// </summary>
+    Control BuildClassResetPanel()
+    {
+        var s = new StackPanel { Spacing = 0 };
+
+        var basePanel = new StackPanel { Spacing = 0 };
+        basePanel.Children.Add(SettingItem("启用下课自动还原", "开启后下课后自动关闭非白名单进程窗口，还原桌面状态",
+            Toggle(_svc.Settings.ClassResetEnabled, v => { _svc.Settings.ClassResetEnabled = v; AutoSave(); })));
+        basePanel.Children.Add(Separator());
+        basePanel.Children.Add(SettingItem("触发延迟（秒）", "下课后等待多少秒再执行还原",
+            Number(_svc.Settings.ClassResetTriggerDelay, 0, 300, v => { _svc.Settings.ClassResetTriggerDelay = v; AutoSave(); })));
+        s.Children.Add(Expander("基础设置", "下课自动还原的开关与触发时机", basePanel, expanded: true));
+
+        // 进程白名单
+        var wlPanel = new StackPanel { Spacing = 0 };
+        var wlListPanel = new StackPanel { Spacing = 0 };
+        void RefreshWhitelist()
+        {
+            wlListPanel.Children.Clear();
+            var list = _svc.Settings.ClassResetProcessWhitelist;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var item = list[i];
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(16, 8, 16, 8) };
+                var nameBox = Text(item, 160, v => { list[i] = v; AutoSave(); });
+                var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
+                delBtn.Click += (a, e) => { list.RemoveAt(i); AutoSave(); RefreshWhitelist(); };
+                row.Children.Add(nameBox);
+                row.Children.Add(delBtn);
+                wlListPanel.Children.Add(row);
+                if (i < list.Count - 1) wlListPanel.Children.Add(Separator());
+            }
+        }
+        RefreshWhitelist();
+        wlPanel.Children.Add(wlListPanel);
+        var addWlBtn = new Button { Content = "+ 添加进程", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 4, 16, 8) };
+        addWlBtn.Click += (a, e) => { _svc.Settings.ClassResetProcessWhitelist.Add("新进程"); AutoSave(); RefreshWhitelist(); };
+        wlPanel.Children.Add(addWlBtn);
+        wlPanel.Children.Add(Info("进程名（不含 .exe），匹配时忽略大小写。系统关键进程（explorer、ClassIsland 等）已内置保护，无需添加。"));
+        s.Children.Add(Expander("进程白名单", "这些进程的窗口不会被关闭", wlPanel));
+
+        // 关键词过滤
+        var kwPanel = new StackPanel { Spacing = 0 };
+        var kwListPanel = new StackPanel { Spacing = 0 };
+        void RefreshKeywords()
+        {
+            kwListPanel.Children.Clear();
+            var list = _svc.Settings.ClassResetKeywords;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var item = list[i];
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(16, 8, 16, 8) };
+                var kwBox = Text(item, 160, v => { list[i] = v; AutoSave(); });
+                var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
+                delBtn.Click += (a, e) => { list.RemoveAt(i); AutoSave(); RefreshKeywords(); };
+                row.Children.Add(kwBox);
+                row.Children.Add(delBtn);
+                kwListPanel.Children.Add(row);
+                if (i < list.Count - 1) kwListPanel.Children.Add(Separator());
+            }
+        }
+        RefreshKeywords();
+        kwPanel.Children.Add(kwListPanel);
+        var addKwBtn = new Button { Content = "+ 添加关键词", Padding = new Thickness(12, 4), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(16, 4, 16, 8) };
+        addKwBtn.Click += (a, e) => { _svc.Settings.ClassResetKeywords.Add("新关键词"); AutoSave(); RefreshKeywords(); };
+        kwPanel.Children.Add(addKwBtn);
+        kwPanel.Children.Add(Info("留空则关闭所有非白名单窗口；填写关键词后，只关闭窗口标题或进程名包含关键词的窗口。"));
+        s.Children.Add(Expander("关键词过滤", "只关闭匹配关键词的窗口", kwPanel));
+
         return s;
     }
 

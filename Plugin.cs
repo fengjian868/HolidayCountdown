@@ -38,9 +38,12 @@ public class Plugin : PluginBase
         {
             services.AddComponent<Views.Components.ClassScheduleComponent>();
             services.AddComponent<Views.Components.WeatherReminderComponent>();
-            services.AddComponent<Views.Components.ClassResetComponent>();
             services.AddTrigger<Automation.Triggers.ForegroundWindowChangedTrigger>();
             services.AddTrigger<Automation.Triggers.WeatherAlertTrigger>();
+
+            // 下课自动还原作为后台服务运行（非组件），实验性功能开启时启动
+            var resetSvc = new Services.ClassResetService(new Services.HolidayService());
+            resetSvc.Start();
         }
 
         services.AddSettingsPage<Views.SettingsPages.UnifiedSettingsPage>();

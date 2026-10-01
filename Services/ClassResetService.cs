@@ -5,34 +5,24 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Layout;
-using Avalonia.Markup.Xaml.MarkupExtensions;
-using Avalonia.Media;
 using Avalonia.Threading;
-using ClassIsland.Core.Abstractions.Controls;
-using ClassIsland.Core.Attributes;
-using HolidayCountdown.Services;
+using HolidayCountdown.Models;
 
-namespace HolidayCountdown.Views.Components;
+namespace HolidayCountdown.Services;
 
-[ComponentInfo(
-    "E8F9A0B1-C2D3-4567-89AB-CDEF01234567",
-    "下课自动还原[测试版]",
-    "\uE74E",
-    "下课后自动关闭非白名单进程的窗口，还原桌面状态"
-)]
-public class ClassResetComponent : ComponentBase
+/// <summary>
+/// 下课自动还原后台服务：检测到下课后自动关闭非白名单进程窗口，还原桌面状态。
+/// 由 Plugin.Initialize 在实验性功能开启时启动，无需在布局中添加组件。
+/// </summary>
+public class ClassResetService
 {
-    private DispatcherTimer _timer = null!;
-    private TextBlock _status = null!;
-    private HolidayService? _svc;
+    private readonly DispatcherTimer _timer;
+    private readonly HolidayService _svc;
     private int _lastState = -1;
-    private DateTime? _classEndTime;
+    private bool _resetPending;
 
     // 内置硬保护名单（不可移除）
-    static readonly HashSet<string> HardProtectedProcesses = new()
+    static readonly HashSet<string> HardProtectedProcesses = new(StringComparer.OrdinalIgnoreCase)
     {
         "explorer", "ClassIsland", "csrss", "winlogon", "dwm", "sihost",
         "taskmgr", "ctfmon", "SearchUI", "StartMenuExperienceHost",
@@ -42,37 +32,36 @@ public class ClassResetComponent : ComponentBase
         "TabTip", "SearchHost", "SearchApp", "TextInputHost"
     };
 
-    public ClassResetComponent()
+    public ClassResetService(HolidayService svc)
     {
-        var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-        _status = new TextBlock { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.9 };
-        _status[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
-        panel.Children.Add(_status);
-        Content = panel;
-
+        _svc = svc;
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _timer.Tick += (s, e) => Update();
-        _timer.Start();
+    }
 
-        Dispatcher.UIThread.Post(() =>
-        {
-            _svc = new HolidayService();
-            HolidayService.SettingsChanged += OnSettingsChanged;
-            Update();
-        });
+    public void Start()
+    {
+        HolidayService.SettingsChanged += OnSettingsChanged;
+        _timer.Start();
+        Update();
+    }
+
+    public void Stop()
+    {
+        HolidayService.SettingsChanged -= OnSettingsChanged;
+        _timer.Stop();
     }
 
     void OnSettingsChanged()
     {
-        _svc?.LoadSettings();
         Dispatcher.UIThread.Post(Update);
     }
 
     void Update()
     {
-        if (_svc == null || !_svc.Settings.ClassResetEnabled)
+        if (!_svc.Settings.ClassResetEnabled)
         {
-            _status.Text = "";
+            _lastState = -1;
             return;
         }
 
@@ -80,44 +69,38 @@ public class ClassResetComponent : ComponentBase
         {
             var state = GetCurrentState();
             // state: 0=放学/无课, 1=上课中, 2=课间休息
-            if (_lastState == 1 && state != 1)
+            if (_lastState == 1 && state != 1 && !_resetPending)
             {
-                // 刚下课
-                _classEndTime = DateTime.Now;
-                _status.Text = "⏳ 等待还原…";
-                // 延迟触发
+                // 刚下课，延迟触发还原
+                _resetPending = true;
                 var delaySec = _svc.Settings.ClassResetTriggerDelay;
                 DispatcherTimer.RunOnce(() => TryReset(), TimeSpan.FromSeconds(delaySec));
             }
             else if (state == 1)
             {
-                _classEndTime = null;
-                _status.Text = "";
+                _resetPending = false;
             }
             _lastState = state;
         }
-        catch { _status.Text = ""; }
+        catch { }
     }
 
     void TryReset()
     {
-        if (_svc == null || !_svc.Settings.ClassResetEnabled) return;
+        _resetPending = false;
+
+        if (!_svc.Settings.ClassResetEnabled) return;
 
         // 如果已经开始上课了，跳过
         var state = GetCurrentState();
-        if (state == 1) { _status.Text = ""; return; }
+        if (state == 1) return;
 
-        _status.Text = "🔄 正在还原…";
-        Dispatcher.UIThread.Post(async () =>
-        {
-            await DoResetAsync();
-            _status.Text = "";
-        });
+        _ = DoResetAsync();
     }
 
     async Task DoResetAsync()
     {
-        var keywords = _svc?.Settings.ClassResetKeywords ?? new List<string>();
+        var keywords = _svc.Settings.ClassResetKeywords ?? new List<string>();
         var whitelist = BuildWhitelist();
 
         var taskbarWindows = GetTaskbarWindows();
@@ -125,11 +108,9 @@ public class ClassResetComponent : ComponentBase
 
         foreach (var (hwnd, title, processName) in taskbarWindows)
         {
-            // 跳过硬保护进程
             if (HardProtectedProcesses.Contains(processName)) continue;
-            // 跳过用户白名单
             if (whitelist.Contains(processName)) continue;
-            // 如果有关键词配置，只关闭匹配关键词的窗口；无关键词配置则关闭所有非白名单窗口
+            // 有关键词配置时只关闭匹配关键词的窗口；无关键词则关闭所有非白名单窗口
             if (keywords.Count > 0 && !keywords.Any(k => title.Contains(k, StringComparison.OrdinalIgnoreCase) || processName.Contains(k, StringComparison.OrdinalIgnoreCase)))
                 continue;
             toClose.Add(hwnd);
@@ -158,7 +139,7 @@ public class ClassResetComponent : ComponentBase
     HashSet<string> BuildWhitelist()
     {
         var set = new HashSet<string>(HardProtectedProcesses, StringComparer.OrdinalIgnoreCase);
-        if (_svc?.Settings.ClassResetProcessWhitelist != null)
+        if (_svc.Settings.ClassResetProcessWhitelist != null)
         {
             foreach (var p in _svc.Settings.ClassResetProcessWhitelist)
                 set.Add(p);
@@ -177,7 +158,7 @@ public class ClassResetComponent : ComponentBase
     [DllImport("user32.dll")]
     static extern bool IsWindow(IntPtr hWnd);
 
-    [DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto)]
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
     static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
 
     [DllImport("user32.dll")]
@@ -199,19 +180,14 @@ public class ClassResetComponent : ComponentBase
         var result = new List<(IntPtr, string, string)>();
         try
         {
-            IntPtr hwnd = IntPtr.Zero;
-            hwnd = GetWindow(IntPtr.Zero, 0); // GW_HWNDFIRST = 0 via GetDesktopWindow chain
-            // 枚举所有顶层窗口
             EnumWindowsProc callback = (h, l) =>
             {
                 if (!IsWindowVisible(h)) return true;
 
-                // 排除工具窗口
                 var exStyle = GetWindowLong(h, -20); // GWL_EXSTYLE = -20
                 if ((exStyle & WS_EX_TOOLWINDOW) != 0 && (exStyle & WS_EX_APPWINDOW) == 0)
                     return true;
 
-                // 排除有 Owner 的窗口
                 var owner = GetWindow(h, GW_OWNER);
                 if (owner != IntPtr.Zero) return true;
 
@@ -282,7 +258,10 @@ public class ClassResetComponent : ComponentBase
             var appHostType = Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Shared")
                 ?? Type.GetType("ClassIsland.Shared.IAppHost, ClassIsland.Core")
                 ?? AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => a.GetTypes())
+                    .SelectMany(a =>
+                    {
+                        try { return a.GetTypes(); } catch { return Array.Empty<Type>(); }
+                    })
                     .FirstOrDefault(t => t.Name == "IAppHost");
             if (appHostType == null) return null;
 
@@ -291,7 +270,10 @@ public class ClassResetComponent : ComponentBase
 
             var lessonsServiceType = Type.GetType("ClassIsland.Core.Abstractions.Services.ILessonsService, ClassIsland.Core")
                 ?? AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => a.GetTypes())
+                    .SelectMany(a =>
+                    {
+                        try { return a.GetTypes(); } catch { return Array.Empty<Type>(); }
+                    })
                     .FirstOrDefault(t => t.Name == "ILessonsService" || t.Name == "LessonsService");
             if (lessonsServiceType == null) return null;
 
