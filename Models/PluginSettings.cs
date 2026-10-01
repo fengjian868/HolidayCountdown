@@ -159,6 +159,12 @@ public class PluginSettings
     public bool ShowNextYearHolidays { get; set; } = true;
     public int HolidayReminderLessonNumber { get; set; } = 0; // 0=不提醒，>0=每天第N节课下课时提醒
 
+    // 小节日倒计时
+    public int MinorHolidayDisplayCount { get; set; } = 3;
+    public bool MinorHolidayShowIcon { get; set; } = true;
+    public bool MinorHolidayShowDays { get; set; } = true;
+    public List<string> MinorHolidayDisabled { get; set; } = new();
+
     // 下课自动还原（测试版）
     public bool ClassResetEnabled { get; set; } = false;
     public int ClassResetTriggerDelay { get; set; } = 15;

@@ -302,6 +302,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         "custom" => BuildCustomHolidayPanel(),
         "vacation" => BuildVacationPanel(),
         "study" => BuildStudyTimePanel(),
+        "minor" => BuildMinorHolidayPanel(),
         "exam" => BuildExamCountdownPanel(),
         "clock" => BuildWorldClockPanel(),
         _ => BuildAboutPanel()
@@ -490,6 +491,63 @@ public class UnifiedSettingsPage : SettingsPageBase
         };
         studyPanel.Children.Add(SettingItem("重置今日时长", "将今日学习时长清零", resetStudyBtn));
         s.Children.Add(Expander("基础设置", "学习时长统计组件基础设置", studyPanel));
+
+        return s;
+    }
+
+    Control BuildMinorHolidayPanel()
+    {
+        var s = new StackPanel { Spacing = 0 };
+        s.Children.Add(PageHeader("\uE34A 小节日倒计时设置"));
+
+        var basicPanel = new StackPanel { Spacing = 0 };
+
+        var countCombo = new ComboBox { Width = 80, HorizontalAlignment = HorizontalAlignment.Right };
+        for (int i = 1; i <= 5; i++) countCombo.Items.Add($"{i}");
+        countCombo.SelectedIndex = Math.Max(0, Math.Min(4, _svc.Settings.MinorHolidayDisplayCount - 1));
+        countCombo.SelectionChanged += (a, b) =>
+        {
+            _svc.Settings.MinorHolidayDisplayCount = countCombo.SelectedIndex + 1;
+            AutoSave();
+        };
+        basicPanel.Children.Add(SettingItem("显示数量", "同时显示几个小节日", countCombo));
+        basicPanel.Children.Add(Separator());
+
+        basicPanel.Children.Add(SettingItem("显示图标", "在每个节日前显示图标",
+            Toggle(_svc.Settings.MinorHolidayShowIcon, v => { _svc.Settings.MinorHolidayShowIcon = v; AutoSave(); })));
+        basicPanel.Children.Add(Separator());
+
+        basicPanel.Children.Add(SettingItem("显示天数", "显示距离节日的天数",
+            Toggle(_svc.Settings.MinorHolidayShowDays, v => { _svc.Settings.MinorHolidayShowDays = v; AutoSave(); })));
+        basicPanel.Children.Add(Separator());
+
+        // 禁用/启用小节日
+        var allHolidays = new[]
+        {
+            "情人节", "妇女节", "植树节", "消费者权益日", "愚人节", "世界读书日",
+            "劳动节", "青年节", "母亲节", "儿童节", "父亲节", "建党节",
+            "建军节", "教师节", "万圣节", "感恩节", "平安夜", "圣诞节"
+        };
+        var disabled = _svc.Settings.MinorHolidayDisabled ?? new List<string>();
+        var holidayPanel = new StackPanel { Spacing = 0 };
+        foreach (var name in allHolidays)
+        {
+            var isDisabled = disabled.Contains(name);
+            var toggle = Toggle(!isDisabled, v =>
+            {
+                var list = _svc.Settings.MinorHolidayDisabled ?? new List<string>();
+                if (v)
+                    list.Remove(name);
+                else if (!list.Contains(name))
+                    list.Add(name);
+                _svc.Settings.MinorHolidayDisabled = list;
+                AutoSave();
+            });
+            holidayPanel.Children.Add(SettingItem(name, isDisabled ? "已禁用" : "已启用", toggle));
+        }
+        basicPanel.Children.Add(Expander("节日管理", "启用/禁用各个小节日", holidayPanel));
+
+        s.Children.Add(Expander("基础设置", "小节日倒计时组件设置", basicPanel));
 
         return s;
     }
@@ -1788,7 +1846,7 @@ public class UnifiedSettingsPage : SettingsPageBase
         var expPanel = new StackPanel { Spacing = 8, Margin = new Thickness(16, 12, 16, 12) };
         var expDesc = new TextBlock
         {
-            Text = "测试版功能包含：天气变化提醒、课程表联动、下课自动还原。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
+            Text = "测试版功能包含：天气变化提醒、课程表联动、下课自动还原、前台窗口变化触发器、天气预警触发器。\n这些功能仍在开发中，可能不稳定。开启后需重启 ClassIsland 才能生效。",
             FontSize = 12,
             Opacity = 0.7
         };

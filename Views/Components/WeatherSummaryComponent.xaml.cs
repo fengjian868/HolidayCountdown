@@ -19,23 +19,23 @@ namespace HolidayCountdown.Views.Components;
     "F1E2D3C4-B5A6-7890-1234-567890ABCDEF",
     "天气总结",
     "\uE4DB",
-    "显示今日天气概要：白天/夜间天气、温度范围、穿衣建议"
+    "用一句话总结今天的天气，含早间天气、全天天气、温度和穿衣建议"
 )]
 public class WeatherSummaryComponent : ComponentBase
 {
     private DispatcherTimer _timer = null!;
-    private StackPanel _main = null!;
+    private TextBlock _main = null!;
     private HolidayService? _svc;
 
     public WeatherSummaryComponent()
     {
-        _main = new StackPanel
+        _main = new TextBlock
         {
-            Orientation = Orientation.Vertical,
-            Spacing = 2,
+            HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Center
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
+        _main[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
         Content = _main;
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
@@ -58,113 +58,117 @@ public class WeatherSummaryComponent : ComponentBase
 
     void Update()
     {
-        _main.Children.Clear();
         if (_svc == null) return;
 
         try
         {
             var settings = GetSettingsServiceSettings();
-            if (settings == null) { _main.Children.Add(MakeText("天气未更新", 0.5)); return; }
+            if (settings == null) { _main.Text = "天气未更新"; _main.Opacity = 0.5; return; }
 
             var lastWeatherInfo = GetPropertyValue(settings, "LastWeatherInfo");
-            if (lastWeatherInfo == null) { _main.Children.Add(MakeText("天气未更新", 0.5)); return; }
+            if (lastWeatherInfo == null) { _main.Text = "天气未更新"; _main.Opacity = 0.5; return; }
 
+            _main.Opacity = 1;
+
+            // 获取当前天气
             var current = GetPropertyValue(lastWeatherInfo, "Current");
-            double? temp = null;
-            string? weatherCode = null;
-            string? weatherText = null;
+            string? currentWeatherText = null;
+            double? currentTemp = null;
 
             if (current != null)
             {
-                var temperature = GetPropertyValue(current, "Temperature");
-                if (temperature != null)
+                var tempObj = GetPropertyValue(current, "Temperature");
+                if (tempObj != null)
                 {
-                    var tempValue = GetPropertyValue(temperature, "Value")?.ToString();
-                    if (double.TryParse(tempValue, out var t)) temp = t;
+                    var tempVal = GetPropertyValue(tempObj, "Value")?.ToString();
+                    if (double.TryParse(tempVal, out var t)) currentTemp = t;
                 }
-                weatherCode = GetPropertyValue(current, "Weather")?.ToString();
-                weatherText = GetWeatherTextByCode(weatherCode);
+                var weatherCode = GetPropertyValue(current, "Weather")?.ToString();
+                currentWeatherText = GetWeatherTextByCode(weatherCode);
             }
 
-            // 获取未来几天温度
+            // 获取今日温度范围
             var dailyTemps = GetDailyTemps(lastWeatherInfo, 1);
-            var todayTemps = dailyTemps.Count > 0 ? dailyTemps[0] : (High: (int?)null, Low: (int?)null);
+            int? todayHigh = dailyTemps.Count > 0 ? dailyTemps[0].High : null;
+            int? todayLow = dailyTemps.Count > 0 ? dailyTemps[0].Low : null;
 
-            // 构建天气概要
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center };
-
-            var icon = GetWeatherIcon(weatherText);
-            if (!string.IsNullOrEmpty(icon))
-                row.Children.Add(new TextBlock { Text = icon, FontSize = 14, VerticalAlignment = VerticalAlignment.Center });
-
-            var summary = "";
-            if (!string.IsNullOrEmpty(weatherText))
-                summary += weatherText;
-            if (temp.HasValue)
-                summary += $" {temp.Value:0}°";
-            else if (todayTemps.High.HasValue && todayTemps.Low.HasValue)
-                summary += $" {todayTemps.Low}~{todayTemps.High}°";
-
-            if (!string.IsNullOrEmpty(summary))
+            // 获取今日白天/夜间天气
+            var dailyForecast = GetDailyForecast(lastWeatherInfo, 1);
+            string? dayWeather = null;
+            string? nightWeather = null;
+            if (dailyForecast.Count > 0)
             {
-                var tb = new TextBlock { Text = summary, VerticalAlignment = VerticalAlignment.Center };
-                tb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
-                row.Children.Add(tb);
+                dayWeather = dailyForecast[0].DayWeather;
+                nightWeather = dailyForecast[0].NightWeather;
             }
 
-            _main.Children.Add(row);
+            // 获取空气质量
+            string? airQuality = GetAirQuality(lastWeatherInfo);
+
+            // 构建天气总结句子
+            var parts = new List<string>();
+
+            // 早间天气
+            var morningWeather = dayWeather ?? currentWeatherText ?? "未知";
+            var quality = airQuality ?? GetQualityFromWeather(morningWeather);
+            if (!string.IsNullOrEmpty(quality))
+                parts.Add($"今天早上天气{morningWeather}（{quality}）");
+            else
+                parts.Add($"今天早上天气{morningWeather}");
+
+            // 全天天气
+            var todayWeather = currentWeatherText ?? dayWeather ?? morningWeather;
+            if (todayWeather != morningWeather)
+                parts.Add($"今天天气{todayWeather}");
+            else
+                parts.Add($"今天天气{todayWeather}");
+
+            // 温度
+            if (todayHigh.HasValue && todayLow.HasValue)
+                parts.Add($"{todayLow}~{todayHigh}°");
+            else if (currentTemp.HasValue)
+                parts.Add($"{currentTemp.Value:0}°");
 
             // 穿衣建议
-            if (temp.HasValue)
+            var dressTemp = currentTemp ?? (todayHigh.HasValue ? todayHigh : (double?)null);
+            if (dressTemp.HasValue)
             {
-                var advice = GetDressAdvice(temp.Value);
+                var advice = GetDressAdvice(dressTemp.Value);
                 if (!string.IsNullOrEmpty(advice))
-                {
-                    var adviceTb = new TextBlock { Text = advice, FontSize = 10, Opacity = 0.6, HorizontalAlignment = HorizontalAlignment.Center };
-                    adviceTb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
-                    _main.Children.Add(adviceTb);
-                }
+                    parts.Add(advice);
             }
+
+            _main.Text = string.Join("，", parts);
         }
-        catch { _main.Children.Clear(); }
+        catch { _main.Text = ""; }
+    }
+
+    string GetQualityFromWeather(string? weather)
+    {
+        if (string.IsNullOrEmpty(weather)) return "";
+        if (weather.Contains("晴")) return "良好";
+        if (weather.Contains("多云")) return "较好";
+        if (weather.Contains("阴")) return "一般";
+        if (weather.Contains("雨")) return "较差";
+        if (weather.Contains("雪") || weather.Contains("冰雹")) return "差";
+        if (weather.Contains("雾") || weather.Contains("霾")) return "较差";
+        return "良好";
     }
 
     string GetDressAdvice(double temp)
     {
         return temp switch
         {
-            >= 35 => "高温防暑",
+            >= 35 => "注意防暑",
             >= 30 => "短袖防晒",
             >= 25 => "短袖即可",
             >= 20 => "薄长袖",
             >= 15 => "建议外套",
             >= 10 => "厚外套",
-            >= 5 => "羽绒服",
+            >= 5 => "穿羽绒服",
             >= 0 => "注意保暖",
             _ => "严寒多穿"
         };
-    }
-
-    string GetWeatherIcon(string? weatherText)
-    {
-        if (string.IsNullOrEmpty(weatherText)) return "🌤️";
-        if (weatherText.Contains("雷阵雨")) return "⛈️";
-        if (weatherText.Contains("雨")) return "🌧️";
-        if (weatherText.Contains("高温")) return "🥵";
-        if (weatherText.Contains("晴")) return "☀️";
-        if (weatherText.Contains("多云")) return "⛅";
-        if (weatherText.Contains("阴")) return "☁️";
-        if (weatherText.Contains("雪") || weatherText.Contains("冰雹")) return "❄️";
-        if (weatherText.Contains("雾") || weatherText.Contains("霾")) return "🌫️";
-        if (weatherText.Contains("风") || weatherText.Contains("沙尘")) return "🍃";
-        return "🌤️";
-    }
-
-    TextBlock MakeText(string text, double opacity)
-    {
-        var tb = new TextBlock { Text = text, HorizontalAlignment = HorizontalAlignment.Center, Opacity = opacity };
-        tb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
-        return tb;
     }
 
     #region ClassIsland 天气数据获取
@@ -202,6 +206,31 @@ public class WeatherSummaryComponent : ComponentBase
         catch { return null; }
     }
 
+    string? GetAirQuality(object? weatherInfo)
+    {
+        try
+        {
+            var aqi = GetPropertyValue(weatherInfo, "Aqi");
+            if (aqi == null) return null;
+
+            var aqiVal = GetPropertyValue(aqi, "Value")?.ToString();
+            if (int.TryParse(aqiVal, out var v))
+            {
+                return v switch
+                {
+                    <= 50 => "优",
+                    <= 100 => "良",
+                    <= 150 => "轻度污染",
+                    <= 200 => "中度污染",
+                    <= 300 => "重度污染",
+                    _ => "严重污染"
+                };
+            }
+        }
+        catch { }
+        return null;
+    }
+
     List<(int? High, int? Low)> GetDailyTemps(object data, int maxDays)
     {
         var result = new List<(int? High, int? Low)>();
@@ -222,6 +251,31 @@ public class WeatherSummaryComponent : ComponentBase
                 int? h = int.TryParse(high, out var hv) ? hv : null;
                 int? l = int.TryParse(low, out var lv) ? lv : null;
                 result.Add((h, l));
+            }
+        }
+        catch { }
+        return result;
+    }
+
+    List<(string? DayWeather, string? NightWeather)> GetDailyForecast(object data, int maxDays)
+    {
+        var result = new List<(string? DayWeather, string? NightWeather)>();
+        try
+        {
+            var forecastDaily = GetPropertyValue(data, "ForecastDaily");
+            if (forecastDaily == null) return result;
+
+            var tempList = forecastDaily as IList;
+            if (tempList == null) return result;
+
+            for (int i = 0; i < Math.Min(maxDays, tempList.Count); i++)
+            {
+                var day = tempList[i];
+                var dayCode = GetPropertyValue(day, "DayWeather")?.ToString();
+                var nightCode = GetPropertyValue(day, "NightWeather")?.ToString();
+                var dayWeather = GetWeatherTextByCode(dayCode);
+                var nightWeather = GetWeatherTextByCode(nightCode);
+                result.Add((dayWeather, nightWeather));
             }
         }
         catch { }

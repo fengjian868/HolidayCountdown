@@ -18,7 +18,7 @@ using HolidayCountdown.Services;
 namespace HolidayCountdown.Views.Components;
 
 [ComponentInfo(
-    "B2C3D4E5-F6A7-8901-BCDE-F23456789012",
+    "E8F9A0B1-C2D3-4567-89AB-CDEF01234567",
     "下课自动还原[测试版]",
     "\uE74E",
     "下课后自动关闭非白名单进程的窗口，还原桌面状态"

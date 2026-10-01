@@ -25,29 +25,39 @@ public class MinorHolidayCountdownComponent : ComponentBase
     private StackPanel _main = null!;
     private HolidayService? _svc;
 
-    static List<MinorHoliday> GetBuiltInHolidays(int year)
+    static readonly List<(string Name, int Month, int Day, string Icon, bool IsFixed)> FixedHolidays = new()
     {
-        var list = new List<MinorHoliday>
-        {
-            new("情人节", new DateTime(year, 2, 14), "🌹"),
-            new("妇女节", new DateTime(year, 3, 8), "💐"),
-            new("植树节", new DateTime(year, 3, 12), "🌱"),
-            new("消费者权益日", new DateTime(year, 3, 15), "🛒"),
-            new("愚人节", new DateTime(year, 4, 1), "🤡"),
-            new("世界读书日", new DateTime(year, 4, 23), "📚"),
-            new("劳动节", new DateTime(year, 5, 1), "👔"),
-        new("青年节", new DateTime(year, 5, 4), "🎓"),
-            new("母亲节", NthDayOfMonth(year, 5, DayOfWeek.Sunday, 2), "💝"),
-            new("儿童节", new DateTime(year, 6, 1), "🎈"),
-            new("父亲节", NthDayOfMonth(year, 6, DayOfWeek.Sunday, 3), "👨"),
-            new("建党节", new DateTime(year, 7, 1), "🔴"),
-            new("建军节", new DateTime(year, 8, 1), "🎖️"),
-            new("教师节", new DateTime(year, 9, 10), "🎓"),
-            new("万圣节", new DateTime(year, 10, 31), "🎃"),
-            new("感恩节", NthDayOfMonth(year, 11, DayOfWeek.Thursday, 4), "🙏"),
-            new("平安夜", new DateTime(year, 12, 24), "🎄"),
-            new("圣诞节", new DateTime(year, 12, 25), "🎅")
-        };
+        ("情人节", 2, 14, "🌹", true),
+        ("妇女节", 3, 8, "💐", true),
+        ("植树节", 3, 12, "🌱", true),
+        ("消费者权益日", 3, 15, "🛒", true),
+        ("愚人节", 4, 1, "🤡", true),
+        ("世界读书日", 4, 23, "📚", true),
+        ("劳动节", 5, 1, "👔", true),
+        ("青年节", 5, 4, "🎓", true),
+        ("儿童节", 6, 1, "🎈", true),
+        ("建党节", 7, 1, "🔴", true),
+        ("建军节", 8, 1, "🎖️", true),
+        ("教师节", 9, 10, "🎓", true),
+        ("万圣节", 10, 31, "🎃", true),
+        ("平安夜", 12, 24, "🎄", true),
+        ("圣诞节", 12, 25, "🎅", true),
+    };
+
+    static readonly List<(string Name, int Month, DayOfWeek DOW, int N, string Icon)> NthHolidays = new()
+    {
+        ("母亲节", 5, DayOfWeek.Sunday, 2, "💝"),
+        ("父亲节", 6, DayOfWeek.Sunday, 3, "👨"),
+        ("感恩节", 11, DayOfWeek.Thursday, 4, "🙏"),
+    };
+
+    static List<(string Name, DateTime Date, string Icon)> GetBuiltInHolidays(int year)
+    {
+        var list = new List<(string, DateTime, string)>();
+        foreach (var (name, month, day, icon, _) in FixedHolidays)
+            list.Add((name, new DateTime(year, month, day), icon));
+        foreach (var (name, month, dow, n, icon) in NthHolidays)
+            list.Add((name, NthDayOfMonth(year, month, dow, n), icon));
         return list;
     }
 
@@ -90,20 +100,26 @@ public class MinorHolidayCountdownComponent : ComponentBase
     void Update()
     {
         _main.Children.Clear();
+        if (_svc == null) return;
+
         var now = DateTime.Now;
-        var count = _svc?.Settings.DisplayCount ?? 3;
-        var all = new List<(MinorHoliday h, DateTime date)>();
+        var count = _svc.Settings.MinorHolidayDisplayCount > 0 ? _svc.Settings.MinorHolidayDisplayCount : 3;
+        var showIcon = _svc.Settings.MinorHolidayShowIcon;
+        var showDays = _svc.Settings.MinorHolidayShowDays;
+        var disabled = _svc.Settings.MinorHolidayDisabled ?? new List<string>();
+
+        var all = new List<(string Name, DateTime Date, string Icon)>();
 
         for (int y = now.Year; y <= now.Year + 1; y++)
         {
-            foreach (var h in GetBuiltInHolidays(y))
+            foreach (var (name, date, icon) in GetBuiltInHolidays(y))
             {
-                if (h.Date.Date >= now.Date)
-                    all.Add((h, h.Date));
+                if (date.Date >= now.Date && !disabled.Contains(name))
+                    all.Add((name, date, icon));
             }
         }
 
-        var next = all.OrderBy(x => x.date).Take(count).ToList();
+        var next = all.OrderBy(x => x.Date).Take(count).ToList();
         if (next.Count == 0)
         {
             var tb = new TextBlock { Text = "暂无小节日", Opacity = 0.5, HorizontalAlignment = HorizontalAlignment.Center };
@@ -112,24 +128,26 @@ public class MinorHolidayCountdownComponent : ComponentBase
             return;
         }
 
-        foreach (var (h, date) in next)
+        foreach (var (name, date, icon) in next)
         {
             var days = (int)(date.Date - now.Date).TotalDays;
             var item = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3, VerticalAlignment = VerticalAlignment.Center };
 
-            if (!string.IsNullOrEmpty(h.Icon))
-                item.Children.Add(new TextBlock { Text = h.Icon, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
+            if (showIcon && !string.IsNullOrEmpty(icon))
+                item.Children.Add(new TextBlock { Text = icon, FontSize = 12, VerticalAlignment = VerticalAlignment.Center });
 
-            item.Children.Add(new TextBlock { Text = h.Name, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+            item.Children.Add(new TextBlock { Text = name, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+            item[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
 
-            var daysText = days == 0 ? "今天" : $"{days}天";
-            var daysTb = new TextBlock { Text = daysText, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8 };
-            daysTb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
-            item.Children.Add(daysTb);
+            if (showDays)
+            {
+                var daysText = days == 0 ? "今天" : $"{days}天";
+                var daysTb = new TextBlock { Text = daysText, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8 };
+                daysTb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
+                item.Children.Add(daysTb);
+            }
 
             _main.Children.Add(item);
         }
     }
-
-    record MinorHoliday(string Name, DateTime Date, string Icon);
 }
