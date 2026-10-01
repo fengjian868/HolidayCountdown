@@ -1927,11 +1927,12 @@ public class UnifiedSettingsPage : SettingsPageBase
             var list = _svc.Settings.ClassResetProcessWhitelist;
             for (int i = 0; i < list.Count; i++)
             {
-                var item = list[i];
+                int idx = i;
+                var item = list[idx];
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(16, 8, 16, 8) };
-                var nameBox = Text(item, 160, v => { list[i] = v; AutoSave(); });
+                var nameBox = Text(item, 160, v => { list[idx] = v; AutoSave(); });
                 var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
-                delBtn.Click += (a, e) => { list.RemoveAt(i); AutoSave(); RefreshWhitelist(); };
+                delBtn.Click += (a, e) => { list.RemoveAt(idx); AutoSave(); RefreshWhitelist(); };
                 row.Children.Add(nameBox);
                 row.Children.Add(delBtn);
                 wlListPanel.Children.Add(row);
@@ -1955,11 +1956,12 @@ public class UnifiedSettingsPage : SettingsPageBase
             var list = _svc.Settings.ClassResetKeywords;
             for (int i = 0; i < list.Count; i++)
             {
-                var item = list[i];
+                int idx = i;
+                var item = list[idx];
                 var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(16, 8, 16, 8) };
-                var kwBox = Text(item, 160, v => { list[i] = v; AutoSave(); });
+                var kwBox = Text(item, 160, v => { list[idx] = v; AutoSave(); });
                 var delBtn = new Button { Content = "删除", Padding = new Thickness(6, 2), Foreground = new SolidColorBrush(Color.Parse("#FFE53935")) };
-                delBtn.Click += (a, e) => { list.RemoveAt(i); AutoSave(); RefreshKeywords(); };
+                delBtn.Click += (a, e) => { list.RemoveAt(idx); AutoSave(); RefreshKeywords(); };
                 row.Children.Add(kwBox);
                 row.Children.Add(delBtn);
                 kwListPanel.Children.Add(row);
