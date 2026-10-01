@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using ClassIsland.Core.Abstractions.Controls;
 using HolidayCountdown.Models.ComponentSettings;
 using HolidayCountdown.Views.SettingsPages;

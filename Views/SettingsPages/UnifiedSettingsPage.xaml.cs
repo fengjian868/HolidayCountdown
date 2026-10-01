@@ -1885,8 +1885,7 @@ public class UnifiedSettingsPage : SettingsPageBase
             // 当前实验功能依赖 Settings 中转字段，启动时才会被读取，因此必须重启生效。
             RequestRestart();
         }
-        expToggle.Checked += (a, b) => OnExpChanged(true);
-        expToggle.Unchecked += (a, b) => OnExpChanged(false);
+        expToggle.IsCheckedChanged += (a, b) => OnExpChanged(expToggle.IsChecked == true);
         expPanel.Children.Add(SettingItem("开启实验性功能", "需重启 ClassIsland 后生效", expToggle));
 
         s.Children.Add(Expander("实验性功能", "测试版功能，默认关闭", expPanel));
@@ -1986,8 +1985,7 @@ public class UnifiedSettingsPage : SettingsPageBase
     static CheckBox Toggle(bool value, Action<bool> onChanged)
     {
         var c = new CheckBox { IsChecked = value };
-        c.Checked += (s, e) => onChanged(true);
-        c.Unchecked += (s, e) => onChanged(false);
+        c.IsCheckedChanged += (s, e) => onChanged(c.IsChecked == true);
         return c;
     }
 

@@ -3,6 +3,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using ClassIsland.Core.Abstractions.Controls;
 
 namespace HolidayCountdown.Automation.Actions;
