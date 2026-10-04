@@ -59,11 +59,12 @@ public class HolidayCountdownComponent : ComponentBase
         CheckLessonReminder();
 
         var wr = _svc.GetNextWorkdayReminder();
+        string? workdayReminderText = null;
         if (wr != null)
         {
             var rd = (int)(wr.Date.Date - DateTime.Now.Date).TotalDays;
             if (rd <= _svc.Settings.WorkdayReminderDays)
-                _main.Children.Add(new TextBlock { Text = rd == 0 ? "⚠️ 明天调休上课" : $"⚠️ {rd}天后调休上课", Foreground = new SolidColorBrush(Colors.Orange), FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
+                workdayReminderText = rd == 0 ? "⚠️ 明天调休上课" : $"⚠️ {rd}天后调休上课";
         }
 
         // 根据设置选择是否包含明年的节日
@@ -97,6 +98,11 @@ public class HolidayCountdownComponent : ComponentBase
                 var daysTb = new TextBlock { Text = daysText, VerticalAlignment = VerticalAlignment.Center, Opacity = 0.8 };
                 daysTb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
                 nameDaysRow.Children.Add(daysTb);
+                // 调休提醒紧跟在倒计时文字后面，用括号括起来
+                if (i == 0 && workdayReminderText != null)
+                {
+                    nameDaysRow.Children.Add(new TextBlock { Text = $"（{workdayReminderText}）", Foreground = new SolidColorBrush(Colors.Orange), FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+                }
                 firstRow.Children.Add(nameDaysRow);
                 item.Children.Add(firstRow);
 
@@ -114,6 +120,8 @@ public class HolidayCountdownComponent : ComponentBase
         }
         else
         {
+            if (workdayReminderText != null)
+                _main.Children.Add(new TextBlock { Text = workdayReminderText, Foreground = new SolidColorBrush(Colors.Orange), FontWeight = FontWeight.SemiBold, HorizontalAlignment = HorizontalAlignment.Center });
             var emptyTb = new TextBlock { Text = "暂无节假日", HorizontalAlignment = HorizontalAlignment.Center, Opacity = 0.5 };
             emptyTb[!TextBlock.ForegroundProperty] = new DynamicResourceExtension("TextFillColorPrimaryBrush");
             _main.Children.Add(emptyTb);
